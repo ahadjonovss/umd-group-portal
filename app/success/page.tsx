@@ -71,30 +71,32 @@ function SuccessContent({ service }: { service: string | null }) {
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            {service === "play-market" && (
+          {service === "play-market" && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800 text-center">
+              <span className="font-semibold">.aab</span> faylni Telegram orqali yuboring:
               <a
                 href="https://t.me/umdgroupadmin"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 h-11 px-5 bg-[#2AABEE] text-white text-sm font-semibold rounded-xl hover:bg-[#1a9bde] active:scale-95 transition-all shadow-sm"
+                className="mt-2 flex items-center justify-center gap-2 h-10 bg-[#2AABEE] text-white text-sm font-medium rounded-xl hover:bg-[#1a9bde] active:scale-95 transition-all"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.496.969z"/>
                 </svg>
-                .aab faylni yuboring → @umdgroupadmin
+                Telegram
               </a>
-            )}
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center gap-2 h-11 px-6 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-200"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-              </svg>
-              Bosh sahifaga qaytish
-            </Link>
-          </div>
+            </div>
+          )}
+
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 h-11 px-6 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm shadow-blue-200"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Bosh sahifaga qaytish
+          </Link>
         </div>
 
         <div className="flex items-center justify-center gap-2 mt-5">
