@@ -27,14 +27,6 @@ export const appStoreStep2Schema = z.object({
 
 export const appStoreStep3Schema = z.object({
   githubRepoUrl: z.string().url("To'g'ri GitHub URL kiriting"),
-  githubUsername: z.string().min(1, "GitHub username majburiy"),
-  certificatePassword: z.string().min(1, "Sertifikat paroli majburiy"),
-  bundleId: z
-    .string()
-    .regex(
-      /^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/,
-      "Format: com.company.appname"
-    ),
 });
 
 export const appStoreStep5Schema = z.object({

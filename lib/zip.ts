@@ -43,8 +43,6 @@ export async function createPlayMarketZip(data: PlayMarketZipData): Promise<Buff
 export interface AppStoreZipData {
   appName: string;
   info: string;
-  certFile: { name: string; data: Buffer };
-  profileFile: { name: string; data: Buffer };
   icon: { name: string; data: Buffer };
   iphoneScreenshots: { name: string; data: Buffer }[];
   ipadScreenshots: { name: string; data: Buffer }[];
@@ -53,10 +51,6 @@ export interface AppStoreZipData {
 export async function createAppStoreZip(data: AppStoreZipData): Promise<Buffer> {
   const zip = new JSZip();
   zip.file("info.txt", data.info);
-
-  const certs = zip.folder("certificates")!;
-  certs.file("distribution.p12", data.certFile.data);
-  certs.file("profile.mobileprovision", data.profileFile.data);
 
   const graphics = zip.folder("graphics")!;
   graphics.file("icon_1024x1024.png", data.icon.data);
@@ -133,11 +127,8 @@ Subtitle:       ${fields.subtitle}
 To'liq tavsif:  ${fields.fullDescription}
 Privacy Policy: ${fields.privacyPolicyUrl}
 
---- KOD VA SERTIFIKATLAR ---
-GitHub Repo:      ${fields.githubRepoUrl}
-GitHub Username:  ${fields.githubUsername}
-Sertifikat parol: ${fields.certificatePassword}
-Bundle ID:        ${fields.bundleId}
+--- GITHUB ---
+Repo URL: ${fields.githubRepoUrl}
 
 --- TEST AKKAUNT ---
 Login:  ${fields.testLogin || "-"}

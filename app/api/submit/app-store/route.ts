@@ -33,9 +33,6 @@ export async function POST(req: NextRequest) {
     fullDescription: String(formData.get("fullDescription") || ""),
     privacyPolicyUrl: String(formData.get("privacyPolicyUrl") || ""),
     githubRepoUrl: String(formData.get("githubRepoUrl") || ""),
-    githubUsername: String(formData.get("githubUsername") || ""),
-    certificatePassword: String(formData.get("certificatePassword") || ""),
-    bundleId: String(formData.get("bundleId") || ""),
     testLogin: String(formData.get("testLogin") || ""),
     testPassword: String(formData.get("testPassword") || ""),
     note: String(formData.get("note") || ""),
@@ -45,12 +42,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Majburiy maydonlar to'ldirilmagan" }, { status: 400 });
   }
 
-  const certFile = await readFile(formData, "certFile");
-  const profileFile = await readFile(formData, "profileFile");
   const iconFile = await readFile(formData, "icon");
 
-  if (!certFile || !profileFile || !iconFile) {
-    return NextResponse.json({ success: false, error: "Barcha majburiy fayllar yuklanmagan" }, { status: 400 });
+  if (!iconFile) {
+    return NextResponse.json({ success: false, error: "Ilova ikonasi yuklanmagan" }, { status: 400 });
   }
 
   // Validate icon (1024x1024, no alpha)
@@ -91,8 +86,6 @@ export async function POST(req: NextRequest) {
   const zipBuffer = await createAppStoreZip({
     appName: fields.appName,
     info,
-    certFile: { name: certFile.name, data: certFile.buffer },
-    profileFile: { name: profileFile.name, data: profileFile.buffer },
     icon: { name: iconFile.name, data: iconFile.buffer },
     iphoneScreenshots,
     ipadScreenshots,

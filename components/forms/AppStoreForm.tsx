@@ -9,7 +9,6 @@ import { StepProgress } from "@/components/StepProgress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { FileUpload } from "@/components/FileUpload";
 import { ImageUpload } from "@/components/ImageUpload";
 
 import {
@@ -24,7 +23,7 @@ import {
 } from "@/lib/validations/app-store";
 
 const STORAGE_KEY = "as_draft";
-const STEPS = ["Mijoz", "Ilova", "Sertifikatlar", "Grafika", "Qo'shimcha"];
+const STEPS = ["Mijoz", "Ilova", "GitHub", "Grafika", "Qo'shimcha"];
 
 interface FormState {
   step1?: AppStoreStep1;
@@ -40,12 +39,6 @@ export function AppStoreForm() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [loadingMsg, setLoadingMsg] = useState("");
-
-  // Step 3 files
-  const [certFile, setCertFile] = useState<File | null>(null);
-  const [profileFile, setProfileFile] = useState<File | null>(null);
-  const [certError, setCertError] = useState("");
-  const [profileError, setProfileError] = useState("");
 
   // Step 4 graphics
   const [icon, setIcon] = useState<File | null>(null);
@@ -84,7 +77,7 @@ export function AppStoreForm() {
 
   const form3 = useForm<AppStoreStep3>({
     resolver: zodResolver(appStoreStep3Schema),
-    defaultValues: formState.step3 || { githubRepoUrl: "", githubUsername: "", certificatePassword: "", bundleId: "" },
+    defaultValues: formState.step3 || { githubRepoUrl: "" },
   });
 
   const form5 = useForm<AppStoreStep5>({
@@ -107,10 +100,6 @@ export function AppStoreForm() {
   }
 
   function onStep3Submit(data: AppStoreStep3) {
-    let valid = true;
-    if (!certFile) { setCertError(".p12 fayl majburiy"); valid = false; } else { setCertError(""); }
-    if (!profileFile) { setProfileError(".mobileprovision fayl majburiy"); valid = false; } else { setProfileError(""); }
-    if (!valid) return;
     const newState = { ...formState, step3: data };
     setFormState(newState);
     saveDraft(newState, 4);
@@ -136,8 +125,6 @@ export function AppStoreForm() {
     const allData = { ...newState.step1, ...newState.step2, ...newState.step3, ...data };
     Object.entries(allData).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
 
-    formData.append("certFile", certFile!);
-    formData.append("profileFile", profileFile!);
     formData.append("icon", icon!);
     iphoneScreenshots.forEach((s, i) => formData.append(`iphone_${i}`, s));
     formData.append("iphoneCount", String(iphoneScreenshots.length));
@@ -207,27 +194,36 @@ export function AppStoreForm() {
 
         {step === 3 && (
           <form onSubmit={form3.handleSubmit(onStep3Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Kod va sertifikatlar</h2>
-            <Input label="GitHub repo URL" type="url" required placeholder="https://github.com/user/repo" {...form3.register("githubRepoUrl")} error={form3.formState.errors.githubRepoUrl?.message} />
-            <Input label="GitHub username" required placeholder="github_username" {...form3.register("githubUsername")} error={form3.formState.errors.githubUsername?.message} hint="Collaborator qo'shish uchun" />
-            <FileUpload
-              label="Distribution Certificate (.p12)"
-              accept=".p12"
+            <h2 className="text-xl font-semibold text-gray-900">GitHub Repository</h2>
+
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+              <p className="font-semibold mb-1">Muhim: Collaborator qo&apos;shing</p>
+              <p>
+                Repo-ga{" "}
+                <a
+                  href="https://github.com/ahadjonovss"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono font-bold underline"
+                >
+                  @ahadjonovss
+                </a>{" "}
+                ni collaborator sifatida qo&apos;shing:
+              </p>
+              <p className="mt-1 text-xs text-blue-600 font-mono">
+                Settings → Collaborators → Add people → ahadjonovss
+              </p>
+            </div>
+
+            <Input
+              label="GitHub repo URL"
+              type="url"
               required
-              value={certFile}
-              onChange={setCertFile}
-              error={certError}
+              placeholder="https://github.com/username/repo"
+              {...form3.register("githubRepoUrl")}
+              error={form3.formState.errors.githubRepoUrl?.message}
             />
-            <Input label="Certificate paroli" type="password" required placeholder="••••••••" {...form3.register("certificatePassword")} error={form3.formState.errors.certificatePassword?.message} />
-            <FileUpload
-              label="Provisioning Profile (.mobileprovision)"
-              accept=".mobileprovision"
-              required
-              value={profileFile}
-              onChange={setProfileFile}
-              error={profileError}
-            />
-            <Input label="Bundle ID" required placeholder="com.company.appname" {...form3.register("bundleId")} error={form3.formState.errors.bundleId?.message} hint="Format: com.company.appname" />
+
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => setStep(2)}>← Orqaga</Button>
               <Button type="submit" size="lg">Davom etish →</Button>
