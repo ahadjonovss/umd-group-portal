@@ -50,12 +50,12 @@ export async function POST(req: NextRequest) {
     });
     const text = await res.text();
 
-    // Google login sahifasi kelsa — script "Anyone" access ga ega emas
-    if (text.includes("accounts.google.com") || text.includes("signin")) {
-      console.error("[Reviews] Apps Script auth talab qilyapti. Deploy settings ni tekshiring.");
+    // HTML login sahifasi kelsa tekshirish (faqat <!doctype bo'lsa)
+    if (text.trimStart().toLowerCase().startsWith("<!doctype")) {
+      console.error("[Reviews] Script HTML qaytardi:", text.slice(0, 200));
       return NextResponse.json({
         success: false,
-        error: "Script sozlamasi noto'g'ri: 'Who has access: Anyone' bo'lishi kerak",
+        error: "Script ulanishda xato yuz berdi. Keyinroq urinib ko'ring.",
       }, { status: 500 });
     }
   } catch {
