@@ -57,13 +57,32 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
     setError("");
 
     try {
-      const res = await fetch("/api/reviews/submit", {
+      const scriptUrl = process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL;
+      if (!scriptUrl) throw new Error("Script URL sozlanmagan");
+
+      const reviewId = crypto.randomUUID();
+      const params = new URLSearchParams({
+        action: "submit",
+        id: reviewId,
+        name: name.trim(),
+        rating: String(rating),
+        comment: comment.trim(),
+      });
+
+      // To'g'ridan Apps Script ga GET so'rov (CORS muammo yo'q)
+      const res = await fetch(`${scriptUrl}?${params.toString()}`, {
+        method: "GET",
+        mode: "no-cors", // redirect HTML ga to'xtamaslik uchun
+      });
+
+      // no-cors da response body o'qilmaydi, ammo so'rov yetib boradi
+      // Telegram xabar server orqali yuboriladi (bloklamas)
+      fetch("/api/reviews/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim() }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Xato");
+        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim(), id: reviewId }),
+      }).catch(() => {});
+
       onSuccess();
     } catch (err: unknown) {
       setStatus("error");
