@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   let formData: FormData;
   try {
     formData = await req.formData();
-  } catch {
+  } catch (e) {
+    console.error("[PM] formData parse xato:", e);
     return NextResponse.json({ success: false, error: "Forma ma'lumotlarini o'qishda xato" }, { status: 400 });
   }
 
@@ -39,7 +40,10 @@ export async function POST(req: NextRequest) {
     note: String(formData.get("note") || ""),
   };
 
+  console.log("[PM] fields:", { fullName: fields.fullName, appName: fields.appName, email: fields.email });
+
   if (!fields.fullName || !fields.phone || !fields.email || !fields.appName) {
+    console.error("[PM] 400: majburiy text maydonlar yo'q");
     return NextResponse.json({ success: false, error: "Majburiy maydonlar to'ldirilmagan" }, { status: 400 });
   }
 
@@ -47,8 +51,14 @@ export async function POST(req: NextRequest) {
   const iconFile = await readFormFile(formData, "icon");
   const bannerFile = await readFormFile(formData, "banner");
 
+  console.log("[PM] files:", { aab: !!aabFile, icon: !!iconFile, banner: !!bannerFile });
+
   if (!aabFile || !iconFile || !bannerFile) {
-    return NextResponse.json({ success: false, error: "Barcha majburiy fayllar yuklanmagan" }, { status: 400 });
+    console.error("[PM] 400: fayllar yo'q —", { aab: !!aabFile, icon: !!iconFile, banner: !!bannerFile });
+    return NextResponse.json({
+      success: false,
+      error: `Fayllar yuklanmadi: ${!aabFile ? "AAB " : ""}${!iconFile ? "icon " : ""}${!bannerFile ? "banner" : ""}`.trim(),
+    }, { status: 400 });
   }
 
   // Validate icon
