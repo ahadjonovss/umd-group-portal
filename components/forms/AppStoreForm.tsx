@@ -51,11 +51,25 @@ export function AppStoreForm() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        setFormState(parsed.formState || {});
+        const s = parsed.formState || {};
+        setFormState(s);
         setStep(parsed.step || 1);
+        if (s.step1) form1.reset(s.step1);
+        if (s.step2) form2.reset(s.step2);
+        if (s.step3) form3.reset(s.step3);
+        if (s.step5) form5.reset(s.step5);
       }
     } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (step === 1 && formState.step1) form1.reset(formState.step1);
+    if (step === 2 && formState.step2) form2.reset(formState.step2);
+    if (step === 3 && formState.step3) form3.reset(formState.step3);
+    if (step === 5 && formState.step5) form5.reset(formState.step5);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   function saveDraft(newState: FormState, newStep: number) {
     try {
@@ -220,7 +234,10 @@ export function AppStoreForm() {
             <Input label="Privacy Policy URL" type="url" required placeholder="https://yourapp.com/privacy" {...form2.register("privacyPolicyUrl")} error={form2.formState.errors.privacyPolicyUrl?.message} hint="HTTPS bilan boshlanishi shart" />
             <Input label="Support URL" type="url" required placeholder="https://yourapp.com/support" {...form2.register("supportUrl")} error={form2.formState.errors.supportUrl?.message} hint="Foydalanuvchilar murojaat qiladigan sahifa (HTTPS)" />
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => setStep(1)}>← Orqaga</Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => {
+                const ns = { ...formState, step2: form2.getValues() };
+                setFormState(ns); saveDraft(ns, 1); setStep(1);
+              }}>← Orqaga</Button>
               <Button type="submit" size="lg">Davom etish →</Button>
             </div>
           </form>
@@ -259,7 +276,10 @@ export function AppStoreForm() {
             />
 
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => setStep(2)}>← Orqaga</Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => {
+                const ns = { ...formState, step3: form3.getValues() };
+                setFormState(ns); saveDraft(ns, 2); setStep(2);
+              }}>← Orqaga</Button>
               <Button type="submit" size="lg">Davom etish →</Button>
             </div>
           </form>
@@ -299,7 +319,7 @@ export function AppStoreForm() {
             </div>
 
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => setStep(3)}>← Orqaga</Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 3); setStep(3); }}>← Orqaga</Button>
               <Button type="button" size="lg" onClick={onStep4Next}>Davom etish →</Button>
             </div>
           </div>
@@ -314,7 +334,10 @@ export function AppStoreForm() {
             <Textarea label="Izoh" placeholder="Qo'shimcha ma'lumot..." rows={4} {...form5.register("note")} />
 
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => setStep(4)}>← Orqaga</Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => {
+                const ns = { ...formState, step5: form5.getValues() };
+                setFormState(ns); saveDraft(ns, 4); setStep(4);
+              }}>← Orqaga</Button>
               <Button type="submit" size="lg">Yuborish ✓</Button>
             </div>
           </form>
