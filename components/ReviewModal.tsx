@@ -47,6 +47,30 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
 
+  function submitViaForm(url: string): Promise<void> {
+    return new Promise((resolve) => {
+      const iframe = document.createElement("iframe");
+      iframe.name = `rf_${Date.now()}`;
+      iframe.style.cssText = "display:none;width:0;height:0;border:0";
+      document.body.appendChild(iframe);
+
+      const form = document.createElement("form");
+      form.method = "GET";
+      form.action = url;
+      form.target = iframe.name;
+      form.style.display = "none";
+      document.body.appendChild(form);
+
+      form.submit();
+
+      setTimeout(() => {
+        document.body.removeChild(form);
+        document.body.removeChild(iframe);
+        resolve();
+      }, 2000);
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!rating) { setError("Iltimos, reyting bering"); return; }
@@ -69,15 +93,8 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
         comment: comment.trim(),
       });
 
-      // Apps Script ga to'g'ridan GET so'rov
-      const res = await fetch(`${scriptUrl}?${params.toString()}`);
-      const text = await res.text();
-
-      // JSON javob kelganligini tekshirish
-      let parsed: { success?: boolean } = {};
-      try { parsed = JSON.parse(text); } catch {}
-
-      if (parsed.success === false) throw new Error("Sharh saqlanmadi");
+      // Hidden iframe + form usuli — CORS muammosi yo'q
+      await submitViaForm(`${scriptUrl}?${params.toString()}`);
 
       // Telegram xabar (bloklamas)
       fetch("/api/reviews/notify", {
