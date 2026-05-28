@@ -81,28 +81,13 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
     setError("");
 
     try {
-      const scriptUrl = process.env.NEXT_PUBLIC_GOOGLE_SCRIPT_URL;
-      if (!scriptUrl) throw new Error("Script URL sozlanmagan");
-
-      const reviewId = crypto.randomUUID();
-      const params = new URLSearchParams({
-        action: "submit",
-        id: reviewId,
-        name: name.trim(),
-        rating: String(rating),
-        comment: comment.trim(),
-      });
-
-      // Hidden iframe + form usuli — CORS muammosi yo'q
-      await submitViaForm(`${scriptUrl}?${params.toString()}`);
-
-      // Telegram xabar (bloklamas)
-      fetch("/api/reviews/notify", {
+      const res = await fetch("/api/reviews/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim(), id: reviewId }),
-      }).catch(() => {});
-
+        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim() }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Xato yuz berdi");
       onSuccess();
     } catch (err: unknown) {
       setStatus("error");
