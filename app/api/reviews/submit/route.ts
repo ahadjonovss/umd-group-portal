@@ -41,15 +41,29 @@ export async function POST(req: NextRequest) {
 
   const reviewId = randomUUID();
 
-  // Google Sheets ga yozish
+  // Google Sheets ga yozish (GET orqali — POST redirect muammosini oldini olish)
   try {
-    const res = await fetch(scriptUrl, {
-      method: "POST",
-      redirect: "follow",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "submit", id: reviewId, name, rating, comment }),
+    const params = new URLSearchParams({
+      action: "submit",
+      id: reviewId,
+      name,
+      rating: String(rating),
+      comment,
     });
-    await res.text();
+    const res = await fetch(`${scriptUrl}?${params.toString()}`, {
+      redirect: "follow",
+      cache: "no-store",
+    });
+    const text = await res.text();
+
+    // Google login sahifasi kelsa — script "Anyone" access ga ega emas
+    if (text.includes("accounts.google.com") || text.includes("signin")) {
+      console.error("[Reviews] Apps Script auth talab qilyapti. Deploy settings ni tekshiring.");
+      return NextResponse.json({
+        success: false,
+        error: "Script sozlamasi noto'g'ri: 'Who has access: Anyone' bo'lishi kerak",
+      }, { status: 500 });
+    }
   } catch {
     return NextResponse.json({ success: false, error: "Yuborishda xato yuz berdi" }, { status: 500 });
   }

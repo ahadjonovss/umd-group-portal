@@ -15,11 +15,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(scriptUrl, {
-      method: "POST",
+    const params = new URLSearchParams({ action: "approve", id });
+    const res = await fetch(`${scriptUrl}?${params.toString()}`, {
       redirect: "follow",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "approve", id }),
+      cache: "no-store",
     });
     await res.text();
   } catch {
