@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["sharp", "jszip"],
+  serverExternalPackages: ["jszip"],
 };
 
 export default nextConfig;

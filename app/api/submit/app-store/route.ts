@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAppStoreZip, buildAppStoreInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
-import { validateImageBuffer } from "@/lib/image-validator";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { readFormFile as readFile } from "@/lib/form-utils";
 
@@ -44,11 +43,7 @@ export async function POST(req: NextRequest) {
   const iphoneScreenshots: { name: string; data: Buffer }[] = [];
   for (let i = 0; i < iphoneCount; i++) {
     const s = await readFile(formData, `iphone_${i}`);
-    if (s) {
-      const vr = await validateImageBuffer(s.buffer, { width: 1320, height: 2868, maxSizeBytes: 8 * 1024 * 1024, strict: false });
-      if (!vr.valid) return NextResponse.json({ success: false, error: `iPhone skrinshot ${i + 1}: ${vr.error}` }, { status: 400 });
-      iphoneScreenshots.push({ name: s.name, data: s.buffer });
-    }
+    if (s) iphoneScreenshots.push({ name: s.name, data: s.buffer });
   }
 
   if (iphoneScreenshots.length < 3) {
@@ -61,8 +56,6 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < ipadCount; i++) {
     const s = await readFile(formData, `ipad_${i}`);
     if (s) {
-      const vr = await validateImageBuffer(s.buffer, { width: 2048, height: 2732, maxSizeBytes: 8 * 1024 * 1024, strict: false });
-      if (!vr.valid) return NextResponse.json({ success: false, error: `iPad skrinshot ${i + 1}: ${vr.error}` }, { status: 400 });
       ipadScreenshots.push({ name: s.name, data: s.buffer });
     }
   }
