@@ -25,21 +25,30 @@ function StarDisplay({ rating }: { rating: number }) {
 }
 
 function ReviewCard({ review }: { review: Review }) {
+  const initial = review.name.charAt(0).toUpperCase();
+  const colors = ["bg-blue-500","bg-violet-500","bg-emerald-500","bg-orange-500","bg-pink-500"];
+  const color = colors[initial.charCodeAt(0) % colors.length];
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 flex flex-col gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-            {review.name.charAt(0).toUpperCase()}
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-900 leading-tight">{review.name}</p>
-            <p className="text-xs text-slate-400 leading-tight">{review.date}</p>
-          </div>
-        </div>
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-4 hover:shadow-lg hover:shadow-slate-100 hover:-translate-y-0.5 transition-all duration-200">
+      {/* Stars + date */}
+      <div className="flex items-center justify-between">
         <StarDisplay rating={review.rating} />
+        <span className="text-xs text-slate-400">{review.date}</span>
       </div>
-      <p className="text-sm text-slate-600 leading-relaxed">{review.comment}</p>
+
+      {/* Comment */}
+      <p className="text-sm text-slate-700 leading-relaxed flex-1">
+        &ldquo;{review.comment}&rdquo;
+      </p>
+
+      {/* Author */}
+      <div className="flex items-center gap-2.5 pt-1 border-t border-slate-50">
+        <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+          {initial}
+        </div>
+        <p className="text-sm font-semibold text-slate-800">{review.name}</p>
+      </div>
     </div>
   );
 }
