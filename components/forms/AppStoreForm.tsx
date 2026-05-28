@@ -194,11 +194,15 @@ export function AppStoreForm() {
       };
       xhr.upload.onload = () => onUploadDone();
       xhr.onload = () => {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch { reject(new Error("Server javobi noto'g'ri")); }
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          console.error("[Submit] Status:", xhr.status, "Response:", xhr.responseText.slice(0, 300));
+          reject(new Error(`Server xatosi (${xhr.status}). Qayta urinib ko'ring.`));
+        }
       };
       xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
-      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi"));
+      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi (3 daqiqa)"));
       xhr.timeout = 180000;
       xhr.send(data);
     });

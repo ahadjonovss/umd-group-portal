@@ -200,11 +200,15 @@ export function PlayMarketForm() {
       };
       xhr.upload.onload = () => onUploadDone();
       xhr.onload = () => {
-        try { resolve(JSON.parse(xhr.responseText)); }
-        catch { reject(new Error("Server javobi noto'g'ri")); }
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          console.error("[Submit] Status:", xhr.status, "Response:", xhr.responseText.slice(0, 300));
+          reject(new Error(`Server xatosi (${xhr.status}). Qayta urinib ko'ring.`));
+        }
       };
       xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
-      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi"));
+      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi (3 daqiqa)"));
       xhr.timeout = 180000;
       xhr.send(data);
     });
@@ -351,9 +355,18 @@ export function PlayMarketForm() {
         {step === 5 && (
           <div className="flex flex-col gap-5">
             <h2 className="text-xl font-semibold text-gray-900">App Bundle (.aab fayl)</h2>
-            <p className="text-sm text-gray-500">
-              Google Play Console-da yaratilgan signed AAB faylni yuklang
+            <p className="text-sm text-slate-500">
+              Android Studio yoki CI/CD orqali build qilingan signed AAB faylni yuklang
             </p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <p className="text-xs font-medium text-slate-600 mb-1.5">Terminal orqali build qilish:</p>
+              <code className="block text-xs font-mono text-blue-700 bg-blue-50 rounded-lg px-3 py-2 select-all">
+                ./gradlew bundleRelease
+              </code>
+              <p className="text-xs text-slate-400 mt-1.5">
+                Fayl joylashuvi: <span className="font-mono">app/build/outputs/bundle/release/app-release.aab</span>
+              </p>
+            </div>
             <FileUpload
               label="App Bundle (.aab)"
               accept=".aab"
