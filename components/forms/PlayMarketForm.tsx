@@ -362,11 +362,6 @@ export function PlayMarketForm() {
               <div className="bg-white rounded-lg px-3 py-2 text-sm font-mono font-bold text-blue-700 border border-blue-200 inline-block">
                 @umdgroupadmin
               </div>
-              <div className="mt-3 bg-slate-50 border border-slate-200 rounded-lg p-2">
-                <p className="text-xs font-medium text-slate-600 mb-1">Build komandasi:</p>
-                <code className="text-xs font-mono text-blue-700">./gradlew bundleRelease</code>
-                <p className="text-xs text-slate-400 mt-1 font-mono">app/build/outputs/bundle/release/app-release.aab</p>
-              </div>
             </div>
 
             <div className="flex gap-3 justify-end">
