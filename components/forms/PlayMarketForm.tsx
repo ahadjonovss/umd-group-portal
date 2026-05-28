@@ -9,7 +9,6 @@ import { StepProgress } from "@/components/StepProgress";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { FileUpload } from "@/components/FileUpload";
 import { ImageUpload } from "@/components/ImageUpload";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
 
@@ -49,9 +48,6 @@ export function PlayMarketForm() {
   const [bannerError, setBannerError] = useState("");
   const [screenshotError, setScreenshotError] = useState("");
 
-  // AAB file (step 5)
-  const [aabFile, setAabFile] = useState<File | null>(null);
-  const [aabError, setAabError] = useState("");
 
   useEffect(() => {
     try {
@@ -131,8 +127,6 @@ export function PlayMarketForm() {
   }
 
   async function onStep5Submit() {
-    if (!aabFile) { setAabError("AAB fayl majburiy"); return; }
-    setAabError("");
     setSubmitStatus("loading");
     setSubmitError("");
     setP(0);
@@ -140,7 +134,6 @@ export function PlayMarketForm() {
     const formData = new FormData();
     const allData = { ...formState.step1, ...formState.step2, ...formState.step4 };
     Object.entries(allData).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
-    formData.append("aabFile", aabFile);
     formData.append("icon", icon!);
     formData.append("banner", banner!);
     screenshots.forEach((s, i) => formData.append(`screenshot_${i}`, s));
@@ -351,32 +344,30 @@ export function PlayMarketForm() {
           </form>
         )}
 
-        {/* Step 5 — AAB fayl (oxirgi qadam) */}
+        {/* Step 5 — Tasdiqlash va yuborish */}
         {step === 5 && (
           <div className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">App Bundle (.aab fayl)</h2>
-            <p className="text-sm text-slate-500">
-              Android Studio yoki CI/CD orqali build qilingan signed AAB faylni yuklang
-            </p>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-              <p className="text-xs font-medium text-slate-600 mb-1.5">Terminal orqali build qilish:</p>
-              <code className="block text-xs font-mono text-blue-700 bg-blue-50 rounded-lg px-3 py-2 select-all">
-                ./gradlew bundleRelease
-              </code>
-              <p className="text-xs text-slate-400 mt-1.5">
-                Fayl joylashuvi: <span className="font-mono">app/build/outputs/bundle/release/app-release.aab</span>
+            <h2 className="text-xl font-semibold text-gray-900">Yuborishga tayyor</h2>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.496.969z"/>
+                </svg>
+                AAB faylni Telegram orqali yuboring
               </p>
+              <p className="text-sm text-blue-700 mb-3">
+                Ariza yuborilgandan keyin <strong>.aab</strong> faylni quyidagi Telegram akkauntga yuboring:
+              </p>
+              <div className="bg-white rounded-lg px-3 py-2 text-sm font-mono font-bold text-blue-700 border border-blue-200 inline-block">
+                @umdgroupadmin
+              </div>
+              <div className="mt-3 bg-slate-50 border border-slate-200 rounded-lg p-2">
+                <p className="text-xs font-medium text-slate-600 mb-1">Build komandasi:</p>
+                <code className="text-xs font-mono text-blue-700">./gradlew bundleRelease</code>
+                <p className="text-xs text-slate-400 mt-1 font-mono">app/build/outputs/bundle/release/app-release.aab</p>
+              </div>
             </div>
-            <FileUpload
-              label="App Bundle (.aab)"
-              accept=".aab"
-              required
-              value={aabFile}
-              onChange={setAabFile}
-              error={aabError}
-              hint="Faqat .aab formatdagi fayl qabul qilinadi"
-              maxSizeMB={200}
-            />
 
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 4); setStep(4); }}>

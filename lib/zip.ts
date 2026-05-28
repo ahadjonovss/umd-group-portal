@@ -14,7 +14,6 @@ function getTodayStr(): string {
 export interface PlayMarketZipData {
   appName: string;
   info: string;
-  aabFile: { name: string; data: Buffer };
   icon: { name: string; data: Buffer };
   banner: { name: string; data: Buffer };
   screenshots: { name: string; data: Buffer }[];
@@ -24,9 +23,6 @@ export async function createPlayMarketZip(data: PlayMarketZipData): Promise<Buff
   const zip = new JSZip();
 
   zip.file("info.txt", data.info);
-
-  const files = zip.folder("files")!;
-  files.file("app.aab", data.aabFile.data);
 
   const graphics = zip.folder("graphics")!;
   graphics.file("icon_512x512.png", data.icon.data);

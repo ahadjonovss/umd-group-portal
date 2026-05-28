@@ -46,17 +46,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Majburiy maydonlar to'ldirilmagan" }, { status: 400 });
   }
 
-  const aabFile = await readFormFile(formData, "aabFile");
   const iconFile = await readFormFile(formData, "icon");
   const bannerFile = await readFormFile(formData, "banner");
 
-  console.log("[PM] files:", { aab: !!aabFile, icon: !!iconFile, banner: !!bannerFile });
+  console.log("[PM] files:", { icon: !!iconFile, banner: !!bannerFile });
 
-  if (!aabFile || !iconFile || !bannerFile) {
-    console.error("[PM] 400: fayllar yo'q —", { aab: !!aabFile, icon: !!iconFile, banner: !!bannerFile });
+  if (!iconFile || !bannerFile) {
+    console.error("[PM] 400: fayllar yo'q —", { icon: !!iconFile, banner: !!bannerFile });
     return NextResponse.json({
       success: false,
-      error: `Fayllar yuklanmadi: ${!aabFile ? "AAB " : ""}${!iconFile ? "icon " : ""}${!bannerFile ? "banner" : ""}`.trim(),
+      error: `Fayllar yuklanmadi: ${!iconFile ? "icon " : ""}${!bannerFile ? "banner" : ""}`.trim(),
     }, { status: 400 });
   }
 
@@ -77,7 +76,6 @@ export async function POST(req: NextRequest) {
   const zipBuffer = await createPlayMarketZip({
     appName: fields.appName,
     info,
-    aabFile: { name: aabFile.name, data: aabFile.buffer },
     icon: { name: iconFile.name, data: iconFile.buffer },
     banner: { name: bannerFile.name, data: bannerFile.buffer },
     screenshots,
