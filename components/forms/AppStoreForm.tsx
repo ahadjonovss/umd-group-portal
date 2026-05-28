@@ -42,10 +42,8 @@ export function AppStoreForm() {
   const [progress, setProgress] = useState(0);
 
   // Step 4 graphics
-  const [icon, setIcon] = useState<File | null>(null);
   const [iphoneScreenshots, setIphoneScreenshots] = useState<File[]>([]);
   const [ipadScreenshots, setIpadScreenshots] = useState<File[]>([]);
-  const [iconError, setIconError] = useState("");
   const [iphoneError, setIphoneError] = useState("");
 
   useEffect(() => {
@@ -67,12 +65,12 @@ export function AppStoreForm() {
 
   const form1 = useForm<AppStoreStep1>({
     resolver: zodResolver(appStoreStep1Schema),
-    defaultValues: formState.step1 || { fullName: "", phone: "", email: "" },
+    defaultValues: formState.step1 || { fullName: "", phone: "", email: "", telegram: "" },
   });
 
   const form2 = useForm<AppStoreStep2>({
     resolver: zodResolver(appStoreStep2Schema),
-    defaultValues: formState.step2 || { appName: "", subtitle: "", fullDescription: "", privacyPolicyUrl: "" },
+    defaultValues: formState.step2 || { appName: "", subtitle: "", fullDescription: "", privacyPolicyUrl: "", supportUrl: "" },
   });
   const fullDescValue = form2.watch("fullDescription") || "";
 
@@ -108,10 +106,8 @@ export function AppStoreForm() {
   }
 
   function onStep4Next() {
-    let valid = true;
-    if (!icon) { setIconError("Ilova ikonasi majburiy"); valid = false; } else { setIconError(""); }
-    if (iphoneScreenshots.length < 3) { setIphoneError("Kamida 3 ta iPhone skrinshot talab qilinadi"); valid = false; } else { setIphoneError(""); }
-    if (!valid) return;
+    if (iphoneScreenshots.length < 3) { setIphoneError("Kamida 3 ta iPhone skrinshot talab qilinadi"); return; }
+    setIphoneError("");
     saveDraft(formState, 5);
     setStep(5);
   }
@@ -127,7 +123,6 @@ export function AppStoreForm() {
     const allData = { ...newState.step1, ...newState.step2, ...newState.step3, ...data };
     Object.entries(allData).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
 
-    formData.append("icon", icon!);
     iphoneScreenshots.forEach((s, i) => formData.append(`iphone_${i}`, s));
     formData.append("iphoneCount", String(iphoneScreenshots.length));
     ipadScreenshots.forEach((s, i) => formData.append(`ipad_${i}`, s));
@@ -187,6 +182,7 @@ export function AppStoreForm() {
             <Input label="To'liq ism" required placeholder="Sardor Abdullayev" {...form1.register("fullName")} error={form1.formState.errors.fullName?.message} />
             <Input label="Telefon raqami" required placeholder="+998901234567" {...form1.register("phone")} error={form1.formState.errors.phone?.message} />
             <Input label="Email" type="email" required placeholder="email@example.com" {...form1.register("email")} error={form1.formState.errors.email?.message} />
+            <Input label="Telegram username" placeholder="@username" {...form1.register("telegram")} hint="Ixtiyoriy — tezkor bog'lanish uchun" />
             <div className="flex justify-end">
               <Button type="submit" size="lg">Davom etish →</Button>
             </div>
@@ -209,6 +205,7 @@ export function AppStoreForm() {
               error={form2.formState.errors.fullDescription?.message}
             />
             <Input label="Privacy Policy URL" type="url" required placeholder="https://yourapp.com/privacy" {...form2.register("privacyPolicyUrl")} error={form2.formState.errors.privacyPolicyUrl?.message} hint="HTTPS bilan boshlanishi shart" />
+            <Input label="Support URL" type="url" required placeholder="https://yourapp.com/support" {...form2.register("supportUrl")} error={form2.formState.errors.supportUrl?.message} hint="Foydalanuvchilar murojaat qiladigan sahifa (HTTPS)" />
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => setStep(1)}>← Orqaga</Button>
               <Button type="submit" size="lg">Davom etish →</Button>
@@ -258,18 +255,6 @@ export function AppStoreForm() {
         {step === 4 && (
           <div className="flex flex-col gap-6">
             <h2 className="text-xl font-semibold text-gray-900">Grafik materiallar</h2>
-
-            <ImageUpload
-              label="Ilova ikonasi"
-              required
-              value={icon}
-              onChange={setIcon}
-              error={iconError}
-              validation={{ width: 1024, height: 1024, maxSizeMB: 10, strict: true }}
-            />
-            <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg -mt-3">
-              ⚠️ Alpha channel (shaffoflik) bo&apos;lmasligi shart
-            </p>
 
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">iPhone skrinshotlari</p>

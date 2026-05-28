@@ -43,7 +43,6 @@ export async function createPlayMarketZip(data: PlayMarketZipData): Promise<Buff
 export interface AppStoreZipData {
   appName: string;
   info: string;
-  icon: { name: string; data: Buffer };
   iphoneScreenshots: { name: string; data: Buffer }[];
   ipadScreenshots: { name: string; data: Buffer }[];
 }
@@ -53,7 +52,6 @@ export async function createAppStoreZip(data: AppStoreZipData): Promise<Buffer> 
   zip.file("info.txt", data.info);
 
   const graphics = zip.folder("graphics")!;
-  graphics.file("icon_1024x1024.png", data.icon.data);
   data.iphoneScreenshots.forEach((s, i) => {
     const ext = s.name.split(".").pop() || "png";
     graphics.file(`iphone_screenshot_${String(i + 1).padStart(2, "0")}.${ext}`, s.data);
@@ -120,12 +118,14 @@ Yuborilgan vaqt: ${now}
 Ism:      ${fields.fullName}
 Telefon:  ${fields.phone}
 Email:    ${fields.email}
+Telegram: ${fields.telegram || "-"}
 
 --- ILOVA ---
 Nomi:           ${fields.appName}
 Subtitle:       ${fields.subtitle}
 To'liq tavsif:  ${fields.fullDescription}
 Privacy Policy: ${fields.privacyPolicyUrl}
+Support URL:    ${fields.supportUrl}
 
 --- GITHUB ---
 Repo URL: ${fields.githubRepoUrl}

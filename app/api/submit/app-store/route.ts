@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAppStoreZip, buildAppStoreInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
-import { validateAppStoreIcon, validateImageBuffer } from "@/lib/image-validator";
+import { validateImageBuffer } from "@/lib/image-validator";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { readFormFile as readFile } from "@/lib/form-utils";
 
@@ -23,10 +23,12 @@ export async function POST(req: NextRequest) {
     fullName: String(formData.get("fullName") || ""),
     phone: String(formData.get("phone") || ""),
     email: String(formData.get("email") || ""),
+    telegram: String(formData.get("telegram") || ""),
     appName: String(formData.get("appName") || ""),
     subtitle: String(formData.get("subtitle") || ""),
     fullDescription: String(formData.get("fullDescription") || ""),
     privacyPolicyUrl: String(formData.get("privacyPolicyUrl") || ""),
+    supportUrl: String(formData.get("supportUrl") || ""),
     githubRepoUrl: String(formData.get("githubRepoUrl") || ""),
     testLogin: String(formData.get("testLogin") || ""),
     testPassword: String(formData.get("testPassword") || ""),
@@ -35,18 +37,6 @@ export async function POST(req: NextRequest) {
 
   if (!fields.fullName || !fields.phone || !fields.email || !fields.appName) {
     return NextResponse.json({ success: false, error: "Majburiy maydonlar to'ldirilmagan" }, { status: 400 });
-  }
-
-  const iconFile = await readFile(formData, "icon");
-
-  if (!iconFile) {
-    return NextResponse.json({ success: false, error: "Ilova ikonasi yuklanmagan" }, { status: 400 });
-  }
-
-  // Validate icon (1024x1024, no alpha)
-  const iconResult = await validateAppStoreIcon(iconFile.buffer);
-  if (!iconResult.valid) {
-    return NextResponse.json({ success: false, error: `Icon: ${iconResult.error}` }, { status: 400 });
   }
 
   // iPhone screenshots
@@ -81,7 +71,6 @@ export async function POST(req: NextRequest) {
   const zipBuffer = await createAppStoreZip({
     appName: fields.appName,
     info,
-    icon: { name: iconFile.name, data: iconFile.buffer },
     iphoneScreenshots,
     ipadScreenshots,
   });

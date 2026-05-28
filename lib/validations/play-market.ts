@@ -2,9 +2,7 @@ import { z } from "zod";
 
 export const playMarketStep1Schema = z.object({
   fullName: z.string().min(2, "To'liq ism kamida 2 belgi bo'lishi kerak"),
-  phone: z
-    .string()
-    .regex(/^\+998\d{9}$/, "Format: +998XXXXXXXXX"),
+  phone: z.string().regex(/^\+998\d{9}$/, "Format: +998XXXXXXXXX"),
   email: z.string().email("Noto'g'ri email format"),
 });
 

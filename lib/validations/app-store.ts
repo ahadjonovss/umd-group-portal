@@ -4,6 +4,7 @@ export const appStoreStep1Schema = z.object({
   fullName: z.string().min(2, "To'liq ism kamida 2 belgi bo'lishi kerak"),
   phone: z.string().min(1, "Telefon raqami majburiy"),
   email: z.string().email("Noto'g'ri email format"),
+  telegram: z.string().optional(),
 });
 
 export const appStoreStep2Schema = z.object({
@@ -20,6 +21,10 @@ export const appStoreStep2Schema = z.object({
     .min(1, "To'liq tavsif majburiy")
     .max(4000, "To'liq tavsif max 4000 belgi"),
   privacyPolicyUrl: z
+    .string()
+    .url("To'g'ri URL kiriting")
+    .refine((url) => url.startsWith("https://"), "URL HTTPS bo'lishi shart"),
+  supportUrl: z
     .string()
     .url("To'g'ri URL kiriting")
     .refine((url) => url.startsWith("https://"), "URL HTTPS bo'lishi shart"),
