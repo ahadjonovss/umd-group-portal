@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Ariza Qabul Qilindi — UMD GROUP" };
@@ -81,7 +82,10 @@ function SuccessContent({ service }: { service: string | null }) {
           </Link>
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-5">© {new Date().getFullYear()} UMD GROUP</p>
+        <div className="flex items-center justify-center gap-2 mt-5">
+          <Logo size={18} color="#94a3b8" />
+          <p className="text-xs text-slate-400">© {new Date().getFullYear()} UMD GROUP</p>
+        </div>
       </div>
     </div>
   );

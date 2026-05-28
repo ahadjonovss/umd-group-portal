@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -38,6 +38,8 @@ export function PlayMarketForm() {
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [progress, setProgress] = useState(0);
+  const progressRef = useRef(0);
+  function setP(v: number) { const c = Math.min(100, Math.round(v)); progressRef.current = c; setProgress(c); }
 
   // Graphics (step 3)
   const [icon, setIcon] = useState<File | null>(null);
@@ -133,7 +135,7 @@ export function PlayMarketForm() {
     setAabError("");
     setSubmitStatus("loading");
     setSubmitError("");
-    setProgress(0);
+    setP(0);
 
     const formData = new FormData();
     const allData = { ...formState.step1, ...formState.step2, ...formState.step4 };
@@ -144,14 +146,33 @@ export function PlayMarketForm() {
     screenshots.forEach((s, i) => formData.append(`screenshot_${i}`, s));
     formData.append("screenshotCount", String(screenshots.length));
 
-    try {
-      const json = await xhrUpload("/api/submit/play-market", formData, (pct) => {
-        // Upload 0→80% real, keyin server javobi 80→100
-        setProgress(Math.round(pct * 0.8));
-      });
+    let serverIntervalId: ReturnType<typeof setInterval> | null = null;
 
-      // Server javobi keldi, 80→100 animatsiya
-      await animateProgress(80, 100, 600);
+    function startServerAnim() {
+      serverIntervalId = setInterval(() => {
+        const next = Math.min(progressRef.current + 0.12, 94);
+        setP(next);
+        if (progressRef.current >= 94 && serverIntervalId) {
+          clearInterval(serverIntervalId);
+          serverIntervalId = null;
+        }
+      }, 100);
+    }
+
+    function stopServerAnim() {
+      if (serverIntervalId) { clearInterval(serverIntervalId); serverIntervalId = null; }
+    }
+
+    try {
+      const json = await xhrUpload(
+        "/api/submit/play-market",
+        formData,
+        (uploadPct) => setP(uploadPct * 0.8),
+        startServerAnim,
+      );
+
+      stopServerAnim();
+      await animateProgress(progressRef.current, 100, 500);
 
       if (!json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
 
@@ -159,18 +180,25 @@ export function PlayMarketForm() {
       await new Promise((r) => setTimeout(r, 500));
       router.push("/success?service=play-market");
     } catch (err: unknown) {
+      stopServerAnim();
       setSubmitStatus("error");
       setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
     }
   }
 
-  function xhrUpload(url: string, data: FormData, onProgress: (pct: number) => void): Promise<{ success: boolean; error?: string; message?: string }> {
+  function xhrUpload(
+    url: string,
+    data: FormData,
+    onProgress: (pct: number) => void,
+    onUploadDone: () => void,
+  ): Promise<{ success: boolean; error?: string; message?: string }> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", url);
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
       };
+      xhr.upload.onload = () => onUploadDone();
       xhr.onload = () => {
         try { resolve(JSON.parse(xhr.responseText)); }
         catch { reject(new Error("Server javobi noto'g'ri")); }
@@ -190,7 +218,7 @@ export function PlayMarketForm() {
       let current = from; let count = 0;
       const interval = setInterval(() => {
         count++; current += stepVal;
-        setProgress(Math.min(Math.round(current), to));
+        setP(Math.min(current, to));
         if (count >= steps) { clearInterval(interval); resolve(); }
       }, stepMs);
     });
@@ -296,8 +324,17 @@ export function PlayMarketForm() {
         {step === 4 && (
           <form onSubmit={form4.handleSubmit(onStep4Submit)} className="flex flex-col gap-5">
             <h2 className="text-xl font-semibold text-gray-900">Qo&apos;shimcha ma&apos;lumotlar</h2>
-            <p className="text-sm text-gray-500">Bu ma&apos;lumotlar ixtiyoriy</p>
-            <Input label="Test login" placeholder="test@example.com" {...form4.register("testLogin")} />
+
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              <p className="font-semibold mb-1">⚠️ Test akkaunt majburiy</p>
+              <p>
+                Ilovangizda login yoki ro&apos;yxatdan o&apos;tish talab qilinsa, Google Play moderatorlari
+                ilovani tekshirish uchun test akkaunt ma&apos;lumotlarini talab qiladi.
+                Aks holda ariza rad etilishi mumkin.
+              </p>
+            </div>
+
+            <Input label="Test login" placeholder="test@example.com" {...form4.register("testLogin")} hint="Ixtiyoriy — login talab qilinmasa bo'sh qoldiring" />
             <Input label="Test parol" type="password" placeholder="••••••••" {...form4.register("testPassword")} />
             <Textarea label="Izoh / Qo'shimcha ma'lumot" placeholder="Qo'shimcha malumot..." rows={4} {...form4.register("note")} />
             <div className="flex gap-3 justify-end">
