@@ -129,16 +129,13 @@ export function AppStoreForm() {
     formData.append("ipadCount", String(ipadScreenshots.length));
 
     try {
-      await animateProgress(0, 20, 600);
-      const fetchPromise = fetch("/api/submit/app-store", { method: "POST", body: formData });
-      await animateProgress(20, 65, 1500);
-      const res = await fetchPromise;
-      await animateProgress(65, 90, 800);
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
-      await animateProgress(90, 100, 400);
+      const json = await xhrUpload("/api/submit/app-store", formData, (pct) => {
+        setProgress(Math.round(pct * 0.8));
+      });
+      await animateProgress(80, 100, 600);
+      if (!json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
       localStorage.removeItem(STORAGE_KEY);
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 500));
       router.push("/success?service=app-store");
     } catch (err: unknown) {
       setSubmitStatus("error");
@@ -146,16 +143,32 @@ export function AppStoreForm() {
     }
   }
 
+  function xhrUpload(url: string, data: FormData, onProgress: (pct: number) => void): Promise<{ success: boolean; error?: string; message?: string }> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+      };
+      xhr.onload = () => {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error("Server javobi noto'g'ri")); }
+      };
+      xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
+      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi"));
+      xhr.timeout = 180000;
+      xhr.send(data);
+    });
+  }
+
   function animateProgress(from: number, to: number, durationMs: number): Promise<void> {
     return new Promise((resolve) => {
       const steps = 20;
       const stepMs = durationMs / steps;
       const stepVal = (to - from) / steps;
-      let current = from;
-      let count = 0;
+      let current = from; let count = 0;
       const interval = setInterval(() => {
-        count++;
-        current += stepVal;
+        count++; current += stepVal;
         setProgress(Math.min(Math.round(current), to));
         if (count >= steps) { clearInterval(interval); resolve(); }
       }, stepMs);

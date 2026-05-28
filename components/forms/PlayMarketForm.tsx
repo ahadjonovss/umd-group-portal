@@ -132,27 +132,18 @@ export function PlayMarketForm() {
     formData.append("screenshotCount", String(screenshots.length));
 
     try {
-      // Tayyorlanmoqda: 0 → 20
-      await animateProgress(0, 20, 600);
+      const json = await xhrUpload("/api/submit/play-market", formData, (pct) => {
+        // Upload 0→80% real, keyin server javobi 80→100
+        setProgress(Math.round(pct * 0.8));
+      });
 
-      const fetchPromise = fetch("/api/submit/play-market", { method: "POST", body: formData });
+      // Server javobi keldi, 80→100 animatsiya
+      await animateProgress(80, 100, 600);
 
-      // ZIP yaratilmoqda: 20 → 65
-      await animateProgress(20, 65, 1500);
-
-      const res = await fetchPromise;
-
-      // Telegram: 65 → 90
-      await animateProgress(65, 90, 800);
-
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
-
-      // Yakunlanmoqda: 90 → 100
-      await animateProgress(90, 100, 400);
+      if (!json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
 
       localStorage.removeItem(STORAGE_KEY);
-      await new Promise((r) => setTimeout(r, 600));
+      await new Promise((r) => setTimeout(r, 500));
       router.push("/success?service=play-market");
     } catch (err: unknown) {
       setSubmitStatus("error");
@@ -160,21 +151,34 @@ export function PlayMarketForm() {
     }
   }
 
+  function xhrUpload(url: string, data: FormData, onProgress: (pct: number) => void): Promise<{ success: boolean; error?: string; message?: string }> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", url);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+      };
+      xhr.onload = () => {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error("Server javobi noto'g'ri")); }
+      };
+      xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
+      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi"));
+      xhr.timeout = 180000;
+      xhr.send(data);
+    });
+  }
+
   function animateProgress(from: number, to: number, durationMs: number): Promise<void> {
     return new Promise((resolve) => {
       const steps = 20;
       const stepMs = durationMs / steps;
       const stepVal = (to - from) / steps;
-      let current = from;
-      let count = 0;
+      let current = from; let count = 0;
       const interval = setInterval(() => {
-        count++;
-        current += stepVal;
+        count++; current += stepVal;
         setProgress(Math.min(Math.round(current), to));
-        if (count >= steps) {
-          clearInterval(interval);
-          resolve();
-        }
+        if (count >= steps) { clearInterval(interval); resolve(); }
       }, stepMs);
     });
   }
