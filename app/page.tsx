@@ -1,7 +1,28 @@
+import Link from "next/link";
+import { Suspense } from "react";
 import { ServiceCard } from "@/components/ServiceCard";
 import { Logo } from "@/components/Logo";
+import { ReviewsSection } from "@/components/ReviewsSection";
+import type { Review } from "@/app/api/reviews/route";
 
-export default function Home() {
+async function getReviews(): Promise<Review[]> {
+  try {
+    const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
+    if (!scriptUrl || scriptUrl === "your_apps_script_url_here") return [];
+    const res = await fetch(`${scriptUrl}?action=get`, {
+      redirect: "follow",
+      next: { revalidate: 60 },
+    });
+    const contentType = res.headers.get("content-type") || "";
+    if (!res.ok || !contentType.includes("application/json")) return [];
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+export default async function Home() {
+  const reviews = await getReviews();
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}
@@ -12,6 +33,29 @@ export default function Home() {
             <p className="text-sm font-bold text-slate-900 leading-tight">UMD GROUP</p>
             <p className="text-[10px] text-slate-500 leading-tight">Mijoz portali</p>
           </div>
+
+          <div className="flex-1" />
+
+          <nav className="flex items-center gap-1">
+            <Link
+              href="/xizmat-narxlari"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="hidden sm:inline">Xizmat narxlari</span>
+            </Link>
+            <Link
+              href="/foydalanish-shartlari"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span className="hidden sm:inline">Foydalanish shartlari</span>
+            </Link>
+          </nav>
         </div>
       </header>
 
@@ -88,22 +132,10 @@ export default function Home() {
           />
         </div>
 
-        {/* Features */}
-        <div className="grid sm:grid-cols-3 gap-4 animate-slide-up delay-300">
-          {[
-            { icon: "🔒", title: "Xavfsiz", desc: "Ma'lumotlaringiz shifrlangan holda uzatiladi", color: "bg-emerald-50" },
-            { icon: "⚡", title: "Tez", desc: "Forma to'ldirilgach darhol jamoamizga yetkaziladi", color: "bg-blue-50" },
-            { icon: "✅", title: "Qulay", desc: "Ro'yxatdan o'tish shart emas", color: "bg-purple-50" },
-          ].map((f, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200/80 p-4 text-center hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-              <div className={`w-10 h-10 ${f.color} rounded-xl flex items-center justify-center mx-auto mb-3 text-lg`}>
-                {f.icon}
-              </div>
-              <p className="font-semibold text-slate-900 text-sm mb-1">{f.title}</p>
-              <p className="text-xs text-slate-500 leading-relaxed">{f.desc}</p>
-            </div>
-          ))}
-        </div>
+        {/* Reviews */}
+        <Suspense fallback={null}>
+          <ReviewsSection initialReviews={reviews} />
+        </Suspense>
       </main>
 
       <footer className="text-center py-6 text-xs text-slate-400 border-t border-slate-200/60 mt-4">
