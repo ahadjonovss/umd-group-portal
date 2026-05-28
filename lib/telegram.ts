@@ -5,7 +5,7 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
 const CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID!;
 const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILE_SIZE = 2000 * 1024 * 1024; // 2GB (local bot API)
 
 export interface TelegramMessage {
   serviceName: string;
@@ -38,12 +38,6 @@ export async function sendZipToTelegram(
   filename: string,
   caption: string
 ): Promise<void> {
-  if (zipBuffer.length > MAX_FILE_SIZE) {
-    throw new Error(
-      `ZIP fayl hajmi ${(zipBuffer.length / 1024 / 1024).toFixed(1)}MB — Telegram limiti 50MB. Iltimos, fayllarni kamaytiring.`
-    );
-  }
-
   const form = new FormData();
   form.append("chat_id", CHANNEL_ID);
   form.append("document", zipBuffer, {
@@ -55,8 +49,9 @@ export async function sendZipToTelegram(
 
   const response = await axios.post(`${BASE_URL}/sendDocument`, form, {
     headers: form.getHeaders(),
-    maxBodyLength: MAX_FILE_SIZE + 1024 * 1024,
-    timeout: 60000,
+    maxBodyLength: MAX_FILE_SIZE,
+    maxContentLength: MAX_FILE_SIZE,
+    timeout: 120000,
   });
 
   if (!response.data.ok) {
