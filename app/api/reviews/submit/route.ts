@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { checkRateLimit } from "@/lib/rate-limit";
 import { sendTelegramMessage } from "@/lib/telegram";
 
 const STARS = ["", "⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"];
@@ -10,11 +9,6 @@ function esc(t: string) {
 }
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-  if (!checkRateLimit(ip).allowed) {
-    return NextResponse.json({ success: false, error: "Juda ko'p so'rov" }, { status: 429 });
-  }
-
   const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
   if (!scriptUrl || scriptUrl.includes("your_apps_script")) {
     return NextResponse.json({ success: false, error: "Script URL sozlanmagan" }, { status: 500 });
