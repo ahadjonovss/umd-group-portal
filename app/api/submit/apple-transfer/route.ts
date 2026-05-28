@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createTransferZip, buildTransferInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
-import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-  if (!checkRateLimit(ip).allowed) {
-    return NextResponse.json({ success: false, error: "Juda ko'p so'rov. 10 daqiqadan keyin qayta urinib ko'ring." }, { status: 429 });
-  }
-
   let formData: FormData;
   try { formData = await req.formData(); } catch {
     return NextResponse.json({ success: false, error: "Forma ma'lumotlarini o'qishda xato" }, { status: 400 });

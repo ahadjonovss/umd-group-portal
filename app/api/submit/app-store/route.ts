@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAppStoreZip, buildAppStoreInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
-import { checkRateLimit } from "@/lib/rate-limit";
 import { readFormFile as readFile } from "@/lib/form-utils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
-  if (!checkRateLimit(ip).allowed) {
-    return NextResponse.json({ success: false, error: "Juda ko'p so'rov. 10 daqiqadan keyin qayta urinib ko'ring." }, { status: 429 });
-  }
 
   let formData: FormData;
   try { formData = await req.formData(); } catch {
