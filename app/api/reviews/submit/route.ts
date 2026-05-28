@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { sendTelegramMessage } from "@/lib/telegram";
+
+const STARS = ["", "⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"];
+
+function esc(t: string) {
+  return t.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+}
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
@@ -8,7 +16,7 @@ export async function POST(req: NextRequest) {
   }
 
   const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-  if (!scriptUrl) {
+  if (!scriptUrl || scriptUrl.includes("your_apps_script")) {
     return NextResponse.json({ success: false, error: "Script URL sozlanmagan" }, { status: 500 });
   }
 
@@ -31,15 +39,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Izoh 500 belgidan oshmasin" }, { status: 400 });
   }
 
+  const reviewId = randomUUID();
+
+  // Google Sheets ga yozish
   try {
     const res = await fetch(scriptUrl, {
       method: "POST",
+      redirect: "follow",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "submit", name, rating, comment }),
+      body: JSON.stringify({ action: "submit", id: reviewId, name, rating, comment }),
     });
-    if (!res.ok) throw new Error("Script error");
-    return NextResponse.json({ success: true });
+    await res.text();
   } catch {
     return NextResponse.json({ success: false, error: "Yuborishda xato yuz berdi" }, { status: 500 });
   }
+
+  // Telegram xabar
+  try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const approveSecret = process.env.APPROVE_SECRET || "";
+    const approveUrl = `${appUrl}/api/reviews/approve?id=${reviewId}&token=${approveSecret}`;
+
+    const text =
+      `⭐ *YANGI SHARH*\n\n` +
+      `👤 Ism: ${esc(name)}\n` +
+      `${STARS[rating]} Reyting: ${rating}/5\n` +
+      `💬 Izoh: ${esc(comment)}\n\n` +
+      `✅ [Saytda chiqarish](${esc(approveUrl)})`;
+
+    await sendTelegramMessage(text);
+  } catch {
+    // Telegram xatosi bo'lsa ham submit muvaffaqiyatli hisoblanadi
+  }
+
+  return NextResponse.json({ success: true });
 }

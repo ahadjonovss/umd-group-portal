@@ -17,14 +17,13 @@ export async function GET() {
   try {
     const res = await fetch(`${scriptUrl}?action=get`, {
       redirect: "follow",
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
-    const contentType = res.headers.get("content-type") || "";
-    if (!res.ok || !contentType.includes("application/json")) {
+    const text = await res.text();
+    if (!text.trimStart().startsWith("[")) {
       return NextResponse.json([] as Review[]);
     }
-    const data = await res.json();
-    return NextResponse.json(data as Review[]);
+    return NextResponse.json(JSON.parse(text) as Review[]);
   } catch {
     return NextResponse.json([] as Review[]);
   }

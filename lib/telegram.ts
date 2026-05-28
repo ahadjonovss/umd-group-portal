@@ -33,6 +33,18 @@ function escapeMarkdown(text: string): string {
   return text.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
 }
 
+export async function sendTelegramMessage(text: string): Promise<void> {
+  const response = await axios.post(`${BASE_URL}/sendMessage`, {
+    chat_id: CHANNEL_ID,
+    text,
+    parse_mode: "MarkdownV2",
+    disable_web_page_preview: true,
+  });
+  if (!response.data.ok) {
+    throw new Error(`Telegram xatosi: ${JSON.stringify(response.data)}`);
+  }
+}
+
 export async function sendZipToTelegram(
   zipBuffer: Buffer,
   filename: string,

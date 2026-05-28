@@ -8,14 +8,14 @@ import type { Review } from "@/app/api/reviews/route";
 async function getReviews(): Promise<Review[]> {
   try {
     const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-    if (!scriptUrl || scriptUrl === "your_apps_script_url_here") return [];
+    if (!scriptUrl || scriptUrl.includes("your_apps_script")) return [];
     const res = await fetch(`${scriptUrl}?action=get`, {
       redirect: "follow",
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
-    const contentType = res.headers.get("content-type") || "";
-    if (!res.ok || !contentType.includes("application/json")) return [];
-    return await res.json();
+    const text = await res.text();
+    if (!text.trimStart().startsWith("[")) return [];
+    return JSON.parse(text) as Review[];
   } catch {
     return [];
   }
