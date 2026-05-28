@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/FileUpload";
 import { ImageUpload } from "@/components/ImageUpload";
+import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
 
 import {
   playMarketStep1Schema,
@@ -36,7 +37,7 @@ export function PlayMarketForm() {
   const [formState, setFormState] = useState<FormState>({});
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
-  const [loadingMsg, setLoadingMsg] = useState("");
+  const [progress, setProgress] = useState(0);
 
   // Graphics (step 3)
   const [icon, setIcon] = useState<File | null>(null);
@@ -117,15 +118,13 @@ export function PlayMarketForm() {
   async function onStep5Submit() {
     if (!aabFile) { setAabError("AAB fayl majburiy"); return; }
     setAabError("");
-
     setSubmitStatus("loading");
     setSubmitError("");
+    setProgress(0);
 
     const formData = new FormData();
-
     const allData = { ...formState.step1, ...formState.step2, ...formState.step4 };
     Object.entries(allData).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
-
     formData.append("aabFile", aabFile);
     formData.append("icon", icon!);
     formData.append("banner", banner!);
@@ -133,29 +132,66 @@ export function PlayMarketForm() {
     formData.append("screenshotCount", String(screenshots.length));
 
     try {
-      setLoadingMsg("Ma'lumotlar yuklanmoqda...");
-      await new Promise((r) => setTimeout(r, 500));
-      setLoadingMsg("ZIP tayyorlanmoqda...");
+      // Tayyorlanmoqda: 0 → 20
+      await animateProgress(0, 20, 600);
 
-      const res = await fetch("/api/submit/play-market", { method: "POST", body: formData });
+      const fetchPromise = fetch("/api/submit/play-market", { method: "POST", body: formData });
 
-      setLoadingMsg("Telegram-ga yuborilmoqda...");
+      // ZIP yaratilmoqda: 20 → 65
+      await animateProgress(20, 65, 1500);
+
+      const res = await fetchPromise;
+
+      // Telegram: 65 → 90
+      await animateProgress(65, 90, 800);
+
       const json = await res.json();
-
       if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
 
+      // Yakunlanmoqda: 90 → 100
+      await animateProgress(90, 100, 400);
+
       localStorage.removeItem(STORAGE_KEY);
+      await new Promise((r) => setTimeout(r, 600));
       router.push("/success?service=play-market");
     } catch (err: unknown) {
       setSubmitStatus("error");
       setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
-    } finally {
-      setLoadingMsg("");
     }
+  }
+
+  function animateProgress(from: number, to: number, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      const steps = 20;
+      const stepMs = durationMs / steps;
+      const stepVal = (to - from) / steps;
+      let current = from;
+      let count = 0;
+      const interval = setInterval(() => {
+        count++;
+        current += stepVal;
+        setProgress(Math.min(Math.round(current), to));
+        if (count >= steps) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, stepMs);
+    });
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {submitStatus === "loading" && (
+        <SubmitProgressOverlay progress={progress} />
+      )}
+      {submitStatus === "error" && (
+        <SubmitProgressOverlay
+          progress={progress}
+          error={submitError}
+          onRetry={() => { setSubmitStatus("idle"); setProgress(0); setSubmitError(""); }}
+        />
+      )}
+
       <StepProgress steps={STEPS} currentStep={step} />
 
       <div className="mt-8">
@@ -269,18 +305,12 @@ export function PlayMarketForm() {
               maxSizeMB={200}
             />
 
-            {submitStatus === "error" && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-                ⚠️ {submitError}
-              </div>
-            )}
-
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => setStep(4)} disabled={submitStatus === "loading"}>
+              <Button type="button" variant="outline" size="lg" onClick={() => setStep(4)}>
                 ← Orqaga
               </Button>
-              <Button type="button" size="lg" loading={submitStatus === "loading"} onClick={onStep5Submit}>
-                {submitStatus === "loading" ? loadingMsg || "Yuborilmoqda..." : "Yuborish ✓"}
+              <Button type="button" size="lg" onClick={onStep5Submit}>
+                Yuborish ✓
               </Button>
             </div>
           </div>

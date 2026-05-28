@@ -3,16 +3,10 @@ import { createPlayMarketZip, buildPlayMarketInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
 import { validateImageBuffer, validateImageBuffer as val } from "@/lib/image-validator";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { readFormFile } from "@/lib/form-utils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-async function readFileFromFormData(formData: FormData, key: string): Promise<{ buffer: Buffer; name: string } | null> {
-  const file = formData.get(key) as File | null;
-  if (!file || file.size === 0) return null;
-  const ab = await file.arrayBuffer();
-  return { buffer: Buffer.from(ab), name: file.name };
-}
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
@@ -49,9 +43,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Majburiy maydonlar to'ldirilmagan" }, { status: 400 });
   }
 
-  const aabFile = await readFileFromFormData(formData, "aabFile");
-  const iconFile = await readFileFromFormData(formData, "icon");
-  const bannerFile = await readFileFromFormData(formData, "banner");
+  const aabFile = await readFormFile(formData, "aabFile");
+  const iconFile = await readFormFile(formData, "icon");
+  const bannerFile = await readFormFile(formData, "banner");
 
   if (!aabFile || !iconFile || !bannerFile) {
     return NextResponse.json({ success: false, error: "Barcha majburiy fayllar yuklanmagan" }, { status: 400 });
@@ -77,7 +71,7 @@ export async function POST(req: NextRequest) {
   const screenshotCount = parseInt(String(formData.get("screenshotCount") || "0"));
   const screenshots: { name: string; data: Buffer }[] = [];
   for (let i = 0; i < screenshotCount; i++) {
-    const s = await readFileFromFormData(formData, `screenshot_${i}`);
+    const s = await readFormFile(formData, `screenshot_${i}`);
     if (s) screenshots.push({ name: s.name, data: s.buffer });
   }
 

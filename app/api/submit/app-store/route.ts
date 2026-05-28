@@ -3,15 +3,10 @@ import { createAppStoreZip, buildAppStoreInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
 import { validateAppStoreIcon, validateImageBuffer } from "@/lib/image-validator";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { readFormFile as readFile } from "@/lib/form-utils";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-async function readFile(formData: FormData, key: string): Promise<{ buffer: Buffer; name: string } | null> {
-  const file = formData.get(key) as File | null;
-  if (!file || file.size === 0) return null;
-  return { buffer: Buffer.from(await file.arrayBuffer()), name: file.name };
-}
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
+import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
 
 import {
   appStoreStep1Schema,
@@ -38,7 +39,7 @@ export function AppStoreForm() {
   const [formState, setFormState] = useState<FormState>({});
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
-  const [loadingMsg, setLoadingMsg] = useState("");
+  const [progress, setProgress] = useState(0);
 
   // Step 4 graphics
   const [icon, setIcon] = useState<File | null>(null);
@@ -120,6 +121,7 @@ export function AppStoreForm() {
     setFormState(newState);
     setSubmitStatus("loading");
     setSubmitError("");
+    setProgress(0);
 
     const formData = new FormData();
     const allData = { ...newState.step1, ...newState.step2, ...newState.step3, ...data };
@@ -132,28 +134,50 @@ export function AppStoreForm() {
     formData.append("ipadCount", String(ipadScreenshots.length));
 
     try {
-      setLoadingMsg("Ma'lumotlar yuklanmoqda...");
-      await new Promise((r) => setTimeout(r, 500));
-      setLoadingMsg("ZIP tayyorlanmoqda...");
-
-      const res = await fetch("/api/submit/app-store", { method: "POST", body: formData });
-      setLoadingMsg("Telegram-ga yuborilmoqda...");
+      await animateProgress(0, 20, 600);
+      const fetchPromise = fetch("/api/submit/app-store", { method: "POST", body: formData });
+      await animateProgress(20, 65, 1500);
+      const res = await fetchPromise;
+      await animateProgress(65, 90, 800);
       const json = await res.json();
-
       if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
-
+      await animateProgress(90, 100, 400);
       localStorage.removeItem(STORAGE_KEY);
+      await new Promise((r) => setTimeout(r, 600));
       router.push("/success?service=app-store");
     } catch (err: unknown) {
       setSubmitStatus("error");
       setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
-    } finally {
-      setLoadingMsg("");
     }
+  }
+
+  function animateProgress(from: number, to: number, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      const steps = 20;
+      const stepMs = durationMs / steps;
+      const stepVal = (to - from) / steps;
+      let current = from;
+      let count = 0;
+      const interval = setInterval(() => {
+        count++;
+        current += stepVal;
+        setProgress(Math.min(Math.round(current), to));
+        if (count >= steps) { clearInterval(interval); resolve(); }
+      }, stepMs);
+    });
   }
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {submitStatus === "loading" && <SubmitProgressOverlay progress={progress} />}
+      {submitStatus === "error" && (
+        <SubmitProgressOverlay
+          progress={progress}
+          error={submitError}
+          onRetry={() => { setSubmitStatus("idle"); setProgress(0); setSubmitError(""); }}
+        />
+      )}
+
       <StepProgress steps={STEPS} currentStep={step} />
 
       <div className="mt-8">
@@ -291,15 +315,9 @@ export function AppStoreForm() {
             <Input label="Test parol" type="password" placeholder="••••••••" {...form5.register("testPassword")} />
             <Textarea label="Izoh" placeholder="Qo'shimcha ma'lumot..." rows={4} {...form5.register("note")} />
 
-            {submitStatus === "error" && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">⚠️ {submitError}</div>
-            )}
-
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => setStep(4)} disabled={submitStatus === "loading"}>← Orqaga</Button>
-              <Button type="submit" size="lg" loading={submitStatus === "loading"}>
-                {submitStatus === "loading" ? loadingMsg || "Yuborilmoqda..." : "Yuborish ✓"}
-              </Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => setStep(4)}>← Orqaga</Button>
+              <Button type="submit" size="lg">Yuborish ✓</Button>
             </div>
           </form>
         )}

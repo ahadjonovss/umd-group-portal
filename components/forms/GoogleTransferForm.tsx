@@ -7,12 +7,14 @@ import { useRouter } from "next/navigation";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
 import { googleTransferSchema, type GoogleTransferData } from "@/lib/validations/google-transfer";
 
 export function GoogleTransferForm() {
   const router = useRouter();
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
+  const [progress, setProgress] = useState(0);
 
   const form = useForm<GoogleTransferData>({
     resolver: zodResolver(googleTransferSchema),
@@ -22,14 +24,21 @@ export function GoogleTransferForm() {
   async function onSubmit(data: GoogleTransferData) {
     setSubmitStatus("loading");
     setSubmitError("");
+    setProgress(0);
 
     const formData = new FormData();
     Object.entries(data).forEach(([k, v]) => formData.append(k, v));
 
     try {
-      const res = await fetch("/api/submit/google-transfer", { method: "POST", body: formData });
+      await animateProgress(0, 30, 400);
+      const fetchPromise = fetch("/api/submit/google-transfer", { method: "POST", body: formData });
+      await animateProgress(30, 80, 800);
+      const res = await fetchPromise;
+      await animateProgress(80, 95, 400);
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
+      await animateProgress(95, 100, 200);
+      await new Promise((r) => setTimeout(r, 500));
       router.push("/success?service=google-transfer");
     } catch (err: unknown) {
       setSubmitStatus("error");
@@ -37,7 +46,30 @@ export function GoogleTransferForm() {
     }
   }
 
+  function animateProgress(from: number, to: number, durationMs: number): Promise<void> {
+    return new Promise((resolve) => {
+      const steps = 15;
+      const stepMs = durationMs / steps;
+      const stepVal = (to - from) / steps;
+      let current = from; let count = 0;
+      const interval = setInterval(() => {
+        count++; current += stepVal;
+        setProgress(Math.min(Math.round(current), to));
+        if (count >= steps) { clearInterval(interval); resolve(); }
+      }, stepMs);
+    });
+  }
+
   return (
+    <>
+      {submitStatus === "loading" && <SubmitProgressOverlay progress={progress} />}
+      {submitStatus === "error" && (
+        <SubmitProgressOverlay
+          progress={progress}
+          error={submitError}
+          onRetry={() => { setSubmitStatus("idle"); setProgress(0); setSubmitError(""); }}
+        />
+      )}
     <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-5">
       <div>
         <h2 className="text-xl font-semibold text-gray-900">Google Play — App Transfer</h2>
@@ -83,13 +115,10 @@ export function GoogleTransferForm() {
         hint="Play Console → Settings → Payments profile"
       />
 
-      {submitStatus === "error" && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">⚠️ {submitError}</div>
-      )}
 
-      <Button type="submit" size="lg" loading={submitStatus === "loading"} className="w-full">
-        {submitStatus === "loading" ? "Yuborilmoqda..." : "Yuborish ✓"}
-      </Button>
+
+      <Button type="submit" size="lg" className="w-full">Yuborish ✓</Button>
     </form>
+    </>
   );
 }
