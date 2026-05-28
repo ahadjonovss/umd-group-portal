@@ -82,10 +82,10 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
       style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(6px)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm animate-scale-in overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm animate-scale-in">
 
         {/* Header gradient */}
-        <div className="bg-gradient-to-br from-blue-600 to-violet-600 px-6 pt-6 pb-8 text-center relative">
+        <div className="bg-gradient-to-br from-blue-600 to-violet-600 px-6 pt-6 pb-6 text-center relative rounded-t-3xl">
           <button
             onClick={onClose}
             className="absolute right-4 top-4 w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-all"
@@ -103,8 +103,8 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
           <p className="text-white/70 text-xs mt-1">Xizmatimiz haqida fikringizni bildiring</p>
         </div>
 
-        {/* Stars — overlapping header */}
-        <div className="bg-white rounded-2xl mx-4 -mt-5 shadow-lg px-4 pt-4 pb-3 flex flex-col items-center">
+        {/* Stars */}
+        <div className="px-4 pt-5 pb-3 flex flex-col items-center">
           <StarSelector value={rating} onChange={setRating} />
         </div>
 

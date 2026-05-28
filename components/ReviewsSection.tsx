@@ -24,31 +24,40 @@ function StarDisplay({ rating }: { rating: number }) {
   );
 }
 
+function formatDate(raw: string) {
+  const d = new Date(raw);
+  if (isNaN(d.getTime())) return raw;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
 function ReviewCard({ review }: { review: Review }) {
   const initial = review.name.charAt(0).toUpperCase();
   const colors = ["bg-blue-500","bg-violet-500","bg-emerald-500","bg-orange-500","bg-pink-500"];
   const color = colors[initial.charCodeAt(0) % colors.length];
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-4 hover:shadow-lg hover:shadow-slate-100 hover:-translate-y-0.5 transition-all duration-200">
-      {/* Stars + date */}
-      <div className="flex items-center justify-between">
-        <StarDisplay rating={review.rating} />
-        <span className="text-xs text-slate-400">{review.date}</span>
-      </div>
-
-      {/* Comment */}
-      <p className="text-sm text-slate-700 leading-relaxed flex-1">
-        &ldquo;{review.comment}&rdquo;
-      </p>
-
-      {/* Author */}
-      <div className="flex items-center gap-2.5 pt-1 border-t border-slate-50">
-        <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 hover:shadow-lg hover:shadow-slate-100 hover:-translate-y-0.5 transition-all duration-200">
+      {/* Author + date */}
+      <div className="flex items-center gap-2.5">
+        <div className={`w-9 h-9 rounded-full ${color} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
           {initial}
         </div>
-        <p className="text-sm font-semibold text-slate-800">{review.name}</p>
+        <div>
+          <p className="text-sm font-semibold text-slate-800 leading-tight">{review.name}</p>
+          <p className="text-[11px] text-slate-400 leading-tight mt-0.5">{formatDate(review.date)}</p>
+        </div>
       </div>
+
+      {/* Stars */}
+      <StarDisplay rating={review.rating} />
+
+      {/* Comment */}
+      <p className="text-sm text-slate-700 leading-relaxed">
+        &ldquo;{review.comment}&rdquo;
+      </p>
     </div>
   );
 }
