@@ -35,28 +35,41 @@ function formatDate(raw: string) {
 
 function ReviewCard({ review }: { review: Review }) {
   const initial = review.name.charAt(0).toUpperCase();
-  const colors = ["bg-blue-500","bg-violet-500","bg-emerald-500","bg-orange-500","bg-pink-500"];
+  const colors = ["bg-blue-600","bg-violet-600","bg-emerald-600","bg-orange-500","bg-pink-600"];
   const color = colors[initial.charCodeAt(0) % colors.length];
+  const [expanded, setExpanded] = useState(false);
+  const maxLen = 120;
+  const isLong = review.comment.length > maxLen;
+  const displayText = expanded || !isLong ? review.comment : review.comment.slice(0, maxLen) + "...";
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 hover:shadow-lg hover:shadow-slate-100 hover:-translate-y-0.5 transition-all duration-200">
-      {/* Author + date */}
-      <div className="flex items-center gap-2.5">
-        <div className={`w-9 h-9 rounded-full ${color} flex items-center justify-center text-white text-sm font-bold flex-shrink-0`}>
+    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
+
+      {/* Avatar + ism + sana */}
+      <div className="flex items-center gap-3">
+        <div className={`w-11 h-11 rounded-full ${color} flex items-center justify-center text-white text-base font-bold flex-shrink-0`}>
           {initial}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-800 leading-tight">{review.name}</p>
-          <p className="text-[11px] text-slate-400 leading-tight mt-0.5">{formatDate(review.date)}</p>
+          <p className="text-sm font-bold text-slate-900 leading-tight">{review.name}</p>
+          <p className="text-xs text-slate-400 mt-0.5">{formatDate(review.date)}</p>
         </div>
       </div>
 
-      {/* Stars */}
+      {/* Yulduzlar */}
       <StarDisplay rating={review.rating} />
 
-      {/* Comment */}
+      {/* Izoh */}
       <p className="text-sm text-slate-700 leading-relaxed">
-        &ldquo;{review.comment}&rdquo;
+        {displayText}
+        {isLong && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="ml-1 text-blue-600 font-medium hover:underline focus:outline-none"
+          >
+            {expanded ? "Yig'ish" : "Ko'proq"}
+          </button>
+        )}
       </p>
     </div>
   );
