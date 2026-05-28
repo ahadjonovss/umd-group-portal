@@ -69,14 +69,17 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
         comment: comment.trim(),
       });
 
-      // To'g'ridan Apps Script ga GET so'rov (CORS muammo yo'q)
-      const res = await fetch(`${scriptUrl}?${params.toString()}`, {
-        method: "GET",
-        mode: "no-cors", // redirect HTML ga to'xtamaslik uchun
-      });
+      // Apps Script ga to'g'ridan GET so'rov
+      const res = await fetch(`${scriptUrl}?${params.toString()}`);
+      const text = await res.text();
 
-      // no-cors da response body o'qilmaydi, ammo so'rov yetib boradi
-      // Telegram xabar server orqali yuboriladi (bloklamas)
+      // JSON javob kelganligini tekshirish
+      let parsed: { success?: boolean } = {};
+      try { parsed = JSON.parse(text); } catch {}
+
+      if (parsed.success === false) throw new Error("Sharh saqlanmadi");
+
+      // Telegram xabar (bloklamas)
       fetch("/api/reviews/notify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
