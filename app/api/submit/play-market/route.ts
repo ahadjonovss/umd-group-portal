@@ -2,11 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPlayMarketZip, buildPlayMarketInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
 import { readFormFile } from "@/lib/form-utils";
+import { getCurrentUser } from "@/lib/auth/dal";
+import { createAppSubmission, markTelegramSent } from "@/lib/firestore/apps";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ success: false, error: "Avval tizimga kiring" }, { status: 401 });
+  }
+
   let formData: FormData;
   try {
     formData = await req.formData();
@@ -85,14 +92,28 @@ export async function POST(req: NextRequest) {
     privacyPolicyUrl: fields.privacyPolicyUrl,
   });
 
+  // 1) Firestore'ga yozish (asosiy — panelda shu ko'rinadi)
+  let appId: string;
+  try {
+    appId = await createAppSubmission({
+      ownerUid: user.uid,
+      ownerEmail: user.email,
+      serviceType: "play-market",
+      appName: fields.appName,
+      contact: { fullName: fields.fullName, phone: fields.phone, email: fields.email },
+      submission: fields,
+    });
+  } catch (e) {
+    console.error("[PM] Firestore yozishda xato:", e);
+    return NextResponse.json({ success: false, error: "Arizani saqlashda xato" }, { status: 500 });
+  }
+
+  // 2) Telegramga yuborish (ixtiyoriy — muvaffaqiyatsiz bo'lsa ham ariza saqlangan)
   try {
     await sendZipToTelegram(zipBuffer, filename, caption);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Telegram xatosi";
-    return NextResponse.json(
-      { success: false, error: `Ma'lumotlar tayyorlandi, lekin yuborishda xato: ${msg}` },
-      { status: 500 }
-    );
+    await markTelegramSent(appId);
+  } catch (err) {
+    console.error("[PM] Telegram xato (ariza Firestore'da saqlangan):", err);
   }
 
   return NextResponse.json({ success: true, message: "Ariza muvaffaqiyatli yuborildi!" });

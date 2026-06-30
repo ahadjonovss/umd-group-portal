@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { ServiceCard } from "@/components/ServiceCard";
 import { Logo } from "@/components/Logo";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import { AuthButtons } from "@/components/auth/AuthButtons";
 import type { Review } from "@/app/api/reviews/route";
 
 async function getReviews(): Promise<Review[]> {
@@ -55,6 +56,8 @@ export default async function Home() {
               </svg>
               <span className="hidden sm:inline">Foydalanish shartlari</span>
             </Link>
+            <span className="w-px h-5 bg-slate-200 mx-1" />
+            <AuthButtons />
           </nav>
         </div>
       </header>
