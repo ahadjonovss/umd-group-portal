@@ -1,5 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp, type QueryDocumentSnapshot } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
@@ -141,8 +141,8 @@ function tsToIso(v: unknown): string | null {
   return v instanceof Timestamp ? v.toDate().toISOString() : null;
 }
 
-function mapApp(d: QueryDocumentSnapshot, reviewed: boolean): AppView {
-  const x = d.data();
+function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
+  const x = d.data() ?? {};
   const pub = x.publication ?? {};
   const sub = x.subscription as Subscription | null;
   return {
@@ -192,6 +192,18 @@ export async function getAllApps(): Promise<AppView[]> {
   const apps = snap.docs.map((d) => mapApp(d, false));
   apps.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   return apps;
+}
+
+// Admin: bitta ariza + submission ma'lumotlari.
+export async function getAppDetail(
+  appId: string
+): Promise<{ app: AppView; submission: Record<string, string> } | null> {
+  const d = await adminDb.collection(APPS).doc(appId).get();
+  if (!d.exists) return null;
+  return {
+    app: mapApp(d, false),
+    submission: (d.get("submission") as Record<string, string>) ?? {},
+  };
 }
 
 // Admin: ilova store'ga chiqdi deb belgilash. Chiqarish xizmatlarida obunani

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { AdminAppRow } from "@/components/admin/AdminAppRow";
+import { AdminAppListItem } from "@/components/admin/AdminAppListItem";
 import { AdminReviewRow } from "@/components/admin/AdminReviewRow";
 import { AdminUserRow } from "@/components/admin/AdminUserRow";
 import { PricingModule } from "@/components/admin/PricingModule";
@@ -52,7 +52,7 @@ function List({ apps }: { apps: AppView[] }) {
   if (!apps.length) return <Empty text="Hech narsa yo'q." />;
   return (
     <div className="flex flex-col gap-3">
-      {apps.map((a) => <AdminAppRow key={a.id} app={a} />)}
+      {apps.map((a) => <AdminAppListItem key={a.id} app={a} />)}
     </div>
   );
 }

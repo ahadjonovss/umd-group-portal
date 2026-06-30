@@ -49,6 +49,7 @@ export interface PaymentView {
   totalUsd: number;
   advancePercent: number;
   status: "pending" | "confirmed";
+  note: string;
   createdAt: string | null;
 }
 
@@ -56,33 +57,47 @@ function iso(v: unknown): string | null {
   return v instanceof Timestamp ? v.toDate().toISOString() : null;
 }
 
-export async function getAllPayments(max = 200): Promise<PaymentView[]> {
-  const snap = await adminDb.collection(PAYMENTS).get();
-  const items: PaymentView[] = snap.docs.map((d) => {
-    const x = d.data();
-    return {
-      id: d.id,
-      appId: x.appId,
-      ownerName: x.ownerName ?? "",
-      ownerPhone: x.ownerPhone ?? "",
-      serviceType: x.serviceType,
-      appName: x.appName ?? null,
-      kind: (x.kind as PaymentKind) ?? "advance",
-      amountUsd: x.amountUsd ?? 0,
-      rate: typeof x.rate === "number" ? x.rate : null,
-      amountUzs: typeof x.amountUzs === "number" ? x.amountUzs : null,
-      totalUsd: x.totalUsd ?? 0,
-      advancePercent: x.advancePercent ?? 0,
-      status: x.status === "confirmed" ? "confirmed" : "pending",
-      createdAt: iso(x.createdAt),
-    };
-  });
-  // Kutilayotganlar birinchi, so'ng yangi -> eski
-  items.sort((a, b) => {
+function mapPayment(d: FirebaseFirestore.QueryDocumentSnapshot): PaymentView {
+  const x = d.data();
+  return {
+    id: d.id,
+    appId: x.appId,
+    ownerName: x.ownerName ?? "",
+    ownerPhone: x.ownerPhone ?? "",
+    serviceType: x.serviceType,
+    appName: x.appName ?? null,
+    kind: (x.kind as PaymentKind) ?? "advance",
+    amountUsd: x.amountUsd ?? 0,
+    rate: typeof x.rate === "number" ? x.rate : null,
+    amountUzs: typeof x.amountUzs === "number" ? x.amountUzs : null,
+    totalUsd: x.totalUsd ?? 0,
+    advancePercent: x.advancePercent ?? 0,
+    status: x.status === "confirmed" ? "confirmed" : "pending",
+    note: x.note ?? "",
+    createdAt: iso(x.createdAt),
+  };
+}
+
+function sortPayments(items: PaymentView[]): PaymentView[] {
+  return items.sort((a, b) => {
     if (a.status !== b.status) return a.status === "pending" ? -1 : 1;
     return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
   });
-  return items.slice(0, max);
+}
+
+export async function getAllPayments(max = 200): Promise<PaymentView[]> {
+  const snap = await adminDb.collection(PAYMENTS).get();
+  return sortPayments(snap.docs.map(mapPayment)).slice(0, max);
+}
+
+// Bitta ariza uchun to'lovlar.
+export async function getAppPayments(appId: string): Promise<PaymentView[]> {
+  const snap = await adminDb.collection(PAYMENTS).where("appId", "==", appId).get();
+  return sortPayments(snap.docs.map(mapPayment));
+}
+
+export async function setPaymentNote(paymentId: string, note: string): Promise<void> {
+  await adminDb.collection(PAYMENTS).doc(paymentId).update({ note: note.slice(0, 1000) });
 }
 
 // To'lovni tasdiqlash: ariza statusini keyingi bosqichga o'tkazadi.

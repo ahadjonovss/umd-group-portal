@@ -1,12 +1,14 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { PaymentView } from "@/lib/firestore/payments";
 import { SERVICE_SHORT, formatDate } from "@/lib/labels";
-import { actConfirmPayment } from "@/app/admin/actions";
+import { actConfirmPayment, actSetPaymentNote } from "@/app/admin/actions";
 
 export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
   const [pending, start] = useTransition();
+  const [note, setNote] = useState(payment.note);
+  const [noteSaved, setNoteSaved] = useState(false);
   const confirmed = payment.status === "confirmed";
   const title = payment.appName || SERVICE_SHORT[payment.serviceType];
 
@@ -60,6 +62,27 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
         Umumiy xizmat narxi: <strong className="text-slate-600">${payment.totalUsd}</strong>
         {" · "}Yuborilgan: {formatDate(payment.createdAt)}
       </p>
+
+      {/* Izoh */}
+      <div className="flex flex-col gap-1.5">
+        <textarea
+          value={note}
+          onChange={(e) => { setNote(e.target.value); setNoteSaved(false); }}
+          placeholder="Izoh (admin uchun)…"
+          rows={2}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+        />
+        <div className="flex items-center gap-2">
+          <button
+            disabled={pending}
+            onClick={() => start(async () => { await actSetPaymentNote(payment.id, note); setNoteSaved(true); })}
+            className="h-8 px-3 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 disabled:opacity-50"
+          >
+            Izohni saqlash
+          </button>
+          {noteSaved && !pending && <span className="text-xs text-emerald-600">✓ Saqlandi</span>}
+        </div>
+      </div>
 
       {!confirmed && (
         <button

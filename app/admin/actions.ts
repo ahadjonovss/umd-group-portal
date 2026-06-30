@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/auth/dal";
 import { setAppStatus, markPublished, renewSubscription } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole } from "@/lib/firestore/users";
-import { confirmPayment } from "@/lib/firestore/payments";
+import { confirmPayment, setPaymentNote } from "@/lib/firestore/payments";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
@@ -65,5 +65,11 @@ export async function actSavePayment(info: PaymentInfo) {
 export async function actConfirmPayment(paymentId: string) {
   await requireAdmin();
   await confirmPayment(paymentId);
+  revalidatePath("/admin");
+}
+
+export async function actSetPaymentNote(paymentId: string, note: string) {
+  await requireAdmin();
+  await setPaymentNote(paymentId, note);
   revalidatePath("/admin");
 }
