@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
 import { setAppStatus, markPublished, renewSubscription } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
-import { setUserRole } from "@/lib/firestore/users";
+import { setUserRole, setUserPassword, setUserEmail } from "@/lib/firestore/users";
 import { confirmPayment, setPaymentNote } from "@/lib/firestore/payments";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
@@ -46,6 +46,35 @@ export async function actSetUserRole(uid: string, makeAdmin: boolean) {
   await requireAdmin();
   await setUserRole(uid, makeAdmin);
   revalidatePath("/admin");
+}
+
+export async function actSetUserPassword(uid: string, password: string) {
+  await requireAdmin();
+  if (!password || password.length < 6) {
+    return { ok: false, error: "Parol kamida 6 belgi bo'lishi kerak" };
+  }
+  try {
+    await setUserPassword(uid, password);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+export async function actSetUserEmail(uid: string, email: string) {
+  await requireAdmin();
+  const e = (email || "").trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) {
+    return { ok: false, error: "Email format noto'g'ri" };
+  }
+  try {
+    await setUserEmail(uid, e);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Xatolik";
+    return { ok: false, error: msg.includes("already") ? "Bu email band" : msg };
+  }
 }
 
 export async function actSavePricing(pricing: Pricing) {

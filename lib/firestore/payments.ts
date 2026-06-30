@@ -96,6 +96,12 @@ export async function getAppPayments(appId: string): Promise<PaymentView[]> {
   return sortPayments(snap.docs.map(mapPayment));
 }
 
+// Bitta foydalanuvchi uchun to'lovlar.
+export async function getUserPayments(ownerUid: string): Promise<PaymentView[]> {
+  const snap = await adminDb.collection(PAYMENTS).where("ownerUid", "==", ownerUid).get();
+  return sortPayments(snap.docs.map(mapPayment));
+}
+
 export async function setPaymentNote(paymentId: string, note: string): Promise<void> {
   await adminDb.collection(PAYMENTS).doc(paymentId).update({ note: note.slice(0, 1000) });
 }
