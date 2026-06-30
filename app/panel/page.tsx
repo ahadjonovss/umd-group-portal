@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Logo } from "@/components/Logo";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { AppCard } from "@/components/panel/AppCard";
+import { DraftButton } from "@/components/panel/DraftButton";
 import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelReviewLauncher";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
@@ -69,12 +70,15 @@ export default async function PanelPage() {
               Ilovalaringiz, ularning holati va obuna muddati
             </p>
           </div>
-          <Link
-            href="/"
-            className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
-          >
-            + Yangi ariza
-          </Link>
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <DraftButton />
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
+            >
+              + Yangi ariza
+            </Link>
+          </div>
         </div>
 
         {apps.length === 0 ? (
