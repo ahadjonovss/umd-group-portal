@@ -8,59 +8,95 @@ export const SERVICE_LABELS: Record<ServiceType, string> = {
   "apple-transfer": "Apple App Store — Transfer",
 };
 
+// Qisqa nom (chiplar uchun)
+export const SERVICE_SHORT: Record<ServiceType, string> = {
+  "play-market": "Play Market",
+  "app-store": "App Store",
+  "google-transfer": "Google Transfer",
+  "apple-transfer": "Apple Transfer",
+};
+
+// Xizmat rangi (chip)
+export const SERVICE_BADGE: Record<ServiceType, string> = {
+  "play-market": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  "app-store": "bg-blue-50 text-blue-700 ring-blue-200",
+  "google-transfer": "bg-orange-50 text-orange-700 ring-orange-200",
+  "apple-transfer": "bg-purple-50 text-purple-700 ring-purple-200",
+};
+
 export const STATUS_META: Record<
   AppStatus,
-  { label: string; badge: string; dot: string }
+  { label: string; badge: string; dot: string; text: string; desc: string }
 > = {
   submitted: {
     label: "Yuborildi",
     badge: "bg-slate-100 text-slate-700 ring-slate-200",
     dot: "bg-slate-400",
+    text: "text-slate-500",
+    desc: "Arizangiz qabul qilindi. Tez orada ko'rib chiqamiz.",
   },
   review: {
     label: "Ko'rib chiqilmoqda",
-    badge: "bg-amber-50 text-amber-700 ring-amber-200",
-    dot: "bg-amber-500",
+    badge: "bg-sky-50 text-sky-700 ring-sky-200",
+    dot: "bg-sky-500",
+    text: "text-sky-600",
+    desc: "Ma'lumot va materiallaringiz jamoamiz tomonidan tekshirilmoqda.",
   },
   payment_pending: {
     label: "To'lov kutilmoqda",
-    badge: "bg-orange-50 text-orange-700 ring-orange-200",
-    dot: "bg-orange-500",
+    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+    text: "text-amber-600",
+    desc: "Xizmatni davom ettirish uchun to'lov kutilmoqda.",
   },
   preparing: {
     label: "Tayyorlanmoqda",
-    badge: "bg-blue-50 text-blue-700 ring-blue-200",
-    dot: "bg-blue-500",
+    badge: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    dot: "bg-indigo-500",
+    text: "text-indigo-600",
+    desc: "Ilova store talablariga moslab tayyorlanmoqda.",
   },
   store_review: {
     label: "Store ko'rigida",
     badge: "bg-violet-50 text-violet-700 ring-violet-200",
     dot: "bg-violet-500",
+    text: "text-violet-600",
+    desc: "Ilova rasmiy store (Google/Apple) ko'rigiga yuborildi.",
   },
   published: {
     label: "Chiqarildi",
     badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
     dot: "bg-emerald-500",
+    text: "text-emerald-600",
+    desc: "Ilova store'da muvaffaqiyatli chiqarildi! 🎉",
   },
   transferring: {
     label: "O'tkazilmoqda",
-    badge: "bg-blue-50 text-blue-700 ring-blue-200",
-    dot: "bg-blue-500",
+    badge: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    dot: "bg-indigo-500",
+    text: "text-indigo-600",
+    desc: "Akkaunt o'tkazish jarayoni ketmoqda.",
   },
   completed: {
     label: "Yakunlandi",
     badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
     dot: "bg-emerald-500",
+    text: "text-emerald-600",
+    desc: "Transfer muvaffaqiyatli yakunlandi! 🎉",
   },
   rejected: {
     label: "Rad etildi",
     badge: "bg-red-50 text-red-700 ring-red-200",
     dot: "bg-red-500",
+    text: "text-red-600",
+    desc: "Ariza rad etildi. Batafsil ma'lumot uchun biz bilan bog'laning.",
   },
   cancelled: {
     label: "Bekor qilindi",
     badge: "bg-slate-100 text-slate-500 ring-slate-200",
     dot: "bg-slate-400",
+    text: "text-slate-500",
+    desc: "Ariza bekor qilindi.",
   },
 };
 

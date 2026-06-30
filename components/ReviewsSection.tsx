@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ReviewModal } from "@/components/ReviewModal";
+import { SERVICE_SHORT, SERVICE_BADGE } from "@/lib/labels";
 import type { Review } from "@/app/api/reviews/route";
 
 const REVIEW_TOKEN = process.env.NEXT_PUBLIC_REVIEW_TOKEN;
@@ -71,6 +72,26 @@ function ReviewCard({ review }: { review: Review }) {
           </button>
         )}
       </p>
+
+      {/* Ilova / xizmat ma'lumoti — izoh ostida */}
+      {review.serviceType && (
+        <div className="flex flex-wrap items-center gap-2 pt-3 mt-auto border-t border-slate-100">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${SERVICE_BADGE[review.serviceType]}`}>
+            {SERVICE_SHORT[review.serviceType]}
+          </span>
+          {review.appName && (
+            <span className="text-xs font-medium text-slate-600 truncate">{review.appName}</span>
+          )}
+          {review.isPublished && (
+            <span className="inline-flex items-center gap-0.5 text-[11px] text-emerald-600">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              Store&apos;da
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

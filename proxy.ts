@@ -4,7 +4,7 @@ import { SESSION_COOKIE } from "@/lib/auth/constants";
 
 // Optimistik tekshiruv — faqat cookie borligini ko'radi (admin verify bu yerda emas,
 // tezlik uchun). Haqiqiy tasdiqlash sahifa/route ichida DAL orqali bo'ladi.
-const PROTECTED_PREFIXES = ["/submit", "/panel"];
+const PROTECTED_PREFIXES = ["/submit", "/panel", "/review"];
 const AUTH_PAGES = ["/login", "/register"];
 
 export function proxy(request: NextRequest) {
@@ -32,5 +32,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/submit/:path*", "/panel/:path*", "/login", "/register"],
+  matcher: ["/submit/:path*", "/panel/:path*", "/review/:path*", "/login", "/register"],
 };

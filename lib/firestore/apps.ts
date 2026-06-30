@@ -3,6 +3,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
+import { getReviewedAppIds } from "@/lib/firestore/reviews";
 
 export type { AppStatus };
 
@@ -113,6 +114,7 @@ export interface AppView {
   status: AppStatus;
   iconUrl: string | null;
   telegramSent: boolean;
+  reviewed: boolean;
   createdAt: string | null;
   publication: { published: boolean; publishedAt: string | null; storeUrl: string | null };
   subscription: null | {
@@ -131,7 +133,10 @@ function tsToIso(v: unknown): string | null {
 // Foydalanuvchining barcha arizalari (yangi -> eski). Xotirada saralanadi
 // (kompozit indeks talab qilinmaydi).
 export async function getUserApps(uid: string): Promise<AppView[]> {
-  const snap = await adminDb.collection(APPS).where("ownerUid", "==", uid).get();
+  const [snap, reviewedIds] = await Promise.all([
+    adminDb.collection(APPS).where("ownerUid", "==", uid).get(),
+    getReviewedAppIds(uid),
+  ]);
 
   const apps: AppView[] = snap.docs.map((d) => {
     const x = d.data();
@@ -144,6 +149,7 @@ export async function getUserApps(uid: string): Promise<AppView[]> {
       status: (x.status ?? "submitted") as AppStatus,
       iconUrl: x.iconUrl ?? null,
       telegramSent: Boolean(x.telegramSent),
+      reviewed: reviewedIds.has(d.id),
       createdAt: tsToIso(x.createdAt),
       publication: {
         published: Boolean(pub.published),

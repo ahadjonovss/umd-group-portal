@@ -4,19 +4,14 @@ import { ServiceCard } from "@/components/ServiceCard";
 import { Logo } from "@/components/Logo";
 import { ReviewsSection } from "@/components/ReviewsSection";
 import { AuthButtons } from "@/components/auth/AuthButtons";
-import type { Review } from "@/app/api/reviews/route";
+import { getApprovedReviews } from "@/lib/firestore/reviews";
 
-async function getReviews(): Promise<Review[]> {
+// Reviewlar Firestore'dan (admin tasdiqlagani) request vaqtida o'qiladi.
+export const dynamic = "force-dynamic";
+
+async function getReviews() {
   try {
-    const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
-    if (!scriptUrl || scriptUrl.includes("your_apps_script")) return [];
-    const res = await fetch(`${scriptUrl}?action=get`, {
-      redirect: "follow",
-      cache: "no-store",
-    });
-    const text = await res.text();
-    if (!text.trimStart().startsWith("[")) return [];
-    return JSON.parse(text) as Review[];
+    return await getApprovedReviews();
   } catch {
     return [];
   }
@@ -57,7 +52,7 @@ export default async function Home() {
               <span className="hidden sm:inline">Foydalanish shartlari</span>
             </Link>
             <span className="w-px h-5 bg-slate-200 mx-1" />
-            <AuthButtons />
+            <AuthButtons showLogout={false} />
           </nav>
         </div>
       </header>

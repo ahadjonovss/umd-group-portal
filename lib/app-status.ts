@@ -46,3 +46,8 @@ export function getStatusFlow(serviceType: ServiceType): AppStatus[] {
 export function isTerminalError(status: AppStatus): boolean {
   return TERMINAL_ERROR.includes(status);
 }
+
+// Xizmat muvaffaqiyatli yakunlandimi (chiqarildi yoki transfer yakunlandi).
+export function isTerminalSuccess(status: AppStatus): boolean {
+  return status === "published" || status === "completed";
+}

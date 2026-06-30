@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface ReviewModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  defaultName?: string;
+  endpoint?: string;
+  extraPayload?: Record<string, unknown>;
+  title?: string;
+  subtitle?: string;
+  hideName?: boolean;
 }
 
 const LABELS = ["", "Yomon", "Past", "O'rtacha", "Yaxshi", "Ajoyib!"];
@@ -45,27 +52,45 @@ function StarSelector({ value, onChange }: { value: number; onChange: (v: number
   );
 }
 
-export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
-  const [name, setName] = useState("");
+export function ReviewModal({
+  onClose,
+  onSuccess,
+  defaultName = "",
+  endpoint = "/api/reviews/submit",
+  extraPayload,
+  title = "Baho bering",
+  subtitle = "Xizmatimiz haqida fikringizni bildiring",
+  hideName = false,
+}: ReviewModalProps) {
+  const [name, setName] = useState(defaultName);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  // Body scroll lock + portal uchun mount tekshiruvi
+  useEffect(() => {
+    setMounted(true);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!rating) { setError("Reyting tanlang"); return; }
-    if (!name.trim()) { setError("Ismingizni kiriting"); return; }
+    if (!hideName && !name.trim()) { setError("Ismingizni kiriting"); return; }
     if (!comment.trim()) { setError("Izoh yozing"); return; }
 
     setStatus("loading");
     setError("");
 
     try {
-      const res = await fetch("/api/reviews/submit", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim() }),
+        body: JSON.stringify({ name: name.trim(), rating, comment: comment.trim(), ...extraPayload }),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Xato yuz berdi");
@@ -76,7 +101,9 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 animate-fade-in"
       style={{ background: "rgba(15,23,42,0.6)", backdropFilter: "blur(6px)" }}
@@ -99,8 +126,8 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
           </div>
-          <h2 className="text-lg font-bold text-white">Baho bering</h2>
-          <p className="text-white/70 text-xs mt-1">Xizmatimiz haqida fikringizni bildiring</p>
+          <h2 className="text-lg font-bold text-white">{title}</h2>
+          <p className="text-white/70 text-xs mt-1">{subtitle}</p>
         </div>
 
         {/* Stars */}
@@ -110,13 +137,15 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-5 pt-4 pb-5 space-y-3">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ismingiz"
-            maxLength={60}
-            className="h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-slate-300 transition-all bg-slate-50/50"
-          />
+          {!hideName && (
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ismingiz"
+              maxLength={60}
+              className="h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 hover:border-slate-300 transition-all bg-slate-50/50"
+            />
+          )}
 
           <div className="relative">
             <textarea
@@ -167,6 +196,7 @@ export function ReviewModal({ onClose, onSuccess }: ReviewModalProps) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
