@@ -71,7 +71,7 @@ export default async function PanelPage() {
             </p>
           </div>
           <div className="flex-shrink-0 flex items-center gap-2">
-            <DraftButton />
+            {process.env.NODE_ENV === "development" && <DraftButton />}
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
