@@ -1,6 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/lib/firebase/admin";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { setAppStatus } from "@/lib/firestore/apps";
 import type { ServiceType } from "@/types";
@@ -57,7 +56,7 @@ function iso(v: unknown): string | null {
   return v instanceof Timestamp ? v.toDate().toISOString() : null;
 }
 
-function mapPayment(d: FirebaseFirestore.QueryDocumentSnapshot): PaymentView {
+function mapPayment(d: QueryDocumentSnapshot): PaymentView {
   const x = d.data();
   return {
     id: d.id,

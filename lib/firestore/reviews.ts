@@ -1,6 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
 
 const REVIEWS = "reviews";
@@ -86,7 +85,7 @@ export interface AdminReview extends PublicReview {
   approved: boolean;
 }
 
-function mapAdminReview(d: FirebaseFirestore.DocumentSnapshot): AdminReview {
+function mapAdminReview(d: DocumentSnapshot): AdminReview {
   const x = d.data() ?? {};
   const created = x.createdAt;
   return {

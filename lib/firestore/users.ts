@@ -1,6 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { adminDb, adminAuth } from "@/lib/firebase/admin";
+import { adminDb, adminAuth, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 
 export interface AdminUser {
   uid: string;
@@ -13,7 +12,7 @@ export interface AdminUser {
   appCount?: number;
 }
 
-function mapUser(d: FirebaseFirestore.DocumentSnapshot): AdminUser {
+function mapUser(d: DocumentSnapshot): AdminUser {
   const x = d.data() ?? {};
   return {
     uid: d.id,
