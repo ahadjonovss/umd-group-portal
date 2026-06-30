@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     `👤 ${esc(app.contact?.fullName || user.name || user.email || "Mijoz")}\n` +
     `📞 ${esc(app.contact?.phone || "-")}\n` +
     `💵 Avans: $${esc(String(usd))}` +
-    (uzs ? ` \\(~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
+    (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
     `\n💳 Karta: ${esc(payment.cardNumber || "-")}`;
 
   // Telegramga chek rasmi (ixtiyoriy — muvaffaqiyatsiz bo'lsa ham belgilanadi)
