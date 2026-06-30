@@ -10,6 +10,8 @@ const TRANSFER: ServiceType[] = ["google-transfer", "apple-transfer"];
 
 // Kabinetga tezkor draft ariza qo'shadi (test/qoralama uchun).
 export async function actCreateDraft(serviceType: ServiceType) {
+  // Faqat dev (lokal) — production'da ishlamaydi.
+  if (process.env.NODE_ENV !== "development") return;
   const user = await requireUser();
 
   const userDoc = await adminDb.collection("users").doc(user.uid).get();
