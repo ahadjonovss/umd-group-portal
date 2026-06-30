@@ -80,3 +80,37 @@ export async function getReviewedAppIds(ownerUid: string): Promise<Set<string>> 
 export async function hasReviewedApp(appId: string, ownerUid: string): Promise<boolean> {
   return (await getReviewedAppIds(ownerUid)).has(appId);
 }
+
+// ── Admin ──────────────────────────────────────
+export interface AdminReview extends PublicReview {
+  approved: boolean;
+}
+
+export async function getAllReviews(max = 100): Promise<AdminReview[]> {
+  const snap = await adminDb.collection(REVIEWS).get();
+  const items: AdminReview[] = snap.docs.map((d) => {
+    const x = d.data();
+    const created = x.createdAt;
+    return {
+      id: d.id,
+      date: created instanceof Timestamp ? created.toDate().toISOString() : "",
+      name: x.name ?? "",
+      rating: x.rating ?? 0,
+      comment: x.comment ?? "",
+      serviceType: (x.serviceType as ServiceType) ?? null,
+      appName: x.appName ?? null,
+      isPublished: Boolean(x.isPublished),
+      approved: Boolean(x.approved),
+    };
+  });
+  items.sort((a, b) => b.date.localeCompare(a.date));
+  return items.slice(0, max);
+}
+
+export async function setReviewApproved(reviewId: string, approved: boolean): Promise<void> {
+  await adminDb.collection(REVIEWS).doc(reviewId).update({ approved });
+}
+
+export async function deleteReview(reviewId: string): Promise<void> {
+  await adminDb.collection(REVIEWS).doc(reviewId).delete();
+}

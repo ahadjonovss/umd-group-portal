@@ -5,10 +5,12 @@ import { Logo } from "@/components/Logo";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { AppCard } from "@/components/panel/AppCard";
 import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelReviewLauncher";
-import { requireUser } from "@/lib/auth/dal";
+import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess } from "@/lib/app-status";
 import { SERVICE_LABELS } from "@/lib/labels";
+import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
+import { getUsdRate } from "@/lib/cbu";
 
 export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
 
@@ -17,7 +19,13 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const apps = await getUserApps(user.uid);
+  const [apps, admin, pricing, paymentInfo, usdRate] = await Promise.all([
+    getUserApps(user.uid),
+    isAdmin(),
+    getPricing(),
+    getPaymentInfo(),
+    getUsdRate(),
+  ]);
 
   const reviewItems: ReviewItem[] = apps.map((a) => ({
     id: a.id,
@@ -39,6 +47,14 @@ export default async function PanelPage() {
             <span className="text-sm font-bold text-slate-900">UMD GROUP</span>
           </Link>
           <div className="flex-1" />
+          {admin && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              Admin
+            </Link>
+          )}
           <AuthButtons />
         </div>
       </header>
@@ -74,7 +90,13 @@ export default async function PanelPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {apps.map((app) => (
-              <AppCard key={app.id} app={app} />
+              <AppCard
+                key={app.id}
+                app={app}
+                pricing={pricing}
+                usdRate={usdRate}
+                paymentInfo={paymentInfo}
+              />
             ))}
           </div>
         )}

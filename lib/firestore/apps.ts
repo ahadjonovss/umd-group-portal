@@ -1,5 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
@@ -98,6 +98,14 @@ export async function setAppIconUrl(appId: string, iconUrl: string): Promise<voi
   await adminDb.collection(APPS).doc(appId).update({ iconUrl });
 }
 
+// To'lov cheki yuborilganini belgilaydi.
+export async function markReceiptSent(appId: string): Promise<void> {
+  await adminDb.collection(APPS).doc(appId).update({
+    receiptSent: true,
+    receiptSentAt: FieldValue.serverTimestamp(),
+  });
+}
+
 // Admin: ilova holatini o'zgartiradi (oqim bo'ylab yoki rad etish/bekor qilish).
 export async function setAppStatus(appId: string, status: AppStatus): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({
@@ -115,6 +123,9 @@ export interface AppView {
   iconUrl: string | null;
   telegramSent: boolean;
   reviewed: boolean;
+  receiptSent: boolean;
+  ownerEmail: string | null;
+  contact: { fullName: string; phone: string; email: string } | null;
   createdAt: string | null;
   publication: { published: boolean; publishedAt: string | null; storeUrl: string | null };
   subscription: null | {
@@ -130,6 +141,39 @@ function tsToIso(v: unknown): string | null {
   return v instanceof Timestamp ? v.toDate().toISOString() : null;
 }
 
+function mapApp(d: QueryDocumentSnapshot, reviewed: boolean): AppView {
+  const x = d.data();
+  const pub = x.publication ?? {};
+  const sub = x.subscription as Subscription | null;
+  return {
+    id: d.id,
+    serviceType: x.serviceType,
+    appName: x.appName ?? null,
+    status: (x.status ?? "submitted") as AppStatus,
+    iconUrl: x.iconUrl ?? null,
+    telegramSent: Boolean(x.telegramSent),
+    reviewed,
+    receiptSent: Boolean(x.receiptSent),
+    ownerEmail: x.ownerEmail ?? null,
+    contact: x.contact ?? null,
+    createdAt: tsToIso(x.createdAt),
+    publication: {
+      published: Boolean(pub.published),
+      publishedAt: tsToIso(pub.publishedAt),
+      storeUrl: pub.storeUrl ?? null,
+    },
+    subscription: sub
+      ? {
+          durationDays: sub.durationDays,
+          startDate: tsToIso(sub.startDate),
+          endDate: tsToIso(sub.endDate),
+          active: Boolean(sub.active),
+          renewedCount: sub.renewedCount ?? 0,
+        }
+      : null,
+  };
+}
+
 // Foydalanuvchining barcha arizalari (yangi -> eski). Xotirada saralanadi
 // (kompozit indeks talab qilinmaydi).
 export async function getUserApps(uid: string): Promise<AppView[]> {
@@ -137,37 +181,15 @@ export async function getUserApps(uid: string): Promise<AppView[]> {
     adminDb.collection(APPS).where("ownerUid", "==", uid).get(),
     getReviewedAppIds(uid),
   ]);
+  const apps = snap.docs.map((d) => mapApp(d, reviewedIds.has(d.id)));
+  apps.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+  return apps;
+}
 
-  const apps: AppView[] = snap.docs.map((d) => {
-    const x = d.data();
-    const pub = x.publication ?? {};
-    const sub = x.subscription as Subscription | null;
-    return {
-      id: d.id,
-      serviceType: x.serviceType,
-      appName: x.appName ?? null,
-      status: (x.status ?? "submitted") as AppStatus,
-      iconUrl: x.iconUrl ?? null,
-      telegramSent: Boolean(x.telegramSent),
-      reviewed: reviewedIds.has(d.id),
-      createdAt: tsToIso(x.createdAt),
-      publication: {
-        published: Boolean(pub.published),
-        publishedAt: tsToIso(pub.publishedAt),
-        storeUrl: pub.storeUrl ?? null,
-      },
-      subscription: sub
-        ? {
-            durationDays: sub.durationDays,
-            startDate: tsToIso(sub.startDate),
-            endDate: tsToIso(sub.endDate),
-            active: Boolean(sub.active),
-            renewedCount: sub.renewedCount ?? 0,
-          }
-        : null,
-    };
-  });
-
+// Admin: barcha foydalanuvchilarning arizalari (yangi -> eski).
+export async function getAllApps(): Promise<AppView[]> {
+  const snap = await adminDb.collection(APPS).get();
+  const apps = snap.docs.map((d) => mapApp(d, false));
   apps.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   return apps;
 }

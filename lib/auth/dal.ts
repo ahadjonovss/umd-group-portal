@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { adminAuth } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import { SESSION_COOKIE } from "@/lib/auth/constants";
 
 export interface SessionUser {
@@ -33,5 +33,29 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
 export async function requireUser(): Promise<SessionUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  return user;
+}
+
+// users/{uid}.role o'qiydi.
+export const getUserRole = cache(async (uid: string): Promise<string | null> => {
+  try {
+    const doc = await adminDb.collection("users").doc(uid).get();
+    return (doc.get("role") as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+});
+
+export async function isAdmin(): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  return (await getUserRole(user.uid)) === "admin";
+}
+
+// Admin-only sahifalar uchun — admin bo'lmasa bosh sahifaga.
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  const role = await getUserRole(user.uid);
+  if (role !== "admin") redirect("/");
   return user;
 }
