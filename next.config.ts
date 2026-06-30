@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["jszip", "firebase-admin"],
+  serverExternalPackages: ["jszip"],
 };
 
 export default nextConfig;
