@@ -45,6 +45,29 @@ export async function sendTelegramMessage(text: string): Promise<void> {
   }
 }
 
+export async function sendPhotoToTelegram(
+  photoBuffer: Buffer,
+  filename: string,
+  caption: string
+): Promise<void> {
+  const form = new FormData();
+  form.append("chat_id", CHANNEL_ID);
+  form.append("photo", photoBuffer, { filename, contentType: "image/jpeg" });
+  form.append("caption", caption);
+  form.append("parse_mode", "MarkdownV2");
+
+  const response = await axios.post(`${BASE_URL}/sendPhoto`, form, {
+    headers: form.getHeaders(),
+    maxBodyLength: MAX_FILE_SIZE,
+    maxContentLength: MAX_FILE_SIZE,
+    timeout: 120000,
+  });
+
+  if (!response.data.ok) {
+    throw new Error(`Telegram xatosi: ${JSON.stringify(response.data)}`);
+  }
+}
+
 export async function sendZipToTelegram(
   zipBuffer: Buffer,
   filename: string,

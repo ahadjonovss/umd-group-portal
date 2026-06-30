@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { StepProgress } from "@/components/StepProgress";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -332,7 +333,7 @@ export function PlayMarketForm() {
             </div>
 
             <Input label="Test login" placeholder="test@example.com" {...form4.register("testLogin")} hint="Ixtiyoriy — login talab qilinmasa bo'sh qoldiring" />
-            <Input label="Test parol" type="password" placeholder="••••••••" {...form4.register("testPassword")} />
+            <PasswordInput label="Test parol" placeholder="••••••••" {...form4.register("testPassword")} />
             <Textarea label="Izoh / Qo'shimcha ma'lumot" placeholder="Qo'shimcha malumot..." rows={4} {...form4.register("note")} />
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => {

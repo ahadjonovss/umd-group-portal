@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
+import { getPricing } from "@/lib/firestore/settings";
 
 export const metadata: Metadata = { title: "Foydalanish shartlari — UMD GROUP" };
+export const dynamic = "force-dynamic";
 
 function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
   return (
@@ -20,7 +22,9 @@ function Section({ num, title, children }: { num: string; title: string; childre
   );
 }
 
-export default function FoydalanishShartlariPage() {
+export default async function FoydalanishShartlariPage() {
+  const p = await getPricing();
+  const rest = 100 - p.publishAdvance;
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
@@ -72,14 +76,14 @@ export default function FoydalanishShartlariPage() {
           </Section>
 
           <Section num="2" title="To'lov tartibi">
-            <p>To&apos;lov <strong>70/30 formatida</strong> amalga oshiriladi:</p>
+            <p>To&apos;lov <strong>{p.publishAdvance}/{rest} formatida</strong> amalga oshiriladi:</p>
             <div className="flex flex-col sm:flex-row gap-3 mt-3">
               <div className="flex-1 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-2xl font-bold text-blue-600 mb-0.5">70%</p>
+                <p className="text-2xl font-bold text-blue-600 mb-0.5">{p.publishAdvance}%</p>
                 <p className="text-xs text-blue-700">Xizmat boshlanishidan oldin — <strong>oldindan to&apos;lov</strong></p>
               </div>
               <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <p className="text-2xl font-bold text-slate-700 mb-0.5">30%</p>
+                <p className="text-2xl font-bold text-slate-700 mb-0.5">{rest}%</p>
                 <p className="text-xs text-slate-600">Ilova platformaga joylashtirilganidan <strong>1 soat ichida</strong></p>
               </div>
             </div>
@@ -89,7 +93,7 @@ export default function FoydalanishShartlariPage() {
             <div className="space-y-2">
               <div className="flex items-start gap-2">
                 <span className="text-red-500 mt-0.5 flex-shrink-0">•</span>
-                <p>30% lik qolgan to&apos;lov 1 soatdan kechiksa — qolgan summaga <strong>30% miqdorida jarima</strong> qo&apos;llaniladi.</p>
+                <p>{rest}% lik qolgan to&apos;lov 1 soatdan kechiksa — qolgan summaga <strong>30% miqdorida jarima</strong> qo&apos;llaniladi.</p>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-red-500 mt-0.5 flex-shrink-0">•</span>

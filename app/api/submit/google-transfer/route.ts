@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createTransferZip, buildTransferInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
+import { getCurrentUser } from "@/lib/auth/dal";
+import { createAppSubmission, markTelegramSent } from "@/lib/firestore/apps";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ success: false, error: "Avval tizimga kiring" }, { status: 401 });
+  }
 
   let formData: FormData;
   try { formData = await req.formData(); } catch {
@@ -37,11 +43,28 @@ export async function POST(req: NextRequest) {
     email: fields.email,
   });
 
+  // 1) Firestore'ga yozish (asosiy)
+  let appId: string;
+  try {
+    appId = await createAppSubmission({
+      ownerUid: user.uid,
+      ownerEmail: user.email,
+      serviceType: "google-transfer",
+      appName: null,
+      contact: { fullName: fields.fullName, phone: fields.phone, email: fields.email },
+      submission: fields,
+    });
+  } catch (e) {
+    console.error("[GT] Firestore yozishda xato:", e);
+    return NextResponse.json({ success: false, error: "Arizani saqlashda xato" }, { status: 500 });
+  }
+
+  // 2) Telegram (ixtiyoriy)
   try {
     await sendZipToTelegram(zipBuffer, filename, caption);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Telegram xatosi";
-    return NextResponse.json({ success: false, error: `Ma'lumotlar tayyorlandi, lekin yuborishda xato: ${msg}` }, { status: 500 });
+    await markTelegramSent(appId);
+  } catch (err) {
+    console.error("[GT] Telegram xato (ariza Firestore'da saqlangan):", err);
   }
 
   return NextResponse.json({ success: true, message: "Ariza muvaffaqiyatli yuborildi!" });

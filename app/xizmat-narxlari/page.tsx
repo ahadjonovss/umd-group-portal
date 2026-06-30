@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
+import { getPricing } from "@/lib/firestore/settings";
 
 export const metadata: Metadata = { title: "Xizmat narxlari — UMD GROUP" };
+export const dynamic = "force-dynamic";
 
 interface PriceCardProps {
   platform: string;
@@ -36,7 +38,8 @@ function PriceCard({ platform, icon, price, color, features }: PriceCardProps) {
   );
 }
 
-export default function XizmatNarxlariPage() {
+export default async function XizmatNarxlariPage() {
+  const p = await getPricing();
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
@@ -76,11 +79,11 @@ export default function XizmatNarxlariPage() {
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
                 </svg>
               }
-              price="$40"
+              price={`$${p.appStorePublish}`}
               color="border-slate-200"
               features={[
                 "9 oylik kafolat muddati",
-                "To'lov: 70% oldindan, 30% chiqarilgandan keyin",
+                `To'lov: ${p.publishAdvance}% oldindan, ${100 - p.publishAdvance}% chiqarilgandan keyin`,
                 "9 oy tugasa chegirmali yangilash imkoni",
               ]}
             />
@@ -91,11 +94,11 @@ export default function XizmatNarxlariPage() {
                   <path d="M3.18 23.76c.3.17.64.24.99.2l.1-.04 11.35-6.55-2.47-2.47-9.97 8.86zM.13 1.55C.05 1.8 0 2.06 0 2.35v19.3c0 .29.05.56.13.8l.07.07 10.82-10.82v-.26L.2 1.48l-.07.07zM19.82 9.65l-2.56-1.48-2.78 2.78 2.78 2.78 2.58-1.49c.74-.43.74-1.13-.02-1.59zm-16.64 14.1l.1-.06 12.06-6.96-2.47-2.47-9.69 9.49z"/>
                 </svg>
               }
-              price="$30"
+              price={`$${p.playMarketPublish}`}
               color="border-slate-200"
               features={[
                 "9 oylik kafolat muddati",
-                "To'lov: 70% oldindan, 30% chiqarilgandan keyin",
+                `To'lov: ${p.publishAdvance}% oldindan, ${100 - p.publishAdvance}% chiqarilgandan keyin`,
                 "9 oy tugasa chegirmali yangilash imkoni",
               ]}
             />
@@ -117,11 +120,11 @@ export default function XizmatNarxlariPage() {
           <div className="grid sm:grid-cols-2 gap-3">
             <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
               <p className="text-xs text-slate-500 mb-1">Android (har bir update)</p>
-              <p className="text-2xl font-bold text-slate-900">$3</p>
+              <p className="text-2xl font-bold text-slate-900">${p.updateAndroid}</p>
             </div>
             <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
               <p className="text-xs text-slate-500 mb-1">iOS (har bir update)</p>
-              <p className="text-2xl font-bold text-slate-900">$5</p>
+              <p className="text-2xl font-bold text-slate-900">${p.updateIos}</p>
             </div>
           </div>
           <p className="text-xs text-slate-500">⚠️ Update chiqarish ilovaning store&apos;da turish muddatini uzaytirmaydi.</p>
@@ -155,9 +158,21 @@ export default function XizmatNarxlariPage() {
                 <p className="text-xs text-slate-500">Google Play va App Store uchun</p>
               </div>
             </div>
-            <span className="text-2xl font-bold text-slate-900">$5</span>
           </div>
-          <p className="text-xs text-slate-500 mt-3 ml-10">To&apos;lov <strong>100% oldindan</strong> amalga oshiriladi.</p>
+          <div className="grid sm:grid-cols-2 gap-3 mt-3 ml-10">
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">Google Play</p>
+              <p className="text-xl font-bold text-slate-900">${p.googleTransfer}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">App Store</p>
+              <p className="text-xl font-bold text-slate-900">${p.appleTransfer}</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-3 ml-10">
+            To&apos;lov <strong>{p.transferAdvance}% oldindan</strong>
+            {p.transferAdvance < 100 ? `, ${100 - p.transferAdvance}% keyin` : ""} amalga oshiriladi.
+          </p>
         </div>
 
         {/* 5. Obuna yangilash */}
@@ -187,7 +202,7 @@ export default function XizmatNarxlariPage() {
           <div className="ml-10 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
             <p className="font-semibold mb-1">⚠️ Diqqat</p>
             <ul className="space-y-1">
-              <li>Faqat <strong>&quot;Ilovani Store-ga chiqarish&quot;</strong> xizmatida avans (70/30) qo&apos;llaniladi.</li>
+              <li>Faqat <strong>&quot;Ilovani Store-ga chiqarish&quot;</strong> xizmatida avans ({p.publishAdvance}/{100 - p.publishAdvance}) qo&apos;llaniladi.</li>
               <li>Boshqa barcha xizmatlarda to&apos;lov <strong>100% oldindan</strong> amalga oshiriladi.</li>
             </ul>
           </div>

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 
 import { StepProgress } from "@/components/StepProgress";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -372,7 +373,7 @@ export function AppStoreForm() {
             </div>
 
             <Input label="Test login" placeholder="test@example.com" {...form5.register("testLogin")} hint="Ixtiyoriy — login talab qilinmasa bo'sh qoldiring" />
-            <Input label="Test parol" type="password" placeholder="••••••••" {...form5.register("testPassword")} />
+            <PasswordInput label="Test parol" placeholder="••••••••" {...form5.register("testPassword")} />
             <Textarea label="Izoh" placeholder="Qo'shimcha ma'lumot..." rows={4} {...form5.register("note")} />
 
             <div className="flex gap-3 justify-end">
