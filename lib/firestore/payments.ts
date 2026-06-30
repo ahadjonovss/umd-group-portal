@@ -1,6 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/lib/firebase/admin";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { setAppStatus } from "@/lib/firestore/apps";
 import type { ServiceType } from "@/types";
@@ -57,7 +56,7 @@ function iso(v: unknown): string | null {
   return v instanceof Timestamp ? v.toDate().toISOString() : null;
 }
 
-function mapPayment(d: FirebaseFirestore.QueryDocumentSnapshot): PaymentView {
+function mapPayment(d: QueryDocumentSnapshot): PaymentView {
   const x = d.data();
   return {
     id: d.id,
@@ -93,6 +92,12 @@ export async function getAllPayments(max = 200): Promise<PaymentView[]> {
 // Bitta ariza uchun to'lovlar.
 export async function getAppPayments(appId: string): Promise<PaymentView[]> {
   const snap = await adminDb.collection(PAYMENTS).where("appId", "==", appId).get();
+  return sortPayments(snap.docs.map(mapPayment));
+}
+
+// Bitta foydalanuvchi uchun to'lovlar.
+export async function getUserPayments(ownerUid: string): Promise<PaymentView[]> {
+  const snap = await adminDb.collection(PAYMENTS).where("ownerUid", "==", ownerUid).get();
   return sortPayments(snap.docs.map(mapPayment));
 }
 

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { AdminAppListItem } from "@/components/admin/AdminAppListItem";
 import { AdminReviewRow } from "@/components/admin/AdminReviewRow";
-import { AdminUserRow } from "@/components/admin/AdminUserRow";
+import { AdminUserListItem } from "@/components/admin/AdminUserListItem";
 import { PricingModule } from "@/components/admin/PricingModule";
 import { CardSettings } from "@/components/admin/CardSettings";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
@@ -128,7 +128,7 @@ export function AdminTabs({
         {tab === "users" &&
           (users.length ? (
             <div className="flex flex-col gap-3">
-              {users.map((u) => <AdminUserRow key={u.uid} user={u} />)}
+              {users.map((u) => <AdminUserListItem key={u.uid} user={u} />)}
             </div>
           ) : (
             <Empty text="Foydalanuvchilar yo'q." />

@@ -1,6 +1,5 @@
 import "server-only";
-import { FieldValue, Timestamp, type DocumentSnapshot } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
