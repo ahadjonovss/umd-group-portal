@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { AdminAppListItem } from "@/components/admin/AdminAppListItem";
 import { AdminReviewRow } from "@/components/admin/AdminReviewRow";
 import { AdminUserListItem } from "@/components/admin/AdminUserListItem";
@@ -13,11 +13,16 @@ import type { AdminReview } from "@/lib/firestore/reviews";
 import type { AdminUser } from "@/lib/firestore/users";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
-import { isRequestActive } from "@/lib/request-status";
+import { isRequestActive, REQUEST_TYPE_LABEL } from "@/lib/request-status";
+import { STATUS_META, SERVICE_LABELS } from "@/lib/labels";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
+import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
 type TabKey = "users" | "apps" | "live" | "payments" | "requests" | "reviews" | "settings";
+
+const TAB_KEYS: TabKey[] = ["users", "apps", "live", "payments", "requests", "reviews", "settings"];
+const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
   users: (
@@ -51,12 +56,78 @@ function Empty({ text }: { text: string }) {
 }
 
 function List({ apps }: { apps: AppView[] }) {
-  if (!apps.length) return <Empty text="Hech narsa yo'q." />;
+  if (!apps.length) return <Empty text="Topilmadi." />;
   return (
     <div className="flex flex-col gap-3">
       {apps.map((a) => <AdminAppListItem key={a.id} app={a} />)}
     </div>
   );
+}
+
+const REQ_STATUS_LABELS: Record<string, string> = {
+  requested: "So'rov yuborildi",
+  review: "Ko'rib chiqilmoqda",
+  payment_pending: "To'lov kutilmoqda",
+  in_progress: "Jarayonda",
+  completed: "Yakunlandi",
+  rejected: "Rad etildi",
+  cancelled: "Bekor qilindi",
+};
+
+const inc = (hay: string, q: string) => hay.toLowerCase().includes(q.trim().toLowerCase());
+
+interface FilterDef {
+  value: string;
+  onChange: (v: string) => void;
+  allLabel: string;
+  options: { value: string; label: string }[];
+}
+
+function Toolbar({
+  query,
+  setQuery,
+  placeholder,
+  filters,
+}: {
+  query: string;
+  setQuery: (v: string) => void;
+  placeholder: string;
+  filters?: FilterDef[];
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="relative flex-1 min-w-[180px]">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
+        </svg>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          className="w-full h-9 pl-9 pr-3 rounded-lg border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+        />
+      </div>
+      {filters?.map((f, i) => (
+        <select
+          key={i}
+          value={f.value}
+          onChange={(e) => f.onChange(e.target.value)}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+        >
+          <option value="">{f.allLabel}</option>
+          {f.options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      ))}
+    </div>
+  );
+}
+
+// Ro'yxatda mavjud statuslardan filter variantlarini quramiz
+function appStatusOptions(list: AppView[]): { value: string; label: string }[] {
+  const seen = Array.from(new Set(list.map((a) => a.status)));
+  return seen.map((s) => ({ value: s, label: STATUS_META[s as AppStatus]?.label ?? s }));
 }
 
 export function AdminTabs({
@@ -78,6 +149,17 @@ export function AdminTabs({
 }) {
   const [tab, setTab] = useState<TabKey>("apps");
 
+  // Tanlangan tabni saqlaymiz — kartochkaga o'tib qaytganda o'sha tab ochiladi
+  useEffect(() => {
+    const saved = sessionStorage.getItem(TAB_STORAGE_KEY);
+    if (saved && TAB_KEYS.includes(saved as TabKey)) setTab(saved as TabKey);
+  }, []);
+
+  const selectTab = (k: TabKey) => {
+    setTab(k);
+    sessionStorage.setItem(TAB_STORAGE_KEY, k);
+  };
+
   const pending = reviews.filter((r) => !r.approved).length;
   const pendingPayments = payments.filter((p) => p.status === "pending").length;
   const activeRequests = requests.filter((r) => isRequestActive(r.status)).length;
@@ -86,6 +168,46 @@ export function AdminTabs({
   const isLive = (a: AppView) => a.status === "published" || a.status === "transferred";
   const arizaApps = apps.filter((a) => !isLive(a));
   const liveApps = apps.filter(isLive);
+
+  // Qidiruv / filter holatlari (har bir tab uchun alohida)
+  const [userQ, setUserQ] = useState("");
+  const [appQ, setAppQ] = useState("");
+  const [appStatus, setAppStatus] = useState("");
+  const [liveQ, setLiveQ] = useState("");
+  const [liveStatus, setLiveStatus] = useState("");
+  const [payQ, setPayQ] = useState("");
+  const [payStatus, setPayStatus] = useState("");
+  const [reqQ, setReqQ] = useState("");
+  const [reqStatus, setReqStatus] = useState("");
+  const [reqType, setReqType] = useState("");
+  const [revQ, setRevQ] = useState("");
+  const [revStatus, setRevStatus] = useState("");
+
+  const appText = (a: AppView) =>
+    `${a.appName ?? ""} ${a.contact?.fullName ?? ""} ${a.contact?.phone ?? ""} ${SERVICE_LABELS[a.serviceType]}`;
+
+  const fUsers = users.filter((u) => !userQ || inc(`${u.fullName} ${u.email ?? ""} ${u.phone} ${u.telegram}`, userQ));
+  const fAriza = arizaApps.filter((a) => (!appStatus || a.status === appStatus) && (!appQ || inc(appText(a), appQ)));
+  const fLive = liveApps.filter((a) => (!liveStatus || a.status === liveStatus) && (!liveQ || inc(appText(a), liveQ)));
+  const fPay = payments.filter(
+    (p) => (!payStatus || p.status === payStatus) && (!payQ || inc(`${p.appName ?? ""} ${p.ownerName} ${p.ownerPhone}`, payQ))
+  );
+  const fReq = requests.filter(
+    (r) =>
+      (!reqStatus || r.status === reqStatus) &&
+      (!reqType || r.type === reqType) &&
+      (!reqQ || inc(`${r.appName ?? ""} ${r.ownerName} ${r.ownerPhone}`, reqQ))
+  );
+  const fRev = reviews.filter(
+    (r) =>
+      (!revStatus || (revStatus === "approved" ? r.approved : !r.approved)) &&
+      (!revQ || inc(`${r.name} ${r.comment} ${r.appName ?? ""}`, revQ))
+  );
+
+  const reqStatusOptions = Array.from(new Set(requests.map((r) => r.status))).map((s) => ({
+    value: s,
+    label: REQ_STATUS_LABELS[s] ?? s,
+  }));
 
   const tabs: { key: TabKey; label: string; count: number; badge?: number }[] = [
     { key: "users", label: "Userlar", count: users.length },
@@ -107,7 +229,7 @@ export function AdminTabs({
             return (
               <button
                 key={t.key}
-                onClick={() => setTab(t.key)}
+                onClick={() => selectTab(t.key)}
                 className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors ${
                   active ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-100"
                 }`}
@@ -131,45 +253,109 @@ export function AdminTabs({
 
       {/* Kontent */}
       <div className="flex-1 min-w-0">
-        {tab === "users" &&
-          (users.length ? (
-            <div className="flex flex-col gap-3">
-              {users.map((u) => <AdminUserListItem key={u.uid} user={u} />)}
-            </div>
-          ) : (
-            <Empty text="Foydalanuvchilar yo'q." />
-          ))}
+        {tab === "users" && (
+          <>
+            <Toolbar query={userQ} setQuery={setUserQ} placeholder="Ism, email, telefon bo'yicha qidirish…" />
+            {fUsers.length ? (
+              <div className="flex flex-col gap-3">
+                {fUsers.map((u) => <AdminUserListItem key={u.uid} user={u} />)}
+              </div>
+            ) : (
+              <Empty text="Topilmadi." />
+            )}
+          </>
+        )}
 
-        {tab === "apps" && <List apps={arizaApps} />}
+        {tab === "apps" && (
+          <>
+            <Toolbar
+              query={appQ}
+              setQuery={setAppQ}
+              placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
+              filters={[{ value: appStatus, onChange: setAppStatus, allLabel: "Barcha statuslar", options: appStatusOptions(arizaApps) }]}
+            />
+            <List apps={fAriza} />
+          </>
+        )}
 
-        {tab === "live" && <List apps={liveApps} />}
+        {tab === "live" && (
+          <>
+            <Toolbar
+              query={liveQ}
+              setQuery={setLiveQ}
+              placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
+              filters={[{ value: liveStatus, onChange: setLiveStatus, allLabel: "Barcha statuslar", options: appStatusOptions(liveApps) }]}
+            />
+            <List apps={fLive} />
+          </>
+        )}
 
-        {tab === "payments" &&
-          (payments.length ? (
-            <div className="flex flex-col gap-3">
-              {payments.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} />)}
-            </div>
-          ) : (
-            <Empty text="To'lovlar yo'q." />
-          ))}
+        {tab === "payments" && (
+          <>
+            <Toolbar
+              query={payQ}
+              setQuery={setPayQ}
+              placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
+              filters={[{
+                value: payStatus,
+                onChange: setPayStatus,
+                allLabel: "Barcha statuslar",
+                options: [{ value: "pending", label: "Kutilmoqda" }, { value: "confirmed", label: "Tasdiqlangan" }],
+              }]}
+            />
+            {fPay.length ? (
+              <div className="flex flex-col gap-3">
+                {fPay.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} />)}
+              </div>
+            ) : (
+              <Empty text="Topilmadi." />
+            )}
+          </>
+        )}
 
-        {tab === "requests" &&
-          (requests.length ? (
-            <div className="flex flex-col gap-3">
-              {requests.map((r) => <AdminRequestRow key={r.id} request={r} />)}
-            </div>
-          ) : (
-            <Empty text="So'rovlar yo'q." />
-          ))}
+        {tab === "requests" && (
+          <>
+            <Toolbar
+              query={reqQ}
+              setQuery={setReqQ}
+              placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
+              filters={[
+                { value: reqType, onChange: setReqType, allLabel: "Barcha turlar", options: (["transfer", "update", "subscription_renewal"] as const).map((t) => ({ value: t, label: REQUEST_TYPE_LABEL[t] })) },
+                { value: reqStatus, onChange: setReqStatus, allLabel: "Barcha statuslar", options: reqStatusOptions },
+              ]}
+            />
+            {fReq.length ? (
+              <div className="flex flex-col gap-3">
+                {fReq.map((r) => <AdminRequestRow key={r.id} request={r} />)}
+              </div>
+            ) : (
+              <Empty text="Topilmadi." />
+            )}
+          </>
+        )}
 
-        {tab === "reviews" &&
-          (reviews.length ? (
-            <div className="grid lg:grid-cols-2 gap-3">
-              {reviews.map((r) => <AdminReviewRow key={r.id} review={r} />)}
-            </div>
-          ) : (
-            <Empty text="Sharhlar yo'q." />
-          ))}
+        {tab === "reviews" && (
+          <>
+            <Toolbar
+              query={revQ}
+              setQuery={setRevQ}
+              placeholder="Ism, izoh yoki ilova bo'yicha qidirish…"
+              filters={[{
+                value: revStatus,
+                onChange: setRevStatus,
+                allLabel: "Barchasi",
+                options: [{ value: "approved", label: "Tasdiqlangan" }, { value: "pending", label: "Kutilmoqda" }],
+              }]}
+            />
+            {fRev.length ? (
+              <div className="grid lg:grid-cols-2 gap-3">
+                {fRev.map((r) => <AdminReviewRow key={r.id} review={r} />)}
+              </div>
+            ) : (
+              <Empty text="Topilmadi." />
+            )}
+          </>
+        )}
 
         {tab === "settings" && (
           <div className="flex flex-col gap-5">
