@@ -7,14 +7,17 @@ import { AdminUserListItem } from "@/components/admin/AdminUserListItem";
 import { PricingModule } from "@/components/admin/PricingModule";
 import { CardSettings } from "@/components/admin/CardSettings";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
+import { AdminRequestRow } from "@/components/admin/AdminRequestRow";
 import type { AppView } from "@/lib/firestore/apps";
 import type { AdminReview } from "@/lib/firestore/reviews";
 import type { AdminUser } from "@/lib/firestore/users";
 import type { PaymentView } from "@/lib/firestore/payments";
+import type { RequestView } from "@/lib/firestore/requests";
+import { isRequestActive } from "@/lib/request-status";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { ServiceType } from "@/types";
 
-type TabKey = "users" | "requests" | "live" | "payments" | "reviews" | "settings";
+type TabKey = "users" | "requests" | "live" | "payments" | "servicerequests" | "reviews" | "settings";
 type SubKey = "transfer" | "store";
 
 const TRANSFER: ServiceType[] = ["google-transfer", "apple-transfer"];
@@ -32,6 +35,9 @@ const ICONS: Record<TabKey, ReactNode> = {
   ),
   payments: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  ),
+  servicerequests: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
   ),
   reviews: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118L2.98 9.771c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -62,6 +68,7 @@ export function AdminTabs({
   users,
   reviews,
   payments,
+  requests,
   pricing,
   payment,
 }: {
@@ -69,6 +76,7 @@ export function AdminTabs({
   users: AdminUser[];
   reviews: AdminReview[];
   payments: PaymentView[];
+  requests: RequestView[];
   pricing: Pricing;
   payment: PaymentInfo;
 }) {
@@ -77,6 +85,7 @@ export function AdminTabs({
 
   const pending = reviews.filter((r) => !r.approved).length;
   const pendingPayments = payments.filter((p) => p.status === "pending").length;
+  const activeRequests = requests.filter((r) => isRequestActive(r.status)).length;
 
   const transferReqs = apps.filter((a) => isTransfer(a.serviceType));
   const storeReqs = apps.filter((a) => !isTransfer(a.serviceType) && a.status !== "published");
@@ -87,6 +96,7 @@ export function AdminTabs({
     { key: "requests", label: "Arizalar", count: transferReqs.length + storeReqs.length },
     { key: "live", label: "Ilovalar", count: liveApps.length },
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
+    { key: "servicerequests", label: "So'rovlar", count: requests.length, badge: activeRequests },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "settings", label: "Sozlamalar", count: 0 },
   ];
@@ -165,6 +175,15 @@ export function AdminTabs({
             </div>
           ) : (
             <Empty text="To'lovlar yo'q." />
+          ))}
+
+        {tab === "servicerequests" &&
+          (requests.length ? (
+            <div className="flex flex-col gap-3">
+              {requests.map((r) => <AdminRequestRow key={r.id} request={r} />)}
+            </div>
+          ) : (
+            <Empty text="So'rovlar yo'q." />
           ))}
 
         {tab === "reviews" &&

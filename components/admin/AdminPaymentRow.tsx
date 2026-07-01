@@ -39,7 +39,11 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
         <div className="bg-slate-50 rounded-lg px-3 py-2">
           <p className="text-[10px] text-slate-400">Turi</p>
           <p className="text-sm font-semibold text-slate-900">
-            {payment.kind === "advance" ? `Avans (${payment.advancePercent}%)` : "Yakuniy"}
+            {payment.kind === "transfer"
+              ? "Transfer"
+              : payment.kind === "advance"
+                ? `Avans (${payment.advancePercent}%)`
+                : "Yakuniy"}
           </p>
         </div>
         <div className="bg-slate-50 rounded-lg px-3 py-2">

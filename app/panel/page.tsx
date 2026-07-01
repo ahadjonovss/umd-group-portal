@@ -10,8 +10,8 @@ import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess } from "@/lib/app-status";
 import { SERVICE_LABELS } from "@/lib/labels";
-import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
-import { getUsdRate } from "@/lib/cbu";
+import { getPricing } from "@/lib/firestore/settings";
+import { getUserRequests } from "@/lib/firestore/requests";
 
 export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
 
@@ -20,13 +20,20 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const [apps, admin, pricing, paymentInfo, usdRate] = await Promise.all([
+  const [apps, admin, pricing, requests] = await Promise.all([
     getUserApps(user.uid),
     isAdmin(),
     getPricing(),
-    getPaymentInfo(),
-    getUsdRate(),
+    getUserRequests(user.uid),
   ]);
+
+  // Har ilova uchun eng so'nggi transfer / update so'rovi
+  const transferByApp = new Map<string, (typeof requests)[number]>();
+  const updateByApp = new Map<string, (typeof requests)[number]>();
+  for (const r of requests) {
+    if (r.type === "transfer" && !transferByApp.has(r.appId)) transferByApp.set(r.appId, r);
+    if (r.type === "update" && !updateByApp.has(r.appId)) updateByApp.set(r.appId, r);
+  }
 
   const reviewItems: ReviewItem[] = apps.map((a) => ({
     id: a.id,
@@ -98,8 +105,8 @@ export default async function PanelPage() {
                 key={app.id}
                 app={app}
                 pricing={pricing}
-                usdRate={usdRate}
-                paymentInfo={paymentInfo}
+                transferRequest={transferByApp.get(app.id) ?? null}
+                updateRequest={updateByApp.get(app.id) ?? null}
               />
             ))}
           </div>

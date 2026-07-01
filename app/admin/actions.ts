@@ -6,6 +6,8 @@ import { setAppStatus, markPublished, renewSubscription, deleteApp } from "@/lib
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, deleteUser } from "@/lib/firestore/users";
 import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/payments";
+import { setRequestStatus, setRequestNote, deleteRequest } from "@/lib/firestore/requests";
+import type { RequestStatus } from "@/lib/request-status";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
@@ -112,6 +114,24 @@ export async function actDeletePayment(paymentId: string) {
 export async function actDeleteUser(uid: string) {
   await requireAdmin();
   await deleteUser(uid);
+  revalidatePath("/admin");
+}
+
+export async function actSetRequestStatus(id: string, status: RequestStatus) {
+  await requireAdmin();
+  await setRequestStatus(id, status);
+  revalidatePath("/admin");
+}
+
+export async function actSetRequestNote(id: string, note: string) {
+  await requireAdmin();
+  await setRequestNote(id, note);
+  revalidatePath("/admin");
+}
+
+export async function actDeleteRequest(id: string) {
+  await requireAdmin();
+  await deleteRequest(id);
   revalidatePath("/admin");
 }
 

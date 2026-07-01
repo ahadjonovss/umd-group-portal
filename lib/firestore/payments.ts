@@ -1,15 +1,17 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/lib/firebase/admin";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
-import { setAppStatus } from "@/lib/firestore/apps";
+import { setAppStatus, setFinalPaid } from "@/lib/firestore/apps";
+import { confirmRequestPayment } from "@/lib/firestore/requests";
 import type { ServiceType } from "@/types";
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final";
+export type PaymentKind = "advance" | "final" | "transfer";
 
 export interface CreatePaymentInput {
   appId: string;
+  requestId?: string | null; // request to'lovi bo'lsa
   ownerUid: string;
   ownerName: string;
   ownerPhone: string;
@@ -27,6 +29,7 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
   const ref = adminDb.collection(PAYMENTS).doc();
   await ref.set({
     ...input,
+    requestId: input.requestId ?? null,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     confirmedAt: null,
@@ -37,6 +40,7 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
 export interface PaymentView {
   id: string;
   appId: string;
+  requestId: string | null;
   ownerName: string;
   ownerPhone: string;
   serviceType: ServiceType;
@@ -61,6 +65,7 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
   return {
     id: d.id,
     appId: x.appId,
+    requestId: x.requestId ?? null,
     ownerName: x.ownerName ?? "",
     ownerPhone: x.ownerPhone ?? "",
     serviceType: x.serviceType,
@@ -117,15 +122,25 @@ export async function confirmPayment(paymentId: string): Promise<void> {
   const p = snap.data()!;
   if (p.status === "confirmed") return;
 
-  const appId = p.appId as string;
-  const serviceType = p.serviceType as ServiceType;
-  const appSnap = await adminDb.collection("apps").doc(appId).get();
-  if (appSnap.exists) {
-    const st = appSnap.get("status") as AppStatus;
-    const flow = getStatusFlow(serviceType);
-    const idx = flow.indexOf(st);
-    if (st === "payment_pending" && idx >= 0 && idx < flow.length - 1) {
-      await setAppStatus(appId, flow[idx + 1]);
+  const requestId = p.requestId as string | null | undefined;
+  if (requestId) {
+    // Request to'lovi: so'rovni keyingi bosqichga o'tkazadi
+    await confirmRequestPayment(requestId);
+  } else if (p.kind === "final") {
+    // Yakuniy (qolgan) to'lov tasdiqlandi
+    await setFinalPaid(p.appId as string);
+  } else {
+    // Ariza avans to'lovi: ilova statusini keyingi bosqichga
+    const appId = p.appId as string;
+    const serviceType = p.serviceType as ServiceType;
+    const appSnap = await adminDb.collection("apps").doc(appId).get();
+    if (appSnap.exists) {
+      const st = appSnap.get("status") as AppStatus;
+      const flow = getStatusFlow(serviceType);
+      const idx = flow.indexOf(st);
+      if (st === "payment_pending" && idx >= 0 && idx < flow.length - 1) {
+        await setAppStatus(appId, flow[idx + 1]);
+      }
     }
   }
 
