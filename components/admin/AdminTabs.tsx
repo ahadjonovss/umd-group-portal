@@ -8,6 +8,7 @@ import { PricingModule } from "@/components/admin/PricingModule";
 import { CardSettings } from "@/components/admin/CardSettings";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { AdminRequestRow } from "@/components/admin/AdminRequestRow";
+import { FinancePanel } from "@/components/admin/FinancePanel";
 import type { AppView } from "@/lib/firestore/apps";
 import type { AdminReview } from "@/lib/firestore/reviews";
 import type { AdminUser } from "@/lib/firestore/users";
@@ -19,9 +20,9 @@ import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
-type TabKey = "users" | "apps" | "live" | "payments" | "requests" | "reviews" | "settings";
+type TabKey = "users" | "apps" | "live" | "payments" | "finance" | "requests" | "reviews" | "settings";
 
-const TAB_KEYS: TabKey[] = ["users", "apps", "live", "payments", "requests", "reviews", "settings"];
+const TAB_KEYS: TabKey[] = ["users", "apps", "live", "payments", "finance", "requests", "reviews", "settings"];
 const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
@@ -36,6 +37,9 @@ const ICONS: Record<TabKey, ReactNode> = {
   ),
   payments: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  ),
+  finance: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
   ),
   requests: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -214,6 +218,7 @@ export function AdminTabs({
     { key: "apps", label: "Arizalar", count: arizaApps.length },
     { key: "live", label: "Ilovalar", count: liveApps.length },
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
+    { key: "finance", label: "Moliya", count: 0 },
     { key: "requests", label: "So'rovlar", count: requests.length, badge: activeRequests },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "settings", label: "Sozlamalar", count: 0 },
@@ -242,7 +247,7 @@ export function AdminTabs({
                   <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
                     {t.badge}
                   </span>
-                ) : t.key !== "settings" ? (
+                ) : t.key !== "settings" && t.key !== "finance" ? (
                   <span className={`text-xs ${active ? "text-blue-400" : "text-slate-400"}`}>{t.count}</span>
                 ) : null}
               </button>
@@ -312,6 +317,8 @@ export function AdminTabs({
             )}
           </>
         )}
+
+        {tab === "finance" && <FinancePanel payments={payments} />}
 
         {tab === "requests" && (
           <>
