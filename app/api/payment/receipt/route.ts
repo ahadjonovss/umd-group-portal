@@ -9,6 +9,7 @@ import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { advanceUsd, finalUsd, fullUsd, advancePercentFor } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
 import { SERVICE_LABELS } from "@/lib/labels";
+import { tgAdminLink } from "@/lib/site";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -96,7 +97,8 @@ export async function POST(req: NextRequest) {
     `📞 ${esc(ownerPhone)}\n` +
     `💵 $${esc(String(usd))}` +
     (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
-    `\n💳 Karta: ${esc(payment.cardNumber || "-")}`;
+    `\n💳 Karta: ${esc(payment.cardNumber || "-")}` +
+    tgAdminLink(appId);
 
   try {
     const ext = receipt.name.split(".").pop()?.toLowerCase();

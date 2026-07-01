@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createTransferZip, buildTransferInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
+import { tgAdminLink } from "@/lib/site";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { createAppSubmission, markTelegramSent } from "@/lib/firestore/apps";
 
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   // 2) Telegram (ixtiyoriy)
   try {
-    await sendZipToTelegram(zipBuffer, filename, caption);
+    await sendZipToTelegram(zipBuffer, filename, caption + tgAdminLink(appId));
     await markTelegramSent(appId);
   } catch (err) {
     console.error("[AT] Telegram xato (ariza Firestore'da saqlangan):", err);

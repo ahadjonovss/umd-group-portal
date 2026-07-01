@@ -7,6 +7,7 @@ import { transferUsd, finalUsd } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
+import { tgAdminLink } from "@/lib/site";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -96,7 +97,8 @@ export async function POST(req: NextRequest) {
       `📱 ${esc(appName)}\n` +
       `👤 ${esc(ownerName)}\n` +
       `📞 ${esc(ownerPhone)}\n` +
-      `💵 ${esc(String(usd))}$`;
+      `💵 ${esc(String(usd))}$` +
+      tgAdminLink(appId);
     await sendTelegramMessage(text);
   } catch {
     // jiddiy emas

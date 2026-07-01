@@ -6,6 +6,7 @@ import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { readFormFile } from "@/lib/form-utils";
 import { sendPhotoToTelegram } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
+import { tgAdminLink } from "@/lib/site";
 import { REQUEST_TYPE_LABEL, type RequestType } from "@/lib/request-status";
 import type { ServiceType } from "@/types";
 
@@ -57,7 +58,8 @@ export async function POST(req: NextRequest) {
     `👤 ${esc(r.ownerName || user.name || user.email || "Mijoz")}\n` +
     `📞 ${esc(r.ownerPhone || "-")}\n` +
     `💵 ${esc(String(usd))}$` +
-    (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "");
+    (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
+    tgAdminLink(r.appId as string);
 
   try {
     const ext = receipt.name.split(".").pop()?.toLowerCase() || "jpg";

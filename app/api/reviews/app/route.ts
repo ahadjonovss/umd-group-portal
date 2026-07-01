@@ -4,6 +4,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { createAppReview, hasReviewedApp } from "@/lib/firestore/reviews";
 import { isTerminalSuccess, type AppStatus } from "@/lib/app-status";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { tgAdminLink } from "@/lib/site";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -92,7 +93,8 @@ export async function POST(req: NextRequest) {
       `👤 ${esc(reviewerName)}\n` +
       `${STARS[rating]} ${rating}/5\n` +
       `📦 ${esc(appName || serviceType)}\n` +
-      `💬 ${esc(comment.trim())}`;
+      `💬 ${esc(comment.trim())}` +
+      tgAdminLink(appId);
     await sendTelegramMessage(text);
   } catch {
     // jiddiy emas
