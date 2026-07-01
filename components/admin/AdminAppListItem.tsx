@@ -3,7 +3,7 @@ import type { AppView } from "@/lib/firestore/apps";
 import { SERVICE_LABELS, STATUS_META } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 
-export function AdminAppListItem({ app }: { app: AppView }) {
+export function AdminAppListItem({ app, spentUsd }: { app: AppView; spentUsd?: number }) {
   const theme = SERVICE_THEME[app.serviceType];
   const status = STATUS_META[app.status];
   const title = app.appName || SERVICE_LABELS[app.serviceType];
@@ -20,6 +20,9 @@ export function AdminAppListItem({ app }: { app: AppView }) {
         <p className="font-semibold text-slate-900 truncate">{title}</p>
         <p className={`text-xs font-medium truncate ${theme.text}`}>{SERVICE_LABELS[app.serviceType]}</p>
         <p className="text-xs text-slate-400 truncate mt-0.5">{app.ownerEmail || "—"}</p>
+        {typeof spentUsd === "number" && (
+          <p className="text-xs font-semibold text-emerald-600 mt-0.5">Sarflangan: ${spentUsd}</p>
+        )}
       </div>
 
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${status.badge}`}>

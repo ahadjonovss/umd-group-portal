@@ -29,49 +29,89 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 function ProfileEditor({ user }: { user: AdminUser }) {
   const router = useRouter();
+  const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user.fullName);
   const [phone, setPhone] = useState(user.phone);
   const [telegram, setTelegram] = useState(user.telegram);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const dirty = fullName !== user.fullName || phone !== user.phone || telegram !== user.telegram;
+  const field = "w-full h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
 
-  const field = "flex-1 min-w-48 h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
+  function cancel() {
+    setFullName(user.fullName);
+    setPhone(user.phone);
+    setTelegram(user.telegram);
+    setMsg(null);
+    setEditing(false);
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
-      <h3 className="font-semibold text-slate-900 text-sm mb-3">Profil ma&apos;lumotlari</h3>
-      <div className="flex flex-col gap-3">
-        <div>
-          <label className="text-xs text-slate-500">To&apos;liq ism</label>
-          <input value={fullName} onChange={(e) => { setFullName(e.target.value); setMsg(null); }} placeholder="Ism familiya" className={`${field} mt-1 w-full`} />
-        </div>
-        <div>
-          <label className="text-xs text-slate-500">Telefon</label>
-          <input value={phone} onChange={(e) => { setPhone(e.target.value); setMsg(null); }} placeholder="+998901234567" className={`${field} mt-1 w-full`} />
-        </div>
-        <div>
-          <label className="text-xs text-slate-500">Telegram username</label>
-          <input value={telegram} onChange={(e) => { setTelegram(e.target.value); setMsg(null); }} placeholder="@username" className={`${field} mt-1 w-full`} />
-        </div>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-slate-900 text-sm">Profil ma&apos;lumotlari</h3>
+        {!editing && (
+          <button
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Tahrirlash
+          </button>
+        )}
       </div>
-      <div className="flex items-center gap-3 mt-4">
-        <button
-          disabled={pending || !dirty}
-          onClick={() =>
-            start(async () => {
-              const r = await actSetUserProfile(user.uid, { fullName, phone, telegram });
-              setMsg(r.ok ? { ok: true, text: "Saqlandi" } : { ok: false, text: r.error || "Xatolik" });
-              if (r.ok) router.refresh();
-            })
-          }
-          className="h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
-        >
-          {pending ? "Saqlanmoqda…" : "Saqlash"}
-        </button>
-        {msg && <span className={`text-xs ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>{msg.ok ? "✓ " : "❌ "}{msg.text}</span>}
-      </div>
+
+      {editing ? (
+        <>
+          <div className="flex flex-col gap-3">
+            <div>
+              <label className="text-xs text-slate-500">To&apos;liq ism</label>
+              <input value={fullName} onChange={(e) => { setFullName(e.target.value); setMsg(null); }} placeholder="Ism familiya" className={`${field} mt-1`} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Telefon</label>
+              <input value={phone} onChange={(e) => { setPhone(e.target.value); setMsg(null); }} placeholder="+998901234567" className={`${field} mt-1`} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-500">Telegram username</label>
+              <input value={telegram} onChange={(e) => { setTelegram(e.target.value); setMsg(null); }} placeholder="@username" className={`${field} mt-1`} />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 mt-4">
+            <button
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const r = await actSetUserProfile(user.uid, { fullName, phone, telegram });
+                  if (r.ok) {
+                    setEditing(false);
+                    setMsg({ ok: true, text: "Saqlandi" });
+                    router.refresh();
+                  } else {
+                    setMsg({ ok: false, text: r.error || "Xatolik" });
+                  }
+                })
+              }
+              className="h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+            >
+              {pending ? "Saqlanmoqda…" : "Saqlash"}
+            </button>
+            <button onClick={cancel} className="h-9 px-4 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200">
+              Bekor
+            </button>
+            {msg && !msg.ok && <span className="text-xs text-red-600">❌ {msg.text}</span>}
+          </div>
+        </>
+      ) : (
+        <div>
+          <InfoRow label="To'liq ism" value={user.fullName} />
+          <InfoRow label="Telefon" value={user.phone} />
+          <InfoRow label="Telegram" value={user.telegram ? `@${user.telegram}` : ""} />
+          {msg?.ok && <p className="text-xs text-emerald-600 mt-2">✓ {msg.text}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -158,6 +198,15 @@ export function AdminUserDetail({
   const [pending, start] = useTransition();
   const isAdmin = user.role === "admin";
 
+  // Sarflangan pul (faqat tasdiqlangan to'lovlar)
+  const confirmedPays = payments.filter((p) => p.status === "confirmed");
+  const totalSpentUsd = confirmedPays.reduce((s, p) => s + p.amountUsd, 0);
+  const totalSpentUzs = confirmedPays.reduce((s, p) => s + (p.amountUzs ?? 0), 0);
+  const spentByApp = new Map<string, number>();
+  for (const p of confirmedPays) {
+    spentByApp.set(p.appId, (spentByApp.get(p.appId) ?? 0) + p.amountUsd);
+  }
+
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Ma'lumot" },
     { key: "apps", label: "Ilovalar", count: apps.length },
@@ -167,6 +216,19 @@ export function AdminUserDetail({
 
   return (
     <div>
+      {/* Umumiy sarflangan pul */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-4 mb-5 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs text-slate-400">Umumiy sarflangan (tasdiqlangan)</p>
+          <p className="text-2xl font-bold text-emerald-600 mt-0.5">${totalSpentUsd}</p>
+          {totalSpentUzs ? <p className="text-xs text-slate-400 mt-0.5">~{totalSpentUzs.toLocaleString("en-US")} so&apos;m</p> : null}
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-slate-400">To&apos;lovlar</p>
+          <p className="text-lg font-semibold text-slate-700 mt-0.5">{confirmedPays.length} ta</p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap gap-1 border-b border-slate-200 mb-5">
         {tabs.map((t) => (
           <button
@@ -232,7 +294,7 @@ export function AdminUserDetail({
 
       {tab === "apps" &&
         (apps.length ? (
-          <div className="flex flex-col gap-3">{apps.map((a) => <AdminAppListItem key={a.id} app={a} />)}</div>
+          <div className="flex flex-col gap-3">{apps.map((a) => <AdminAppListItem key={a.id} app={a} spentUsd={spentByApp.get(a.id) ?? 0} />)}</div>
         ) : (
           <Empty text="Ilova yo'q." />
         ))}
