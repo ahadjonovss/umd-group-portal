@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import type { RequestView } from "@/lib/firestore/requests";
 import {
   REQUEST_STATUS_META,
@@ -22,36 +23,109 @@ const DATA_LABELS: Record<string, string> = {
   note: "Izoh (mijoz)",
 };
 
+const TYPE_COLOR: Record<string, string> = {
+  transfer: "bg-violet-100 text-violet-700",
+  update: "bg-blue-100 text-blue-700",
+  subscription_renewal: "bg-teal-100 text-teal-700",
+};
+
+function NoteDialog({
+  initial,
+  saving,
+  onSave,
+  onClose,
+}: {
+  initial: string;
+  saving: boolean;
+  onSave: (v: string) => void;
+  onClose: () => void;
+}) {
+  const [val, setVal] = useState(initial);
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-bold text-slate-900 mb-3">Izoh (admin uchun)</h3>
+        <textarea
+          autoFocus
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Izoh yozing…"
+          rows={4}
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="h-9 px-4 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200">
+            Bekor
+          </button>
+          <button
+            disabled={saving}
+            onClick={() => onSave(val)}
+            className="h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? "Saqlanmoqda…" : "Saqlash"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function AdminRequestRow({ request }: { request: RequestView }) {
   const [pending, start] = useTransition();
   const [note, setNote] = useState(request.note);
-  const [saved, setSaved] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [showData, setShowData] = useState(false);
 
   const meta = REQUEST_STATUS_META[request.status];
   const next = requestNextStatus(request.status);
   const active = isRequestActive(request.status);
   const title = request.appName || SERVICE_SHORT[request.serviceType];
   const entries = Object.entries(request.data).filter(([, v]) => v && String(v).trim() !== "");
+  const typeColor = TYPE_COLOR[request.type] ?? "bg-slate-100 text-slate-700";
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 p-4 flex flex-col gap-3">
+    <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 flex flex-col gap-2">
+      {/* Yuqori: tur + ilova | status */}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-semibold text-slate-900 truncate">
-            <span className="text-indigo-600">{REQUEST_TYPE_LABEL[request.type]}</span> · {title}
-          </p>
-          <p className="text-xs text-slate-500 truncate">
-            {SERVICE_SHORT[request.serviceType]} · {request.ownerName} · {request.ownerPhone}
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`inline-flex flex-shrink-0 items-center rounded-md px-2 py-0.5 text-[11px] font-semibold ${typeColor}`}>
+              {REQUEST_TYPE_LABEL[request.type]}
+            </span>
+            <p className="font-semibold text-slate-900 text-sm truncate">{title}</p>
+          </div>
+          <p className="text-xs text-slate-500 truncate mt-1">
+            {request.ownerName} · {request.ownerPhone}
           </p>
         </div>
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${meta.badge}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-          {requestStatusLabel(request.type, request.status)}
-        </span>
+        <div className="flex flex-col items-end flex-shrink-0">
+          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+            {requestStatusLabel(request.type, request.status)}
+          </span>
+          <span className="text-[11px] text-slate-400 mt-1">{formatDate(request.createdAt)}</span>
+        </div>
       </div>
 
-      {/* Ma'lumotlar */}
-      {entries.length > 0 && (
+      {/* Summa + ma'lumot ochish */}
+      <div className="flex items-center gap-2 text-xs">
+        <span className="font-semibold text-slate-900">${request.amountUsd}</span>
+        {request.amountUzs ? <span className="text-slate-400">~{request.amountUzs.toLocaleString("en-US")} so&apos;m</span> : null}
+        {request.status === "payment_pending" && (
+          <span className={request.receiptSent ? "text-emerald-600" : "text-amber-600"}>
+            · Chek: {request.receiptSent ? "✓" : "kutilmoqda"}
+          </span>
+        )}
+        {entries.length > 0 && (
+          <button onClick={() => setShowData((s) => !s)} className="ml-auto text-blue-600 hover:underline">
+            {showData ? "Ma'lumotni yashirish" : `Ma'lumot (${entries.length})`}
+          </button>
+        )}
+      </div>
+
+      {/* Ma'lumotlar (yig'iladigan) */}
+      {showData && entries.length > 0 && (
         <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 rounded-lg p-3">
           {entries.map(([k, v]) => (
             <div key={k} className="min-w-0">
@@ -62,75 +136,72 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
         </div>
       )}
 
-      <p className="text-xs text-slate-400">
-        Summa: <strong className="text-slate-600">${request.amountUsd}</strong>
-        {request.amountUzs ? ` (~${request.amountUzs.toLocaleString("en-US")} so'm)` : ""}
-        {" · "}
-        {request.status === "payment_pending" && (request.receiptSent ? "Chek: ✓ yuborilgan" : "Chek: kutilmoqda")}
-        {" · "}Yuborilgan: {formatDate(request.createdAt)}
-      </p>
-
-      {/* Status boshqaruvi */}
-      {(next || active) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {next && (
-            <button
-              disabled={pending}
-              onClick={() => start(() => actSetRequestStatus(request.id, next))}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${meta.dot} hover:opacity-90 disabled:opacity-50`}
-            >
-              {requestStatusLabel(request.type, next)} ga o&apos;tkazish →
-            </button>
-          )}
-          {active && (
-            <>
-              <button
-                disabled={pending}
-                onClick={() => start(() => actSetRequestStatus(request.id, "rejected"))}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
-              >
-                Rad etish
-              </button>
-              <button
-                disabled={pending}
-                onClick={() => start(() => actSetRequestStatus(request.id, "cancelled"))}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
-              >
-                Bekor qilish
-              </button>
-            </>
-          )}
-        </div>
+      {/* Izoh (mavjud bo'lsa) */}
+      {note && (
+        <p className="text-xs text-slate-600 bg-slate-50 rounded-lg px-2.5 py-1.5">
+          <span className="text-slate-400">Izoh: </span>{note}
+        </p>
       )}
 
-      {/* Izoh + o'chirish */}
-      <div className="flex flex-col gap-1.5 pt-1 border-t border-slate-100">
-        <textarea
-          value={note}
-          onChange={(e) => { setNote(e.target.value); setSaved(false); }}
-          placeholder="Izoh (admin uchun)…"
-          rows={2}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-        />
-        <div className="flex items-center gap-2">
+      {/* Amallar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {next && (
           <button
             disabled={pending}
-            onClick={() => start(async () => { await actSetRequestNote(request.id, note); setSaved(true); })}
-            className="h-8 px-3 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 disabled:opacity-50"
+            onClick={() => start(() => actSetRequestStatus(request.id, next))}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white ${meta.dot} hover:opacity-90 disabled:opacity-50`}
           >
-            Izohni saqlash
+            {requestStatusLabel(request.type, next)} ga o&apos;tkazish →
           </button>
-          {saved && !pending && <span className="text-xs text-emerald-600">✓</span>}
-          <div className="flex-1" />
-          <button
-            disabled={pending}
-            onClick={() => { if (confirm("Bu so'rovni o'chirasizmi?")) start(() => actDeleteRequest(request.id)); }}
-            className="h-8 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 disabled:opacity-50"
-          >
-            O&apos;chirish
-          </button>
-        </div>
+        )}
+        {active && (
+          <>
+            <button
+              disabled={pending}
+              onClick={() => start(() => actSetRequestStatus(request.id, "rejected"))}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+            >
+              Rad etish
+            </button>
+            <button
+              disabled={pending}
+              onClick={() => start(() => actSetRequestStatus(request.id, "cancelled"))}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
+            >
+              Bekor qilish
+            </button>
+          </>
+        )}
+        <button
+          onClick={() => setNoteOpen(true)}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200"
+        >
+          {note ? "Izohni tahrirlash" : "Izoh qo'shish"}
+        </button>
+        <div className="flex-1" />
+        <button
+          disabled={pending}
+          onClick={() => { if (confirm("Bu so'rovni o'chirasizmi?")) start(() => actDeleteRequest(request.id)); }}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+        >
+          O&apos;chirish
+        </button>
       </div>
+
+      {noteOpen && (
+        <NoteDialog
+          initial={note}
+          saving={pending}
+          onClose={() => setNoteOpen(false)}
+          onSave={(v) =>
+            start(async () => {
+              await actSetRequestNote(request.id, v);
+              setNote(v);
+              setNoteOpen(false);
+            })
+          }
+        />
+      )}
     </div>
   );
 }
