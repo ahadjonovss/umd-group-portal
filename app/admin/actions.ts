@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
 import { setAppStatus, markPublished, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
-import { setUserRole, setUserPassword, setUserEmail, deleteUser } from "@/lib/firestore/users";
+import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser } from "@/lib/firestore/users";
 import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/payments";
 import { setRequestStatus, setRequestNote, deleteRequest } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
@@ -70,6 +70,23 @@ export async function actSetUserEmail(uid: string, email: string) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Xatolik";
     return { ok: false, error: msg.includes("already") ? "Bu email band" : msg };
+  }
+}
+
+export async function actSetUserProfile(
+  uid: string,
+  data: { fullName: string; phone: string; telegram: string }
+) {
+  await requireAdmin();
+  if (!data.fullName || data.fullName.trim().length < 2) {
+    return { ok: false, error: "To'liq ismni kiriting" };
+  }
+  try {
+    await setUserProfile(uid, data);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
   }
 }
 

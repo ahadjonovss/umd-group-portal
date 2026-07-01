@@ -81,3 +81,19 @@ export async function setUserRole(uid: string, makeAdmin: boolean): Promise<void
     .doc(uid)
     .update({ role: makeAdmin ? "admin" : FieldValue.delete() });
 }
+
+// Admin: profil ma'lumotlarini (ism, telefon, telegram) yangilaydi.
+export async function setUserProfile(
+  uid: string,
+  data: { fullName: string; phone: string; telegram: string }
+): Promise<void> {
+  const fullName = data.fullName.trim();
+  const phone = data.phone.trim();
+  const telegram = data.telegram.trim().replace(/^@/, "");
+  await adminDb.collection("users").doc(uid).set({ fullName, phone, telegram }, { merge: true });
+  try {
+    await adminAuth.updateUser(uid, { displayName: fullName });
+  } catch {
+    // Auth displayName yangilanmasa ham jiddiy emas
+  }
+}

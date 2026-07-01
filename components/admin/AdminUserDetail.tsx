@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdminAppListItem } from "@/components/admin/AdminAppListItem";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { AdminReviewRow } from "@/components/admin/AdminReviewRow";
-import { actSetUserRole, actSetUserPassword, actSetUserEmail, actDeleteUser } from "@/app/admin/actions";
+import { actSetUserRole, actSetUserPassword, actSetUserEmail, actSetUserProfile, actDeleteUser } from "@/app/admin/actions";
 import { formatDate } from "@/lib/labels";
 import type { AdminUser } from "@/lib/firestore/users";
 import type { AppView } from "@/lib/firestore/apps";
@@ -23,6 +23,55 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0">
       <span className="text-sm text-slate-500">{label}</span>
       <span className="text-sm text-slate-900 text-right break-all">{value || "—"}</span>
+    </div>
+  );
+}
+
+function ProfileEditor({ user }: { user: AdminUser }) {
+  const router = useRouter();
+  const [fullName, setFullName] = useState(user.fullName);
+  const [phone, setPhone] = useState(user.phone);
+  const [telegram, setTelegram] = useState(user.telegram);
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const dirty = fullName !== user.fullName || phone !== user.phone || telegram !== user.telegram;
+
+  const field = "flex-1 min-w-48 h-10 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+      <h3 className="font-semibold text-slate-900 text-sm mb-3">Profil ma&apos;lumotlari</h3>
+      <div className="flex flex-col gap-3">
+        <div>
+          <label className="text-xs text-slate-500">To&apos;liq ism</label>
+          <input value={fullName} onChange={(e) => { setFullName(e.target.value); setMsg(null); }} placeholder="Ism familiya" className={`${field} mt-1 w-full`} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-500">Telefon</label>
+          <input value={phone} onChange={(e) => { setPhone(e.target.value); setMsg(null); }} placeholder="+998901234567" className={`${field} mt-1 w-full`} />
+        </div>
+        <div>
+          <label className="text-xs text-slate-500">Telegram username</label>
+          <input value={telegram} onChange={(e) => { setTelegram(e.target.value); setMsg(null); }} placeholder="@username" className={`${field} mt-1 w-full`} />
+        </div>
+      </div>
+      <div className="flex items-center gap-3 mt-4">
+        <button
+          disabled={pending || !dirty}
+          onClick={() =>
+            start(async () => {
+              const r = await actSetUserProfile(user.uid, { fullName, phone, telegram });
+              setMsg(r.ok ? { ok: true, text: "Saqlandi" } : { ok: false, text: r.error || "Xatolik" });
+              if (r.ok) router.refresh();
+            })
+          }
+          className="h-9 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
+        >
+          {pending ? "Saqlanmoqda…" : "Saqlash"}
+        </button>
+        {msg && <span className={`text-xs ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>{msg.ok ? "✓ " : "❌ "}{msg.text}</span>}
+      </div>
     </div>
   );
 }
@@ -135,11 +184,10 @@ export function AdminUserDetail({
 
       {tab === "info" && (
         <div className="flex flex-col gap-4">
+          <ProfileEditor user={user} />
+
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
-            <InfoRow label="To'liq ism" value={user.fullName} />
             <InfoRow label="Email (login)" value={user.email || ""} />
-            <InfoRow label="Telefon" value={user.phone} />
-            <InfoRow label="Telegram" value={user.telegram} />
             <InfoRow label="Rol" value={isAdmin ? "Admin" : "Mijoz"} />
             <InfoRow label="Ro'yxatdan o'tgan" value={formatDate(user.createdAt)} />
           </div>

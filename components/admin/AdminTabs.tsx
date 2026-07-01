@@ -196,6 +196,8 @@ export function AdminTabs({
   const arizaApps = apps.filter((a) => !isLive(a));
   const liveApps = apps.filter(isLive);
   const subApps = apps.filter((a) => a.status === "published" && a.subscription?.endDate);
+  const telegramByUid: Record<string, string> = {};
+  for (const u of users) if (u.telegram) telegramByUid[u.uid] = u.telegram;
 
   // Qidiruv / filter holatlari (har bir tab uchun alohida)
   const [userQ, setUserQ] = useState("");
@@ -331,7 +333,7 @@ export function AdminTabs({
           </>
         )}
 
-        {tab === "subscriptions" && <SubscriptionsPanel apps={subApps} />}
+        {tab === "subscriptions" && <SubscriptionsPanel apps={subApps} telegramByUid={telegramByUid} />}
 
         {tab === "payments" && (
           <>
