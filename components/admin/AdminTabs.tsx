@@ -15,19 +15,15 @@ import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isRequestActive } from "@/lib/request-status";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
-import type { ServiceType } from "@/types";
 
-type TabKey = "users" | "requests" | "live" | "payments" | "servicerequests" | "reviews" | "settings";
-type SubKey = "transfer" | "store";
-
-const TRANSFER: ServiceType[] = ["google-transfer", "apple-transfer"];
-const isTransfer = (s: ServiceType) => TRANSFER.includes(s);
+// Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
+type TabKey = "users" | "apps" | "live" | "payments" | "requests" | "reviews" | "settings";
 
 const ICONS: Record<TabKey, ReactNode> = {
   users: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.5-4.5" />
   ),
-  requests: (
+  apps: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   ),
   live: (
@@ -36,7 +32,7 @@ const ICONS: Record<TabKey, ReactNode> = {
   payments: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
   ),
-  servicerequests: (
+  requests: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
   ),
   reviews: (
@@ -80,23 +76,23 @@ export function AdminTabs({
   pricing: Pricing;
   payment: PaymentInfo;
 }) {
-  const [tab, setTab] = useState<TabKey>("requests");
-  const [sub, setSub] = useState<SubKey>("store");
+  const [tab, setTab] = useState<TabKey>("apps");
 
   const pending = reviews.filter((r) => !r.approved).length;
   const pendingPayments = payments.filter((p) => p.status === "pending").length;
   const activeRequests = requests.filter((r) => isRequestActive(r.status)).length;
 
-  const transferReqs = apps.filter((a) => isTransfer(a.serviceType));
-  const storeReqs = apps.filter((a) => !isTransfer(a.serviceType) && a.status !== "published");
-  const liveApps = apps.filter((a) => !isTransfer(a.serviceType) && a.status === "published");
+  // Jarayondagi arizalar vs chiqarilgan/transfer qilingan ilovalar
+  const isLive = (a: AppView) => a.status === "published" || a.status === "transferred";
+  const arizaApps = apps.filter((a) => !isLive(a));
+  const liveApps = apps.filter(isLive);
 
   const tabs: { key: TabKey; label: string; count: number; badge?: number }[] = [
     { key: "users", label: "Userlar", count: users.length },
-    { key: "requests", label: "Arizalar", count: transferReqs.length + storeReqs.length },
+    { key: "apps", label: "Arizalar", count: arizaApps.length },
     { key: "live", label: "Ilovalar", count: liveApps.length },
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
-    { key: "servicerequests", label: "So'rovlar", count: requests.length, badge: activeRequests },
+    { key: "requests", label: "So'rovlar", count: requests.length, badge: activeRequests },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "settings", label: "Sozlamalar", count: 0 },
   ];
@@ -144,27 +140,7 @@ export function AdminTabs({
             <Empty text="Foydalanuvchilar yo'q." />
           ))}
 
-        {tab === "requests" && (
-          <div>
-            <div className="inline-flex rounded-xl bg-slate-100 p-1 mb-4">
-              {([
-                { key: "store" as SubKey, label: `Store (${storeReqs.length})` },
-                { key: "transfer" as SubKey, label: `Transfer (${transferReqs.length})` },
-              ]).map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() => setSub(s.key)}
-                  className={`px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    sub === s.key ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-            <List apps={sub === "store" ? storeReqs : transferReqs} />
-          </div>
-        )}
+        {tab === "apps" && <List apps={arizaApps} />}
 
         {tab === "live" && <List apps={liveApps} />}
 
@@ -177,7 +153,7 @@ export function AdminTabs({
             <Empty text="To'lovlar yo'q." />
           ))}
 
-        {tab === "servicerequests" &&
+        {tab === "requests" &&
           (requests.length ? (
             <div className="flex flex-col gap-3">
               {requests.map((r) => <AdminRequestRow key={r.id} request={r} />)}
