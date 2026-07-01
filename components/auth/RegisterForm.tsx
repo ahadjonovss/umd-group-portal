@@ -8,7 +8,8 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { registerWithEmail, authErrorMessage } from "@/lib/auth/client";
 
-const PHONE_RE = /^\+998\d{9}$/;
+// Telegram username: 5–32 belgi, harf/raqam/pastki chiziq (@ ixtiyoriy)
+const TG_RE = /^@?[A-Za-z0-9_]{5,32}$/;
 
 export function RegisterForm() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export function RegisterForm() {
   const next = searchParams.get("next") || "/panel";
 
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [telegram, setTelegram] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -27,14 +28,17 @@ export function RegisterForm() {
     setError("");
 
     if (fullName.trim().length < 2) return setError("To'liq ismni kiriting");
-    if (!PHONE_RE.test(phone.trim())) return setError("Telefon format: +998XXXXXXXXX");
+    if (!TG_RE.test(telegram.trim())) return setError("Telegram username: @ bilan, 5–32 belgi (harf, raqam, _)");
     if (password.length < 6) return setError("Parol kamida 6 belgi bo'lishi kerak");
+
+    // @ belgisisiz, toza username saqlaymiz
+    const tgUsername = telegram.trim().replace(/^@/, "");
 
     setLoading(true);
     try {
       await registerWithEmail({
         fullName: fullName.trim(),
-        phone: phone.trim(),
+        telegram: tgUsername,
         email: email.trim(),
         password,
       });
@@ -58,12 +62,12 @@ export function RegisterForm() {
         onChange={(e) => setFullName(e.target.value)}
       />
       <Input
-        label="Telefon raqami"
+        label="Telegram username"
         required
-        autoComplete="tel"
-        placeholder="+998901234567"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
+        autoComplete="off"
+        placeholder="@username"
+        value={telegram}
+        onChange={(e) => setTelegram(e.target.value)}
       />
       <Input
         label="Email"

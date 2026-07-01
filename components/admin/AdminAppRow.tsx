@@ -8,6 +8,8 @@ import { STATUS_META, SERVICE_LABELS, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { actSetStatus, actPublish, actDeleteApp } from "@/app/admin/actions";
 
+const SITE_URL = "https://umdgroup.uz";
+
 export function AdminAppRow({ app }: { app: AppView }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -17,6 +19,21 @@ export function AdminAppRow({ app }: { app: AppView }) {
 
   const [date, setDate] = useState("");
   const [url, setUrl] = useState(app.publication.storeUrl ?? "");
+  const [copied, setCopied] = useState(false);
+
+  async function copyPaymentMessage() {
+    const name = app.contact?.fullName || "mijoz";
+    const link = `${SITE_URL}/panel/app/${app.id}`;
+    const msg =
+      `Hurmatli ${name}, quyidagi havola orqali to'lovni amalga oshiring va ilovangiz keyingi bosqichga o'tadi:\n\n${link}`;
+    try {
+      await navigator.clipboard.writeText(msg);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard bloklangan bo'lsa — jim
+    }
+  }
 
   // Faqat keyingi status ko'rsatiladi (barcha statuslar ishlatiladi).
   const flow = getStatusFlow(app.serviceType);
@@ -126,6 +143,15 @@ export function AdminAppRow({ app }: { app: AppView }) {
             <p className="text-[11px] text-slate-400">
               Yuborilgan: {formatDate(app.createdAt)} · {app.telegramSent ? "Telegram ✓" : "Telegram ✗"}
             </p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {app.status === "payment_pending" && (
+                <button
+                  onClick={copyPaymentMessage}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  {copied ? "✓ Nusxalandi" : "Xabar nusxalash"}
+                </button>
+              )}
             <button
               disabled={pending}
               onClick={() => {
@@ -136,6 +162,7 @@ export function AdminAppRow({ app }: { app: AppView }) {
             >
               O&apos;chirish
             </button>
+            </div>
           </div>
         </div>
       </div>
