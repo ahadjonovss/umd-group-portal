@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import type { PaymentView } from "@/lib/firestore/payments";
-import { SERVICE_LABELS } from "@/lib/labels";
+import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
 import type { ServiceType } from "@/types";
 
 const KIND_LABEL: Record<PaymentView["kind"], string> = {
@@ -75,6 +75,19 @@ export function FinancePanel({ payments }: { payments: PaymentView[] }) {
       .map(([svc, v]) => ({ key: svc, label: SERVICE_LABELS[svc], ...v }))
       .sort((a, b) => b.usd - a.usd);
 
+    // Platforma bo'yicha (Android / iOS)
+    const platMap = new Map<Platform, { usd: number; count: number }>();
+    for (const p of confirmed) {
+      const plat = platformOf(p.serviceType);
+      const cur = platMap.get(plat) ?? { usd: 0, count: 0 };
+      cur.usd += p.amountUsd;
+      cur.count += 1;
+      platMap.set(plat, cur);
+    }
+    const byPlatform = (["android", "ios"] as Platform[])
+      .map((plat) => ({ key: plat, label: PLATFORM_LABEL[plat], ...(platMap.get(plat) ?? { usd: 0, count: 0 }) }))
+      .filter((x) => x.count > 0);
+
     // To'lov turlari bo'yicha
     const kindMap = new Map<PaymentView["kind"], { usd: number; count: number }>();
     for (const p of confirmed) {
@@ -104,7 +117,7 @@ export function FinancePanel({ payments }: { payments: PaymentView[] }) {
       })
       .sort((a, b) => b.key.localeCompare(a.key));
 
-    return { totalUsd, totalUzs, pendingUsd, confirmedCount: confirmed.length, pendingCount: pending.length, byService, byKind, byMonth };
+    return { totalUsd, totalUzs, pendingUsd, confirmedCount: confirmed.length, pendingCount: pending.length, byService, byPlatform, byKind, byMonth };
   }, [payments]);
 
   const maxMonth = Math.max(1, ...stats.byMonth.map((m) => m.usd));
@@ -134,6 +147,27 @@ export function FinancePanel({ payments }: { payments: PaymentView[] }) {
           <div className="flex flex-col gap-3">
             {stats.byService.map((s) => (
               <BarRow key={s.key} label={s.label} value={s.usd} total={stats.totalUsd} count={s.count} color="bg-blue-500" />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">Ma&apos;lumot yo&apos;q.</p>
+        )}
+      </div>
+
+      {/* Platforma bo'yicha (Android / iOS) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+        <h3 className="font-semibold text-slate-900 text-sm mb-4">Platforma bo&apos;yicha daromad</h3>
+        {stats.byPlatform.length ? (
+          <div className="flex flex-col gap-3">
+            {stats.byPlatform.map((p) => (
+              <BarRow
+                key={p.key}
+                label={p.label}
+                value={p.usd}
+                total={stats.totalUsd}
+                count={p.count}
+                color={p.key === "ios" ? "bg-slate-700" : "bg-green-500"}
+              />
             ))}
           </div>
         ) : (

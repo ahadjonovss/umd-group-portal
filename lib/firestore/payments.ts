@@ -41,6 +41,7 @@ export interface PaymentView {
   id: string;
   appId: string;
   requestId: string | null;
+  ownerUid: string;
   ownerName: string;
   ownerPhone: string;
   serviceType: ServiceType;
@@ -66,6 +67,7 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     id: d.id,
     appId: x.appId,
     requestId: x.requestId ?? null,
+    ownerUid: x.ownerUid ?? "",
     ownerName: x.ownerName ?? "",
     ownerPhone: x.ownerPhone ?? "",
     serviceType: x.serviceType,

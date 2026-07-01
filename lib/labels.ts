@@ -8,6 +8,18 @@ export const SERVICE_LABELS: Record<ServiceType, string> = {
   "apple-transfer": "Apple App Store — Transfer",
 };
 
+// Platforma: App Store / Apple transfer -> iOS, qolgani -> Android
+export type Platform = "android" | "ios";
+
+export function platformOf(s: ServiceType): Platform {
+  return s === "app-store" || s === "apple-transfer" ? "ios" : "android";
+}
+
+export const PLATFORM_LABEL: Record<Platform, string> = {
+  android: "Android",
+  ios: "iOS",
+};
+
 // Qisqa nom (chiplar uchun)
 export const SERVICE_SHORT: Record<ServiceType, string> = {
   "play-market": "Play Market",

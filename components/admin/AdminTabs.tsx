@@ -9,20 +9,21 @@ import { CardSettings } from "@/components/admin/CardSettings";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { AdminRequestRow } from "@/components/admin/AdminRequestRow";
 import { FinancePanel } from "@/components/admin/FinancePanel";
+import { SubscriptionsPanel } from "@/components/admin/SubscriptionsPanel";
 import type { AppView } from "@/lib/firestore/apps";
 import type { AdminReview } from "@/lib/firestore/reviews";
 import type { AdminUser } from "@/lib/firestore/users";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isRequestActive, REQUEST_TYPE_LABEL } from "@/lib/request-status";
-import { STATUS_META, SERVICE_LABELS } from "@/lib/labels";
+import { STATUS_META, SERVICE_LABELS, PLATFORM_LABEL, platformOf } from "@/lib/labels";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
-type TabKey = "users" | "live" | "payments" | "finance" | "requests" | "reviews" | "settings";
+type TabKey = "users" | "live" | "subscriptions" | "payments" | "finance" | "requests" | "reviews" | "settings";
 
-const TAB_KEYS: TabKey[] = ["users", "live", "payments", "finance", "requests", "reviews", "settings"];
+const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "finance", "requests", "reviews", "settings"];
 const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
@@ -37,6 +38,9 @@ const ICONS: Record<TabKey, ReactNode> = {
   ),
   finance: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+  ),
+  subscriptions: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
   ),
   requests: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -191,11 +195,13 @@ export function AdminTabs({
   const isLive = (a: AppView) => a.status === "published" || a.status === "transferred";
   const arizaApps = apps.filter((a) => !isLive(a));
   const liveApps = apps.filter(isLive);
+  const subApps = apps.filter((a) => a.status === "published" && a.subscription?.endDate);
 
   // Qidiruv / filter holatlari (har bir tab uchun alohida)
   const [userQ, setUserQ] = useState("");
   const [liveQ, setLiveQ] = useState("");
   const [liveStatus, setLiveStatus] = useState("");
+  const [livePlatform, setLivePlatform] = useState("");
   const [payQ, setPayQ] = useState("");
   const [payStatus, setPayStatus] = useState("");
   const [reqQ, setReqQ] = useState("");
@@ -235,7 +241,12 @@ export function AdminTabs({
   );
 
   const fUsers = users.filter((u) => !userQ || inc(`${u.fullName} ${u.email ?? ""} ${u.phone} ${u.telegram}`, userQ));
-  const fLive = liveApps.filter((a) => (!liveStatus || a.status === liveStatus) && (!liveQ || inc(appText(a), liveQ)));
+  const fLive = liveApps.filter(
+    (a) =>
+      (!liveStatus || a.status === liveStatus) &&
+      (!livePlatform || platformOf(a.serviceType) === livePlatform) &&
+      (!liveQ || inc(appText(a), liveQ))
+  );
   const fPay = payments.filter(
     (p) => (!payStatus || p.status === payStatus) && (!payQ || inc(`${p.appName ?? ""} ${p.ownerName} ${p.ownerPhone}`, payQ))
   );
@@ -252,6 +263,7 @@ export function AdminTabs({
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "live", label: "Ilovalar", count: liveApps.length },
+    { key: "subscriptions", label: "Obunalar", count: subApps.length },
     { key: "finance", label: "Moliya", count: 0 },
     { key: "users", label: "Userlar", count: users.length },
     { key: "settings", label: "Sozlamalar", count: 0 },
@@ -310,11 +322,16 @@ export function AdminTabs({
               query={liveQ}
               setQuery={setLiveQ}
               placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
-              filters={[{ value: liveStatus, onChange: setLiveStatus, allLabel: "Barcha statuslar", options: appStatusOptions(liveApps) }]}
+              filters={[
+                { value: livePlatform, onChange: setLivePlatform, allLabel: "Barcha platformalar", options: [{ value: "android", label: PLATFORM_LABEL.android }, { value: "ios", label: PLATFORM_LABEL.ios }] },
+                { value: liveStatus, onChange: setLiveStatus, allLabel: "Barcha statuslar", options: appStatusOptions(liveApps) },
+              ]}
             />
             <List apps={fLive} />
           </>
         )}
+
+        {tab === "subscriptions" && <SubscriptionsPanel apps={subApps} />}
 
         {tab === "payments" && (
           <>
