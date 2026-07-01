@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
-import { setAppStatus, markPublished, renewSubscription } from "@/lib/firestore/apps";
+import { setAppStatus, markPublished, renewSubscription, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
-import { setUserRole, setUserPassword, setUserEmail } from "@/lib/firestore/users";
-import { confirmPayment, setPaymentNote } from "@/lib/firestore/payments";
+import { setUserRole, setUserPassword, setUserEmail, deleteUser } from "@/lib/firestore/users";
+import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/payments";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
@@ -94,6 +94,24 @@ export async function actSavePayment(info: PaymentInfo) {
 export async function actConfirmPayment(paymentId: string) {
   await requireAdmin();
   await confirmPayment(paymentId);
+  revalidatePath("/admin");
+}
+
+export async function actDeleteApp(appId: string) {
+  await requireAdmin();
+  await deleteApp(appId);
+  revalidatePath("/admin");
+}
+
+export async function actDeletePayment(paymentId: string) {
+  await requireAdmin();
+  await deletePayment(paymentId);
+  revalidatePath("/admin");
+}
+
+export async function actDeleteUser(uid: string) {
+  await requireAdmin();
+  await deleteUser(uid);
   revalidatePath("/admin");
 }
 

@@ -105,6 +105,10 @@ export async function setPaymentNote(paymentId: string, note: string): Promise<v
   await adminDb.collection(PAYMENTS).doc(paymentId).update({ note: note.slice(0, 1000) });
 }
 
+export async function deletePayment(paymentId: string): Promise<void> {
+  await adminDb.collection(PAYMENTS).doc(paymentId).delete();
+}
+
 // To'lovni tasdiqlash: ariza statusini keyingi bosqichga o'tkazadi.
 export async function confirmPayment(paymentId: string): Promise<void> {
   const ref = adminDb.collection(PAYMENTS).doc(paymentId);

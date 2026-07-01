@@ -55,6 +55,26 @@ export async function setUserEmail(uid: string, email: string): Promise<void> {
   }
 }
 
+// Admin: foydalanuvchini + uning ilovalari, to'lovlari, sharhlarini + Auth akkauntini o'chiradi.
+export async function deleteUser(uid: string): Promise<void> {
+  const [apps, pays, revs] = await Promise.all([
+    adminDb.collection("apps").where("ownerUid", "==", uid).get(),
+    adminDb.collection("payments").where("ownerUid", "==", uid).get(),
+    adminDb.collection("reviews").where("ownerUid", "==", uid).get(),
+  ]);
+  const batch = adminDb.batch();
+  apps.forEach((d) => batch.delete(d.ref));
+  pays.forEach((d) => batch.delete(d.ref));
+  revs.forEach((d) => batch.delete(d.ref));
+  batch.delete(adminDb.collection("users").doc(uid));
+  await batch.commit();
+  try {
+    await adminAuth.deleteUser(uid);
+  } catch {
+    // Auth'da bo'lmasa ham davom etamiz
+  }
+}
+
 export async function setUserRole(uid: string, makeAdmin: boolean): Promise<void> {
   await adminDb
     .collection("users")
