@@ -143,6 +143,15 @@ export async function setAppStatus(appId: string, status: AppStatus): Promise<vo
   });
 }
 
+// Obuna to'xtatildi — ilova store'dan olib tashlandi (terminal). Obuna faolsizlanadi.
+export async function endSubscription(appId: string): Promise<void> {
+  await adminDb.collection(APPS).doc(appId).update({
+    status: "subscription_ended" satisfies AppStatus,
+    statusUpdatedAt: FieldValue.serverTimestamp(),
+    "subscription.active": false,
+  });
+}
+
 // Transfer yakunlangach ilova "transfer qilingan" holatiga o'tadi (obuna endi amal qilmaydi).
 export async function markAppTransferred(appId: string): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({

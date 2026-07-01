@@ -192,7 +192,7 @@ export function AdminTabs({
   const activeRequests = requests.filter((r) => isRequestActive(r.status)).length;
 
   // Jarayondagi arizalar vs chiqarilgan/transfer qilingan ilovalar
-  const isLive = (a: AppView) => a.status === "published" || a.status === "transferred";
+  const isLive = (a: AppView) => a.status === "published" || a.status === "transferred" || a.status === "subscription_ended";
   const arizaApps = apps.filter((a) => !isLive(a));
   const liveApps = apps.filter(isLive);
   const subApps = apps.filter((a) => a.status === "published" && a.subscription?.endDate);

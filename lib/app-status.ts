@@ -16,7 +16,9 @@ export type AppStatus =
   | "transferring"
   | "completed"
   // ilova boshqa akkauntga transfer qilingan (terminal)
-  | "transferred";
+  | "transferred"
+  // obuna to'xtatildi — ilova store'dan olib tashlandi (terminal)
+  | "subscription_ended";
 
 // Chiqarish xizmatlari oqimi (6 bosqich).
 export const PUBLISH_FLOW: AppStatus[] = [

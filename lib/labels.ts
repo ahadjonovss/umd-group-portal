@@ -117,6 +117,13 @@ export const STATUS_META: Record<
     text: "text-violet-600",
     desc: "Ilova boshqa akkauntga o'tkazildi.",
   },
+  subscription_ended: {
+    label: "Obuna to'xtatildi",
+    badge: "bg-rose-50 text-rose-700 ring-rose-200",
+    dot: "bg-rose-500",
+    text: "text-rose-600",
+    desc: "Obuna to'xtatildi — ilova store'dan olib tashlandi.",
+  },
 };
 
 // ISO -> DD.MM.YYYY

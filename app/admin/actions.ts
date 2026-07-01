@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
-import { setAppStatus, markPublished, deleteApp } from "@/lib/firestore/apps";
+import { setAppStatus, markPublished, markAppTransferred, endSubscription, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser } from "@/lib/firestore/users";
 import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/payments";
@@ -21,6 +21,18 @@ export async function actPublish(appId: string, publishedAt: string, storeUrl: s
   await requireAdmin();
   const date = publishedAt ? new Date(publishedAt) : new Date();
   await markPublished(appId, date, storeUrl.trim() || undefined);
+  revalidatePath("/admin");
+}
+
+export async function actMarkTransferred(appId: string) {
+  await requireAdmin();
+  await markAppTransferred(appId);
+  revalidatePath("/admin");
+}
+
+export async function actEndSubscription(appId: string) {
+  await requireAdmin();
+  await endSubscription(appId);
   revalidatePath("/admin");
 }
 

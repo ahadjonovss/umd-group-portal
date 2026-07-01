@@ -6,7 +6,7 @@ import type { AppView } from "@/lib/firestore/apps";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { STATUS_META, SERVICE_LABELS, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
-import { actSetStatus, actPublish, actDeleteApp } from "@/app/admin/actions";
+import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actDeleteApp } from "@/app/admin/actions";
 
 const SITE_URL = "https://umdgroup.uz";
 
@@ -40,7 +40,7 @@ export function AdminAppRow({ app }: { app: AppView }) {
   const idx = flow.indexOf(app.status);
   const nextStatus: AppStatus | null = idx >= 0 && idx < flow.length - 1 ? flow[idx + 1] : null;
   const nextMeta = nextStatus ? STATUS_META[nextStatus] : null;
-  const inProgress = !["published", "completed", "rejected", "cancelled"].includes(app.status);
+  const inProgress = !["published", "completed", "rejected", "cancelled", "transferred", "subscription_ended"].includes(app.status);
   const nextIsPublish = nextStatus === "published";
 
   return (
@@ -136,6 +136,38 @@ export function AdminAppRow({ app }: { app: AppView }) {
                 Obuna: {formatDate(app.subscription.startDate)} → {formatDate(app.subscription.endDate)}
                 {app.subscription.renewedCount > 0 && ` · ${app.subscription.renewedCount}× uzaytirilgan`}
               </span>
+            </div>
+          )}
+
+          {/* Chiqarilgan ilova uchun terminal amallar */}
+          {app.status === "published" && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                disabled={pending}
+                onClick={() => {
+                  if (confirm("Ilovani 'transfer qilingan' deb belgilaysizmi? Obuna to'xtaydi."))
+                    start(() => actMarkTransferred(app.id));
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Transfer qilingan deb belgilash
+              </button>
+              <button
+                disabled={pending}
+                onClick={() => {
+                  if (confirm("Obunani to'xtatasizmi? Ilova store'dan olib tashlangan hisoblanadi."))
+                    start(() => actEndSubscription(app.id));
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                Obuna to&apos;xtatildi
+              </button>
             </div>
           )}
 
