@@ -20,17 +20,14 @@ import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
-type TabKey = "users" | "apps" | "live" | "payments" | "finance" | "requests" | "reviews" | "settings";
+type TabKey = "users" | "live" | "payments" | "finance" | "requests" | "reviews" | "settings";
 
-const TAB_KEYS: TabKey[] = ["users", "apps", "live", "payments", "finance", "requests", "reviews", "settings"];
+const TAB_KEYS: TabKey[] = ["users", "live", "payments", "finance", "requests", "reviews", "settings"];
 const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
   users: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a3 3 0 10-2.5-4.5" />
-  ),
-  apps: (
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
   ),
   live: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -67,16 +64,6 @@ function List({ apps }: { apps: AppView[] }) {
     </div>
   );
 }
-
-const REQ_STATUS_LABELS: Record<string, string> = {
-  requested: "So'rov yuborildi",
-  review: "Ko'rib chiqilmoqda",
-  payment_pending: "To'lov kutilmoqda",
-  in_progress: "Jarayonda",
-  completed: "Yakunlandi",
-  rejected: "Rad etildi",
-  cancelled: "Bekor qilindi",
-};
 
 const inc = (hay: string, q: string) => hay.toLowerCase().includes(q.trim().toLowerCase());
 
@@ -134,6 +121,38 @@ function appStatusOptions(list: AppView[]): { value: string; label: string }[] {
   return seen.map((s) => ({ value: s, label: STATUS_META[s as AppStatus]?.label ?? s }));
 }
 
+// So'rovlar oqimi (chiqarish arizasi + transfer/update/uzaytirish) uchun umumiy holat
+type ItemState = "active" | "done" | "cancelled";
+
+function appState(a: AppView): ItemState {
+  if (a.status === "rejected" || a.status === "cancelled") return "cancelled";
+  if (a.status === "published" || a.status === "transferred") return "done";
+  return "active";
+}
+function reqState(r: RequestView): ItemState {
+  if (r.status === "completed") return "done";
+  if (r.status === "rejected" || r.status === "cancelled") return "cancelled";
+  return "active";
+}
+
+// Oqimdagi element: chiqarish arizasi yoki so'rov
+type FeedItem =
+  | { kind: "app"; app: AppView; date: string; type: string; state: ItemState; text: string }
+  | { kind: "req"; req: RequestView; date: string; type: string; state: ItemState; text: string };
+
+const FEED_TYPE_OPTIONS = [
+  { value: "chiqarish", label: "Chiqarish" },
+  { value: "transfer", label: REQUEST_TYPE_LABEL.transfer },
+  { value: "update", label: REQUEST_TYPE_LABEL.update },
+  { value: "subscription_renewal", label: REQUEST_TYPE_LABEL.subscription_renewal },
+];
+
+const FEED_STATE_OPTIONS = [
+  { value: "active", label: "Faol" },
+  { value: "done", label: "Yakunlangan" },
+  { value: "cancelled", label: "Bekor/Rad etilgan" },
+];
+
 export function AdminTabs({
   apps,
   users,
@@ -151,7 +170,7 @@ export function AdminTabs({
   pricing: Pricing;
   payment: PaymentInfo;
 }) {
-  const [tab, setTab] = useState<TabKey>("apps");
+  const [tab, setTab] = useState<TabKey>("requests");
 
   // Tanlangan tabni saqlaymiz — kartochkaga o'tib qaytganda o'sha tab ochiladi
   useEffect(() => {
@@ -175,14 +194,12 @@ export function AdminTabs({
 
   // Qidiruv / filter holatlari (har bir tab uchun alohida)
   const [userQ, setUserQ] = useState("");
-  const [appQ, setAppQ] = useState("");
-  const [appStatus, setAppStatus] = useState("");
   const [liveQ, setLiveQ] = useState("");
   const [liveStatus, setLiveStatus] = useState("");
   const [payQ, setPayQ] = useState("");
   const [payStatus, setPayStatus] = useState("");
   const [reqQ, setReqQ] = useState("");
-  const [reqStatus, setReqStatus] = useState("");
+  const [feedState, setFeedState] = useState("");
   const [reqType, setReqType] = useState("");
   const [revQ, setRevQ] = useState("");
   const [revStatus, setRevStatus] = useState("");
@@ -190,17 +207,37 @@ export function AdminTabs({
   const appText = (a: AppView) =>
     `${a.appName ?? ""} ${a.contact?.fullName ?? ""} ${a.contact?.phone ?? ""} ${SERVICE_LABELS[a.serviceType]}`;
 
+  // Birlashgan "So'rovlar" oqimi: chiqarish arizalari + transfer/update/uzaytirish
+  const feed: FeedItem[] = [
+    ...arizaApps.map<FeedItem>((a) => ({
+      kind: "app",
+      app: a,
+      date: a.createdAt ?? "",
+      type: "chiqarish",
+      state: appState(a),
+      text: appText(a),
+    })),
+    ...requests.map<FeedItem>((r) => ({
+      kind: "req",
+      req: r,
+      date: r.createdAt ?? "",
+      type: r.type,
+      state: reqState(r),
+      text: `${r.appName ?? ""} ${r.ownerName} ${r.ownerPhone}`,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  const fFeed = feed.filter(
+    (it) =>
+      (!reqType || it.type === reqType) &&
+      (!feedState || it.state === feedState) &&
+      (!reqQ || inc(it.text, reqQ))
+  );
+
   const fUsers = users.filter((u) => !userQ || inc(`${u.fullName} ${u.email ?? ""} ${u.phone} ${u.telegram}`, userQ));
-  const fAriza = arizaApps.filter((a) => (!appStatus || a.status === appStatus) && (!appQ || inc(appText(a), appQ)));
   const fLive = liveApps.filter((a) => (!liveStatus || a.status === liveStatus) && (!liveQ || inc(appText(a), liveQ)));
   const fPay = payments.filter(
     (p) => (!payStatus || p.status === payStatus) && (!payQ || inc(`${p.appName ?? ""} ${p.ownerName} ${p.ownerPhone}`, payQ))
-  );
-  const fReq = requests.filter(
-    (r) =>
-      (!reqStatus || r.status === reqStatus) &&
-      (!reqType || r.type === reqType) &&
-      (!reqQ || inc(`${r.appName ?? ""} ${r.ownerName} ${r.ownerPhone}`, reqQ))
   );
   const fRev = reviews.filter(
     (r) =>
@@ -208,14 +245,10 @@ export function AdminTabs({
       (!revQ || inc(`${r.name} ${r.comment} ${r.appName ?? ""}`, revQ))
   );
 
-  const reqStatusOptions = Array.from(new Set(requests.map((r) => r.status))).map((s) => ({
-    value: s,
-    label: REQ_STATUS_LABELS[s] ?? s,
-  }));
+  const activeAriza = arizaApps.filter((a) => appState(a) === "active").length;
 
   const tabs: { key: TabKey; label: string; count: number; badge?: number }[] = [
-    { key: "apps", label: "Arizalar", count: arizaApps.length },
-    { key: "requests", label: "So'rovlar", count: requests.length, badge: activeRequests },
+    { key: "requests", label: "So'rovlar", count: feed.length, badge: activeRequests + activeAriza },
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "live", label: "Ilovalar", count: liveApps.length },
@@ -271,18 +304,6 @@ export function AdminTabs({
           </>
         )}
 
-        {tab === "apps" && (
-          <>
-            <Toolbar
-              query={appQ}
-              setQuery={setAppQ}
-              placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
-              filters={[{ value: appStatus, onChange: setAppStatus, allLabel: "Barcha statuslar", options: appStatusOptions(arizaApps) }]}
-            />
-            <List apps={fAriza} />
-          </>
-        )}
-
         {tab === "live" && (
           <>
             <Toolbar
@@ -327,13 +348,19 @@ export function AdminTabs({
               setQuery={setReqQ}
               placeholder="Ilova nomi yoki mijoz bo'yicha qidirish…"
               filters={[
-                { value: reqType, onChange: setReqType, allLabel: "Barcha turlar", options: (["transfer", "update", "subscription_renewal"] as const).map((t) => ({ value: t, label: REQUEST_TYPE_LABEL[t] })) },
-                { value: reqStatus, onChange: setReqStatus, allLabel: "Barcha statuslar", options: reqStatusOptions },
+                { value: reqType, onChange: setReqType, allLabel: "Barcha turlar", options: FEED_TYPE_OPTIONS },
+                { value: feedState, onChange: setFeedState, allLabel: "Barcha holatlar", options: FEED_STATE_OPTIONS },
               ]}
             />
-            {fReq.length ? (
+            {fFeed.length ? (
               <div className="flex flex-col gap-3">
-                {fReq.map((r) => <AdminRequestRow key={r.id} request={r} />)}
+                {fFeed.map((it) =>
+                  it.kind === "app" ? (
+                    <AdminAppListItem key={`a-${it.app.id}`} app={it.app} />
+                  ) : (
+                    <AdminRequestRow key={`r-${it.req.id}`} request={it.req} />
+                  )
+                )}
               </div>
             ) : (
               <Empty text="Topilmadi." />
