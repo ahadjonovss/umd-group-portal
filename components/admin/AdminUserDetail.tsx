@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdminAppListItem } from "@/components/admin/AdminAppListItem";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { AdminReviewRow } from "@/components/admin/AdminReviewRow";
-import { actSetUserRole, actSetUserPassword, actSetUserEmail } from "@/app/admin/actions";
+import { actSetUserRole, actSetUserPassword, actSetUserEmail, actDeleteUser } from "@/app/admin/actions";
 import { formatDate } from "@/lib/labels";
 import type { AdminUser } from "@/lib/firestore/users";
 import type { AppView } from "@/lib/firestore/apps";
@@ -104,6 +104,7 @@ export function AdminUserDetail({
   payments: PaymentView[];
   reviews: AdminReview[];
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabKey>("info");
   const [pending, start] = useTransition();
   const isAdmin = user.role === "admin";
@@ -160,6 +161,24 @@ export function AdminUserDetail({
           </div>
 
           <CredentialsEditor uid={user.uid} currentEmail={user.email || ""} />
+
+          {/* Xavfli zona */}
+          <div className="bg-white rounded-2xl border border-red-200 p-5">
+            <h3 className="font-semibold text-red-700 text-sm mb-1">Xavfli zona</h3>
+            <p className="text-xs text-slate-400 mb-3">
+              Foydalanuvchi va uning barcha ilovalari, to&apos;lovlari, sharhlari butunlay o&apos;chiriladi. Qaytarib bo&apos;lmaydi.
+            </p>
+            <button
+              disabled={pending}
+              onClick={() => {
+                if (confirm(`"${user.fullName || user.email}" va uning BARCHA ma'lumotlarini o'chirasizmi? Bu amalni qaytarib bo'lmaydi.`))
+                  start(async () => { await actDeleteUser(user.uid); router.push("/admin"); });
+              }}
+              className="h-9 px-4 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+            >
+              Foydalanuvchini o&apos;chirish
+            </button>
+          </div>
         </div>
       )}
 

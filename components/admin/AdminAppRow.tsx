@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { AppView } from "@/lib/firestore/apps";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { STATUS_META, SERVICE_LABELS, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
-import { actSetStatus, actPublish, actRenew } from "@/app/admin/actions";
+import { actSetStatus, actPublish, actRenew, actDeleteApp } from "@/app/admin/actions";
 
 export function AdminAppRow({ app }: { app: AppView }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const theme = SERVICE_THEME[app.serviceType];
   const status = STATUS_META[app.status];
@@ -127,9 +129,21 @@ export function AdminAppRow({ app }: { app: AppView }) {
             </div>
           )}
 
-          <p className="text-[11px] text-slate-400 pt-1 border-t border-slate-100">
-            Yuborilgan: {formatDate(app.createdAt)} · {app.telegramSent ? "Telegram ✓" : "Telegram ✗"}
-          </p>
+          <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100">
+            <p className="text-[11px] text-slate-400">
+              Yuborilgan: {formatDate(app.createdAt)} · {app.telegramSent ? "Telegram ✓" : "Telegram ✗"}
+            </p>
+            <button
+              disabled={pending}
+              onClick={() => {
+                if (confirm("Bu arizani va unga bog'liq to'lov/sharhlarni butunlay o'chirasizmi?"))
+                  start(async () => { await actDeleteApp(app.id); router.push("/admin"); });
+              }}
+              className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 flex-shrink-0"
+            >
+              O&apos;chirish
+            </button>
+          </div>
         </div>
       </div>
     </div>

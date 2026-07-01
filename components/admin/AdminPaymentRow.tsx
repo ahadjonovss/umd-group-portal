@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { PaymentView } from "@/lib/firestore/payments";
 import { SERVICE_SHORT, formatDate } from "@/lib/labels";
-import { actConfirmPayment, actSetPaymentNote } from "@/app/admin/actions";
+import { actConfirmPayment, actSetPaymentNote, actDeletePayment } from "@/app/admin/actions";
 
 export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
   const [note, setNote] = useState(payment.note);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -84,15 +86,27 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
         </div>
       </div>
 
-      {!confirmed && (
+      <div className="flex items-center gap-2">
+        {!confirmed && (
+          <button
+            disabled={pending}
+            onClick={() => start(() => actConfirmPayment(payment.id))}
+            className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {pending ? "Tasdiqlanmoqda…" : "Tasdiqlash → keyingi bosqich"}
+          </button>
+        )}
         <button
           disabled={pending}
-          onClick={() => start(() => actConfirmPayment(payment.id))}
-          className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 self-start"
+          onClick={() => {
+            if (confirm("Bu to'lovni o'chirasizmi?"))
+              start(async () => { await actDeletePayment(payment.id); router.refresh(); });
+          }}
+          className="h-9 px-3 rounded-lg bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100 disabled:opacity-50"
         >
-          {pending ? "Tasdiqlanmoqda…" : "Tasdiqlash → keyingi bosqich"}
+          O&apos;chirish
         </button>
-      )}
+      </div>
     </div>
   );
 }

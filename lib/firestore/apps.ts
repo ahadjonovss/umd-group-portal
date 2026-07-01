@@ -105,6 +105,19 @@ export async function markReceiptSent(appId: string): Promise<void> {
   });
 }
 
+// Admin: arizani o'chiradi + unga bog'liq to'lov va sharhlarni.
+export async function deleteApp(appId: string): Promise<void> {
+  const [pays, revs] = await Promise.all([
+    adminDb.collection("payments").where("appId", "==", appId).get(),
+    adminDb.collection("reviews").where("appId", "==", appId).get(),
+  ]);
+  const batch = adminDb.batch();
+  batch.delete(adminDb.collection(APPS).doc(appId));
+  pays.forEach((d) => batch.delete(d.ref));
+  revs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+}
+
 // Admin: ilova holatini o'zgartiradi (oqim bo'ylab yoki rad etish/bekor qilish).
 export async function setAppStatus(appId: string, status: AppStatus): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({
