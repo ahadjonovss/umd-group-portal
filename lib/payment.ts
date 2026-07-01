@@ -34,6 +34,27 @@ export function updateUsd(serviceType: ServiceType, p: Pricing): number {
   return serviceType === "app-store" || serviceType === "apple-transfer" ? p.updateIos : p.updateAndroid;
 }
 
+// Obunani uzaytirish — chiqarilgan (store'ga chiqqan paytdagi) narxning 50%i.
+export const RENEWAL_FACTOR = 0.5;
+
+// Ilova chiqarilgan narxi: publishedPrice saqlangan bo'lsa o'sha, aks holda
+// (eski/migratsiya qilingan ilovalar uchun) joriy narx.
+export function publishedBasePrice(
+  app: { serviceType: ServiceType; publishedPrice?: number | null },
+  p: Pricing
+): number {
+  return typeof app.publishedPrice === "number" && app.publishedPrice > 0
+    ? app.publishedPrice
+    : fullUsd(app.serviceType, p);
+}
+
+export function renewalUsd(
+  app: { serviceType: ServiceType; publishedPrice?: number | null },
+  p: Pricing
+): number {
+  return publishedBasePrice(app, p) * RENEWAL_FACTOR;
+}
+
 // Qolgan (yakuniy) to'lov summasi ($) — chiqarilgandan keyin. 70/30 da bu 30%.
 export function finalUsd(serviceType: ServiceType, p: Pricing): number {
   return (fullUsd(serviceType, p) * (100 - advancePercentFor(serviceType, p))) / 100;

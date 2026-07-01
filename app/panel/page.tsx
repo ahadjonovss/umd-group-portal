@@ -27,12 +27,14 @@ export default async function PanelPage() {
     getUserRequests(user.uid),
   ]);
 
-  // Har ilova uchun eng so'nggi transfer / update so'rovi
+  // Har ilova uchun eng so'nggi transfer / update / uzaytirish so'rovi
   const transferByApp = new Map<string, (typeof requests)[number]>();
   const updateByApp = new Map<string, (typeof requests)[number]>();
+  const renewalByApp = new Map<string, (typeof requests)[number]>();
   for (const r of requests) {
     if (r.type === "transfer" && !transferByApp.has(r.appId)) transferByApp.set(r.appId, r);
     if (r.type === "update" && !updateByApp.has(r.appId)) updateByApp.set(r.appId, r);
+    if (r.type === "subscription_renewal" && !renewalByApp.has(r.appId)) renewalByApp.set(r.appId, r);
   }
 
   const reviewItems: ReviewItem[] = apps.map((a) => ({
@@ -107,6 +109,7 @@ export default async function PanelPage() {
                 pricing={pricing}
                 transferRequest={transferByApp.get(app.id) ?? null}
                 updateRequest={updateByApp.get(app.id) ?? null}
+                renewalRequest={renewalByApp.get(app.id) ?? null}
               />
             ))}
           </div>

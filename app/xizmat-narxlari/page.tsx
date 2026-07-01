@@ -179,7 +179,20 @@ export default async function XizmatNarxlariPage() {
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-3">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">5</span>
-            <h2 className="font-semibold text-slate-900">Obunani yangilash shartlari</h2>
+            <h2 className="font-semibold text-slate-900">Obunani uzaytirish (+9 oy)</h2>
+          </div>
+          <p className="ml-10 text-sm text-slate-600">
+            Obunani uzaytirish narxi ilova <strong>chiqarilgan paytdagi narxning 50%</strong>i.
+          </p>
+          <div className="grid sm:grid-cols-2 gap-3 ml-10">
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">Android (Play Market)</p>
+              <p className="text-xl font-bold text-slate-900">${Math.round(p.playMarketPublish / 2)}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">iOS (App Store)</p>
+              <p className="text-xl font-bold text-slate-900">${Math.round(p.appStorePublish / 2)}</p>
+            </div>
           </div>
           <ul className="ml-10 space-y-2 text-sm text-slate-600">
             <li className="flex items-start gap-2">

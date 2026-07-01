@@ -7,7 +7,7 @@ import type { ServiceType } from "@/types";
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final" | "transfer";
+export type PaymentKind = "advance" | "final" | "transfer" | "update" | "renewal";
 
 export interface CreatePaymentInput {
   appId: string;

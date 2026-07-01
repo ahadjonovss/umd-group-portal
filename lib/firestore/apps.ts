@@ -3,6 +3,8 @@ import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/fir
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
+import { getPricing } from "@/lib/firestore/settings";
+import { fullUsd } from "@/lib/payment";
 
 export type { AppStatus };
 
@@ -163,6 +165,7 @@ export interface AppView {
   receiptSent: boolean;
   finalReceiptSent: boolean;
   finalPaid: boolean;
+  publishedPrice: number | null; // store'ga chiqarilgan paytdagi to'liq narx ($)
   ownerUid: string;
   ownerEmail: string | null;
   contact: { fullName: string; phone: string; email: string } | null;
@@ -197,6 +200,7 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
     receiptSent: Boolean(x.receiptSent),
     finalReceiptSent: Boolean(x.finalReceiptSent),
     finalPaid: Boolean(x.finalPaid),
+    publishedPrice: typeof x.publishedPrice === "number" ? x.publishedPrice : null,
     ownerUid: x.ownerUid ?? "",
     ownerEmail: x.ownerEmail ?? null,
     contact: x.contact ?? null,
@@ -265,12 +269,21 @@ export async function markPublished(
   const serviceType = snap.get("serviceType") as ServiceType;
   const publishedTs = Timestamp.fromDate(publishedAt);
 
+  // Chiqarilgan paytdagi to'liq narxni saqlaymiz (keyingi uzaytirish 50% shundan).
+  // Bir marta chiqarilgan bo'lsa (qayta chiqarishda) o'zgartirmaymiz.
+  const existingPublishedPrice = snap.get("publishedPrice");
+  const publishedPrice =
+    typeof existingPublishedPrice === "number"
+      ? existingPublishedPrice
+      : fullUsd(serviceType, await getPricing());
+
   const update: Record<string, unknown> = {
     publication: {
       published: true,
       publishedAt: publishedTs,
       storeUrl: storeUrl ?? snap.get("publication")?.storeUrl ?? null,
     } satisfies Publication,
+    publishedPrice,
     status: "published" satisfies AppStatus,
     statusUpdatedAt: FieldValue.serverTimestamp(),
   };

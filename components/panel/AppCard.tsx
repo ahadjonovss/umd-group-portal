@@ -24,11 +24,13 @@ export function AppCard({
   pricing,
   transferRequest,
   updateRequest,
+  renewalRequest,
 }: {
   app: AppView;
   pricing?: Pricing;
   transferRequest?: RequestView | null;
   updateRequest?: RequestView | null;
+  renewalRequest?: RequestView | null;
 }) {
   const theme = SERVICE_THEME[app.serviceType];
   const status = STATUS_META[app.status];
@@ -42,7 +44,8 @@ export function AppCard({
   const needsFinal = app.status === "published" && !app.finalPaid && finalAmount > 0 && !app.finalReceiptSent;
   const needsRequestPay =
     (transferRequest?.status === "payment_pending" && !transferRequest.receiptSent) ||
-    (updateRequest?.status === "payment_pending" && !updateRequest.receiptSent);
+    (updateRequest?.status === "payment_pending" && !updateRequest.receiptSent) ||
+    (renewalRequest?.status === "payment_pending" && !renewalRequest.receiptSent);
   const actionLabel = needsAdvance || needsFinal || needsRequestPay ? "To'lov kutilmoqda" : null;
 
   return (

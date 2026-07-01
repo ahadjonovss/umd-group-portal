@@ -14,6 +14,78 @@ export function ClockIcon() {
   );
 }
 
+export function RenewalSection({
+  app,
+  req,
+  cardNumber,
+  cardHolder,
+  paymentDone,
+}: {
+  app: AppView;
+  req: RequestView | null;
+  cardNumber: string;
+  cardHolder: string;
+  paymentDone: boolean;
+}) {
+  // Faqat chiqarilgan + obunasi boshlangan + qolgan to'lovi yakunlangan ilovada
+  if (app.status !== "published" || !app.subscription?.startDate || !paymentDone) return null;
+
+  const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
+
+  // Faol so'rov yo'q — (qayta) uzaytirish mumkin
+  if (!req || !active) {
+    return (
+      <Link
+        href={`/panel/request/renewal/${app.id}`}
+        className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 active:scale-[0.99] transition-all"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Obunani uzaytirish (+9 oy)
+      </Link>
+    );
+  }
+
+  const meta = REQUEST_STATUS_META[req.status];
+  const idx = REQUEST_FLOW.indexOf(req.status);
+  return (
+    <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-700">Obunani uzaytirish (+9 oy)</span>
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+          {requestStatusLabel(req.type, req.status)}
+        </span>
+      </div>
+      {idx >= 0 && (
+        <div className="flex gap-1">
+          {REQUEST_FLOW.map((s, i) => (
+            <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= idx ? meta.dot : "bg-slate-200"}`} />
+          ))}
+        </div>
+      )}
+      {req.status === "payment_pending" && (
+        <PaymentView
+          endpoint="/api/requests/receipt"
+          idPayload={{ requestId: req.id }}
+          usd={req.amountUsd}
+          rate={req.rate}
+          uzs={req.amountUzs}
+          cardNumber={cardNumber}
+          cardHolder={cardHolder}
+          receiptSent={req.receiptSent}
+        />
+      )}
+      {req.status === "in_progress" && (
+        <p className="text-xs text-slate-500 leading-snug">
+          To&apos;lov tasdiqlandi. Obuna muddati tez orada uzaytiriladi.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function StatusProgress({ app }: { app: AppView }) {
   if (isTerminalError(app.status)) {
     const meta = STATUS_META[app.status];
@@ -129,22 +201,15 @@ export function TransferSection({
   // So'rov yo'q yoki rad etilgan/bekor qilingan — (qayta) so'rov qilish mumkin
   if (!req || isRequestTerminalError(req.status)) {
     return (
-      <div className="flex flex-col gap-2">
-        {req && isRequestTerminalError(req.status) && (
-          <span className="text-xs text-slate-400">
-            Oldingi transfer so&apos;rovi: {requestStatusLabel(req.type, req.status)}
-          </span>
-        )}
-        <Link
-          href={`/panel/request/transfer/${app.id}`}
-          className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 active:scale-[0.99] transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Transferga so&apos;rov yuborish
-        </Link>
-      </div>
+      <Link
+        href={`/panel/request/transfer/${app.id}`}
+        className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 active:scale-[0.99] transition-all"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        Transferga so&apos;rov yuborish
+      </Link>
     );
   }
 
@@ -202,25 +267,15 @@ export function UpdateSection({
   // Faol so'rov yo'q — (qayta) update so'rovi mumkin
   if (!req || !active) {
     return (
-      <div className="flex flex-col gap-2">
-        {req && req.status === "completed" && (
-          <span className="text-xs text-emerald-600">✓ Oxirgi update yakunlandi</span>
-        )}
-        {req && isRequestTerminalError(req.status) && (
-          <span className="text-xs text-slate-400">
-            Oldingi update so&apos;rovi: {requestStatusLabel(req.type, req.status)}
-          </span>
-        )}
-        <Link
-          href={`/panel/request/update/${app.id}`}
-          className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.99] transition-all"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-          </svg>
-          Update chiqarish
-        </Link>
-      </div>
+      <Link
+        href={`/panel/request/update/${app.id}`}
+        className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 active:scale-[0.99] transition-all"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+        Update chiqarish
+      </Link>
     );
   }
 

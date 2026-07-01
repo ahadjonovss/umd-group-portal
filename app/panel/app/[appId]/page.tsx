@@ -20,6 +20,7 @@ import {
   SubscriptionProgress,
   TransferSection,
   UpdateSection,
+  RenewalSection,
   ClockIcon,
 } from "@/components/panel/AppSections";
 
@@ -58,6 +59,8 @@ const PAYMENT_KIND_LABEL: Record<string, string> = {
   advance: "Avans (oldindan)",
   final: "Qolgan to'lov",
   transfer: "Transfer to'lovi",
+  update: "Update to'lovi",
+  renewal: "Obuna uzaytirish",
 };
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -66,6 +69,23 @@ function SectionCard({ title, children }: { title: string; children: React.React
       <h2 className="text-sm font-bold text-slate-900 mb-4">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function InfoGroup({ label, rows }: { label: string; rows: [string, string][] }) {
+  if (!rows.length) return null;
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">{label}</p>
+      <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+        {rows.map(([k, v]) => (
+          <div key={k} className="min-w-0">
+            <dt className="text-[11px] text-slate-400">{k}</dt>
+            <dd className="text-sm text-slate-800 break-words">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
@@ -108,8 +128,37 @@ export default async function AppDetailPage({
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;
+  const renewalReq = requests.find((r) => r.type === "subscription_renewal") ?? null;
 
-  const infoEntries = Object.entries(submission).filter(([, v]) => v && String(v).trim() !== "");
+  // Umumiy metama'lumot
+  const generalRows: [string, string][] = [];
+  if (app.appName) generalRows.push(["Ilova nomi", app.appName]);
+  generalRows.push(["Xizmat turi", SERVICE_LABELS[app.serviceType]]);
+  generalRows.push(["Holati", status.label]);
+  generalRows.push(["Yuborilgan sana", formatDate(app.createdAt)]);
+  if (app.publication.published) generalRows.push(["Store'ga chiqarilgan", formatDate(app.publication.publishedAt)]);
+  if (app.publishedPrice) generalRows.push(["Chiqarilgan narx", `$${app.publishedPrice}`]);
+  if (app.subscription?.startDate) {
+    generalRows.push(["Obuna boshlangan", formatDate(app.subscription.startDate)]);
+    generalRows.push(["Obuna tugashi", formatDate(app.subscription.endDate)]);
+    generalRows.push(["Obuna holati", app.subscription.active ? "Faol" : "Faol emas"]);
+    if (app.subscription.renewedCount > 0) generalRows.push(["Uzaytirilgan", `${app.subscription.renewedCount} marta`]);
+  }
+  if (transferred) generalRows.push(["Transfer qilingan", formatDate(app.transferredAt)]);
+
+  // Aloqa ma'lumotlari
+  const contactRows: [string, string][] = [];
+  if (app.contact?.fullName) contactRows.push(["To'liq ism", app.contact.fullName]);
+  if (app.contact?.phone) contactRows.push(["Telefon", app.contact.phone]);
+  if (app.contact?.email) contactRows.push(["Email", app.contact.email]);
+
+  // Yuborilgan (forma) ma'lumotlari — aloqa maydonlarini takrorlamaymiz
+  const CONTACT_KEYS = new Set(["fullName", "phone", "email", "telegram"]);
+  const submissionRows: [string, string][] = Object.entries(submission)
+    .filter(([k, v]) => v && String(v).trim() !== "" && !CONTACT_KEYS.has(k))
+    .map(([k, v]) => [FIELD_LABELS[k] ?? k, String(v)]);
+
+  const hasAnyInfo = generalRows.length + contactRows.length + submissionRows.length > 0;
 
   const cardNumber = paymentInfo?.cardNumber ?? "";
   const cardHolder = paymentInfo?.cardHolder ?? "";
@@ -223,6 +272,7 @@ export default async function AppDetailPage({
                     cardHolder={cardHolder}
                     paymentDone={paymentDone}
                   />
+                  <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
                   <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
                 </>
               )}
@@ -268,15 +318,12 @@ export default async function AppDetailPage({
 
         {/* Ilova ma'lumotlari */}
         <SectionCard title="Ilova ma'lumotlari">
-          {infoEntries.length ? (
-            <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
-              {infoEntries.map(([k, v]) => (
-                <div key={k} className="min-w-0">
-                  <dt className="text-[11px] text-slate-400">{FIELD_LABELS[k] ?? k}</dt>
-                  <dd className="text-sm text-slate-800 break-words">{v}</dd>
-                </div>
-              ))}
-            </dl>
+          {hasAnyInfo ? (
+            <div className="flex flex-col gap-5">
+              <InfoGroup label="Umumiy" rows={generalRows} />
+              <InfoGroup label="Aloqa" rows={contactRows} />
+              <InfoGroup label="Yuborilgan ma'lumotlar" rows={submissionRows} />
+            </div>
           ) : (
             <p className="text-sm text-slate-400">Qo&apos;shimcha ma&apos;lumot yo&apos;q.</p>
           )}

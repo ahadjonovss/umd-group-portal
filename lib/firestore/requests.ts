@@ -1,6 +1,6 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
-import { markAppTransferred } from "@/lib/firestore/apps";
+import { markAppTransferred, renewSubscription } from "@/lib/firestore/apps";
 import type { RequestStatus, RequestType } from "@/lib/request-status";
 import type { ServiceType } from "@/types";
 
@@ -122,13 +122,13 @@ export async function setRequestStatus(id: string, status: RequestStatus): Promi
   const ref = adminDb.collection(REQUESTS).doc(id);
   await ref.update({ status, statusUpdatedAt: FieldValue.serverTimestamp() });
 
-  // Transfer yakunlangach ilovani "transfer qilingan" holatiga o'tkazamiz
+  // Yakunlangach turga qarab ilova ustida amal bajaramiz
   if (status === "completed") {
     const snap = await ref.get();
-    if (snap.get("type") === "transfer") {
-      const appId = snap.get("appId") as string | undefined;
-      if (appId) await markAppTransferred(appId);
-    }
+    const type = snap.get("type") as RequestType | undefined;
+    const appId = snap.get("appId") as string | undefined;
+    if (appId && type === "transfer") await markAppTransferred(appId);
+    if (appId && type === "subscription_renewal") await renewSubscription(appId);
   }
 }
 

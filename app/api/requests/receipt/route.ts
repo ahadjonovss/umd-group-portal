@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { adminDb } from "@/lib/firebase/admin";
 import { markRequestReceiptSent } from "@/lib/firestore/requests";
-import { createPayment } from "@/lib/firestore/payments";
+import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { readFormFile } from "@/lib/form-utils";
 import { sendPhotoToTelegram } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
@@ -42,7 +42,10 @@ export async function POST(req: NextRequest) {
   if (!receipt) return NextResponse.json({ success: false, error: "Chek rasmi yuklanmadi" }, { status: 400 });
 
   const serviceType = r.serviceType as ServiceType;
-  const typeLabel = REQUEST_TYPE_LABEL[(r.type as RequestType) ?? "transfer"];
+  const reqType = (r.type as RequestType) ?? "transfer";
+  const typeLabel = REQUEST_TYPE_LABEL[reqType];
+  const paymentKind: PaymentKind =
+    reqType === "update" ? "update" : reqType === "subscription_renewal" ? "renewal" : "transfer";
   const appName = (r.appName as string | null) || SERVICE_LABELS[serviceType];
   const usd = r.amountUsd ?? 0;
   const uzs = typeof r.amountUzs === "number" ? r.amountUzs : null;
@@ -74,7 +77,7 @@ export async function POST(req: NextRequest) {
         ownerPhone: r.ownerPhone || "-",
         serviceType,
         appName,
-        kind: "transfer",
+        kind: paymentKind,
         amountUsd: usd,
         rate: r.rate ?? null,
         amountUzs: uzs,

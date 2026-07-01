@@ -18,6 +18,7 @@ const DATA_LABELS: Record<string, string> = {
   appStoreConnectTeamId: "App Store Connect Team ID",
   appleDevAccountEmail: "Apple Dev email",
   releaseNotes: "Relizdagi o'zgarishlar",
+  months: "Muddat (oy)",
   note: "Izoh (mijoz)",
 };
 
