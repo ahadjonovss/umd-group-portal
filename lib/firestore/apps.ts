@@ -3,6 +3,8 @@ import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/fir
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
+import { getPricing } from "@/lib/firestore/settings";
+import { fullUsd } from "@/lib/payment";
 
 export type { AppStatus };
 
@@ -82,6 +84,8 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     publication,
     subscription,
     telegramSent: false,
+    finalReceiptSent: false,
+    finalPaid: false,
     createdAt: FieldValue.serverTimestamp(),
   });
   return ref.id;
@@ -105,6 +109,19 @@ export async function markReceiptSent(appId: string): Promise<void> {
   });
 }
 
+// Yakuniy (qolgan) to'lov cheki yuborilgani.
+export async function markFinalReceiptSent(appId: string): Promise<void> {
+  await adminDb.collection(APPS).doc(appId).update({
+    finalReceiptSent: true,
+    finalReceiptSentAt: FieldValue.serverTimestamp(),
+  });
+}
+
+// Yakuniy to'lov tasdiqlangani.
+export async function setFinalPaid(appId: string): Promise<void> {
+  await adminDb.collection(APPS).doc(appId).update({ finalPaid: true });
+}
+
 // Admin: arizani o'chiradi + unga bog'liq to'lov va sharhlarni.
 export async function deleteApp(appId: string): Promise<void> {
   const [pays, revs] = await Promise.all([
@@ -126,6 +143,16 @@ export async function setAppStatus(appId: string, status: AppStatus): Promise<vo
   });
 }
 
+// Transfer yakunlangach ilova "transfer qilingan" holatiga o'tadi (obuna endi amal qilmaydi).
+export async function markAppTransferred(appId: string): Promise<void> {
+  await adminDb.collection(APPS).doc(appId).update({
+    status: "transferred" satisfies AppStatus,
+    transferredAt: FieldValue.serverTimestamp(),
+    statusUpdatedAt: FieldValue.serverTimestamp(),
+    "subscription.active": false,
+  });
+}
+
 // Panel uchun seriyalashtirилgan ko'rinish (Timestamp -> ISO string).
 export interface AppView {
   id: string;
@@ -136,9 +163,14 @@ export interface AppView {
   telegramSent: boolean;
   reviewed: boolean;
   receiptSent: boolean;
+  finalReceiptSent: boolean;
+  finalPaid: boolean;
+  publishedPrice: number | null; // store'ga chiqarilgan paytdagi to'liq narx ($)
+  ownerUid: string;
   ownerEmail: string | null;
   contact: { fullName: string; phone: string; email: string } | null;
   createdAt: string | null;
+  transferredAt: string | null;
   publication: { published: boolean; publishedAt: string | null; storeUrl: string | null };
   subscription: null | {
     durationDays: number;
@@ -166,9 +198,14 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
     telegramSent: Boolean(x.telegramSent),
     reviewed,
     receiptSent: Boolean(x.receiptSent),
+    finalReceiptSent: Boolean(x.finalReceiptSent),
+    finalPaid: Boolean(x.finalPaid),
+    publishedPrice: typeof x.publishedPrice === "number" ? x.publishedPrice : null,
+    ownerUid: x.ownerUid ?? "",
     ownerEmail: x.ownerEmail ?? null,
     contact: x.contact ?? null,
     createdAt: tsToIso(x.createdAt),
+    transferredAt: tsToIso(x.transferredAt),
     publication: {
       published: Boolean(pub.published),
       publishedAt: tsToIso(pub.publishedAt),
@@ -232,12 +269,21 @@ export async function markPublished(
   const serviceType = snap.get("serviceType") as ServiceType;
   const publishedTs = Timestamp.fromDate(publishedAt);
 
+  // Chiqarilgan paytdagi to'liq narxni saqlaymiz (keyingi uzaytirish 50% shundan).
+  // Bir marta chiqarilgan bo'lsa (qayta chiqarishda) o'zgartirmaymiz.
+  const existingPublishedPrice = snap.get("publishedPrice");
+  const publishedPrice =
+    typeof existingPublishedPrice === "number"
+      ? existingPublishedPrice
+      : fullUsd(serviceType, await getPricing());
+
   const update: Record<string, unknown> = {
     publication: {
       published: true,
       publishedAt: publishedTs,
       storeUrl: storeUrl ?? snap.get("publication")?.storeUrl ?? null,
     } satisfies Publication,
+    publishedPrice,
     status: "published" satisfies AppStatus,
     statusUpdatedAt: FieldValue.serverTimestamp(),
   };

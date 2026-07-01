@@ -1,129 +1,58 @@
+import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
-import { getStatusFlow, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
+import type { RequestView } from "@/lib/firestore/requests";
+import { isTerminalError } from "@/lib/app-status";
+import { isRequestActive } from "@/lib/request-status";
 import { SERVICE_LABELS, STATUS_META, formatDate } from "@/lib/labels";
-import { ReviewButton } from "@/components/panel/ReviewButton";
-import { PaymentView } from "@/components/panel/PaymentView";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
-import { advanceUsd } from "@/lib/payment";
-import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
+import { StatusProgress, SubscriptionProgress, ClockIcon } from "@/components/panel/AppSections";
+import { finalUsd } from "@/lib/payment";
+import type { Pricing } from "@/lib/firestore/settings";
 
-function StatusProgress({ app }: { app: AppView }) {
-  if (isTerminalError(app.status)) {
-    const meta = STATUS_META[app.status];
-    return (
-      <div className="flex items-center gap-2 rounded-lg bg-red-50 ring-1 ring-red-100 px-2.5 py-1.5">
-        <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-        <span className="text-xs font-medium text-red-600">
-          {app.status === "rejected" ? "Ariza rad etildi" : "Ariza bekor qilindi"}
-        </span>
-      </div>
-    );
-  }
-
-  const flow = getStatusFlow(app.serviceType);
-  const currentIndex = flow.indexOf(app.status);
-  const meta = STATUS_META[app.status];
-
+// Kartochkada ko'rsatiladigan "amal talab qilinadi" belgisi.
+function ActionHint({ label }: { label: string }) {
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] font-medium text-slate-500">
-          Bosqich {Math.max(currentIndex + 1, 1)}/{flow.length}
-        </span>
-        <span className={`text-[11px] font-semibold ${meta.text}`}>
-          {meta.label}
-        </span>
-      </div>
-      <div className="flex gap-1">
-        {flow.map((s, i) => (
-          <div
-            key={s}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${
-              i <= currentIndex ? meta.dot : "bg-slate-200"
-            }`}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-type SubData = NonNullable<AppView["subscription"]>;
-
-// Ilova chiqarilgandan keyin: bosqich bari o'rnida obuna muddati foizda.
-function SubscriptionProgress({ sub }: { sub: SubData }) {
-  const start = sub.startDate ? new Date(sub.startDate).getTime() : 0;
-  const end = sub.endDate ? new Date(sub.endDate).getTime() : 0;
-  const now = Date.now();
-
-  const total = Math.max(end - start, 1);
-  const remainingMs = end - now;
-  const dLeft = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
-  const expired = remainingMs <= 0;
-  // qolgan foiz
-  const pctLeft = Math.max(0, Math.min(100, Math.round((remainingMs / total) * 100)));
-  const low = !expired && dLeft <= 30;
-
-  const barColor = expired ? "bg-red-500" : low ? "bg-amber-500" : "bg-emerald-500";
-  const textColor = expired ? "text-red-600" : low ? "text-amber-600" : "text-emerald-600";
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
-          <ClockIcon />
-          Obuna muddati
-        </span>
-        <span className={`text-[11px] font-semibold ${textColor}`}>
-          {expired ? "Muddati tugagan" : `${pctLeft}% · ${dLeft} kun qoldi`}
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
-        <div
-          className={`h-full rounded-full ${barColor} transition-all duration-500`}
-          style={{ width: `${expired ? 100 : pctLeft}%` }}
-        />
-      </div>
-      <p className="text-[11px] text-slate-400 mt-1">
-        {formatDate(sub.startDate)} → {formatDate(sub.endDate)}
-        {sub.renewedCount > 0 ? ` · ${sub.renewedCount}× uzaytirilgan` : ""}
-      </p>
-    </div>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
+    <span className="inline-flex items-center gap-1.5 self-start rounded-lg bg-amber-50 ring-1 ring-amber-200 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+      {label}
+    </span>
   );
 }
 
 export function AppCard({
   app,
   pricing,
-  usdRate,
-  paymentInfo,
+  transferRequest,
+  updateRequest,
+  renewalRequest,
 }: {
   app: AppView;
   pricing?: Pricing;
-  usdRate?: number | null;
-  paymentInfo?: PaymentInfo;
+  transferRequest?: RequestView | null;
+  updateRequest?: RequestView | null;
+  renewalRequest?: RequestView | null;
 }) {
   const theme = SERVICE_THEME[app.serviceType];
   const status = STATUS_META[app.status];
   const title = app.appName || SERVICE_LABELS[app.serviceType];
   const subStarted = Boolean(app.subscription?.startDate);
-  const canReview = isTerminalSuccess(app.status);
+  const transferred = app.status === "transferred";
 
-  const showPayment = app.status === "payment_pending" && !!pricing;
-  const usd = pricing ? Math.round(advanceUsd(app.serviceType, pricing)) : 0;
-  const rate = usdRate ?? null;
-  const uzs = rate ? Math.round(usd * rate) : null;
+  // Amal talab qiladigan holatlar (kartochkada ogohlantirish uchun)
+  const finalAmount = pricing ? Math.round(finalUsd(app.serviceType, pricing)) : 0;
+  const needsAdvance = app.status === "payment_pending" && !app.receiptSent;
+  const needsFinal = app.status === "published" && !app.finalPaid && finalAmount > 0 && !app.finalReceiptSent;
+  const needsRequestPay =
+    (transferRequest?.status === "payment_pending" && !transferRequest.receiptSent) ||
+    (updateRequest?.status === "payment_pending" && !updateRequest.receiptSent) ||
+    (renewalRequest?.status === "payment_pending" && !renewalRequest.receiptSent);
+  const actionLabel = needsAdvance || needsFinal || needsRequestPay ? "To'lov kutilmoqda" : null;
 
   return (
-    <div className="group relative overflow-hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/40 transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 animate-slide-up">
+    <Link
+      href={`/panel/app/${app.id}`}
+      className="group relative block overflow-hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/40 transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 animate-slide-up"
+    >
       {/* Rangli chap aksent */}
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${theme.accent}`} />
 
@@ -134,77 +63,50 @@ export function AppCard({
           {/* Sarlavha + status */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-semibold text-slate-900 truncate">{title}</p>
-              <p className={`text-xs font-medium truncate ${theme.text}`}>
-                {SERVICE_LABELS[app.serviceType]}
-              </p>
+              <p className="font-semibold text-slate-900 truncate group-hover:text-blue-700 transition-colors">{title}</p>
+              <p className={`text-xs font-medium truncate ${theme.text}`}>{SERVICE_LABELS[app.serviceType]}</p>
             </div>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${status.badge}`}
-            >
-              <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-              {status.label}
-            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${status.badge}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                {status.label}
+              </span>
+              <svg className="w-4 h-4 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
           </div>
 
-          {/* Chiqarilgandan keyin (obuna boshlangan) — bosqich bari o'rnida obuna foizi */}
-          {subStarted ? (
-            <SubscriptionProgress sub={app.subscription!} />
+          {transferred ? (
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 ring-1 ring-violet-200 px-2.5 py-1.5 text-xs font-medium text-violet-700 self-start">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {formatDate(app.transferredAt)} da transfer qilingan
+            </div>
           ) : (
-            <StatusProgress app={app} />
-          )}
+            <>
+              {subStarted ? <SubscriptionProgress sub={app.subscription!} /> : <StatusProgress app={app} />}
 
-          {/* Joriy status tushuntirishi — mijoz tushunishi uchun */}
-          <p className="flex items-start gap-1.5 text-xs text-slate-500 leading-snug">
-            <svg className="w-3.5 h-3.5 flex-shrink-0 mt-px text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{status.desc}</span>
-          </p>
+              {actionLabel && <ActionHint label={actionLabel} />}
 
-          {/* To'lov kutilmoqda — alohida to'lov ko'rinishi */}
-          {showPayment && (
-            <PaymentView
-              appId={app.id}
-              usd={usd}
-              rate={rate}
-              uzs={uzs}
-              cardNumber={paymentInfo?.cardNumber ?? ""}
-              cardHolder={paymentInfo?.cardHolder ?? ""}
-              receiptSent={app.receiptSent}
-            />
-          )}
-
-          {/* Hali chiqmagan chiqarish xizmatlarida obuna eslatmasi */}
-          {!subStarted && app.subscription && !isTerminalError(app.status) && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 ring-1 ring-slate-200 px-2.5 py-1.5 text-xs text-slate-500 self-start">
-              <ClockIcon />
-              Obuna: ilova chiqarilgach boshlanadi (9 oy)
-            </div>
-          )}
-
-          {/* Footer meta + baholash */}
-          <div className="flex items-end justify-between gap-3 pt-2 border-t border-slate-100">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-              <span>Yuborilgan: {formatDate(app.createdAt)}</span>
-              {app.publication.published && (
-                <span>· Store&apos;da: {formatDate(app.publication.publishedAt)}</span>
+              {!subStarted && app.subscription && !isTerminalError(app.status) && (
+                <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 ring-1 ring-slate-200 px-2.5 py-1.5 text-xs text-slate-500 self-start">
+                  <ClockIcon />
+                  Obuna: ilova chiqarilgach boshlanadi (9 oy)
+                </div>
               )}
-              {app.publication.storeUrl && (
-                <a
-                  href={app.publication.storeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`font-medium ${theme.text} hover:underline`}
-                >
-                  · Store havolasi ↗
-                </a>
-              )}
-            </div>
-            {canReview && <ReviewButton appId={app.id} reviewed={app.reviewed} />}
+            </>
+          )}
+
+          {/* Footer meta */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 pt-2 border-t border-slate-100">
+            <span>Yuborilgan: {formatDate(app.createdAt)}</span>
+            {app.publication.published && <span>· Store&apos;da: {formatDate(app.publication.publishedAt)}</span>}
+            <span className="ml-auto font-medium text-blue-600 group-hover:underline">Batafsil →</span>
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

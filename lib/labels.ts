@@ -98,6 +98,13 @@ export const STATUS_META: Record<
     text: "text-slate-500",
     desc: "Ariza bekor qilindi.",
   },
+  transferred: {
+    label: "Transfer qilingan",
+    badge: "bg-violet-50 text-violet-700 ring-violet-200",
+    dot: "bg-violet-500",
+    text: "text-violet-600",
+    desc: "Ilova boshqa akkauntga o'tkazildi.",
+  },
 };
 
 // ISO -> DD.MM.YYYY

@@ -6,7 +6,7 @@ import type { AppView } from "@/lib/firestore/apps";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { STATUS_META, SERVICE_LABELS, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
-import { actSetStatus, actPublish, actRenew, actDeleteApp } from "@/app/admin/actions";
+import { actSetStatus, actPublish, actDeleteApp } from "@/app/admin/actions";
 
 export function AdminAppRow({ app }: { app: AppView }) {
   const router = useRouter();
@@ -112,20 +112,13 @@ export function AdminAppRow({ app }: { app: AppView }) {
             </div>
           )}
 
-          {/* Obuna + uzaytirish */}
+          {/* Obuna ma'lumoti (uzaytirish user so'rovi orqali) */}
           {app.subscription?.startDate && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3">
+            <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3">
               <span className="text-xs text-slate-600">
                 Obuna: {formatDate(app.subscription.startDate)} → {formatDate(app.subscription.endDate)}
                 {app.subscription.renewedCount > 0 && ` · ${app.subscription.renewedCount}× uzaytirilgan`}
               </span>
-              <button
-                disabled={pending}
-                onClick={() => start(() => actRenew(app.id))}
-                className="h-8 px-3 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
-              >
-                +270 kun uzaytirish
-              </button>
             </div>
           )}
 

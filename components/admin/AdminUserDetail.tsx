@@ -118,12 +118,12 @@ export function AdminUserDetail({
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-slate-200 mb-5 overflow-x-auto">
+      <div className="flex flex-wrap gap-1 border-b border-slate-200 mb-5">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
               tab === t.key ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >

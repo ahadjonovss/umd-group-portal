@@ -4,16 +4,28 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export interface PaymentViewProps {
-  appId: string;
   usd: number;
   rate: number | null;
   uzs: number | null;
   cardNumber: string;
   cardHolder: string;
   receiptSent: boolean;
+  endpoint?: string;
+  idPayload?: Record<string, string>;
+  amountLabel?: string;
 }
 
-export function PaymentView({ appId, usd, rate, uzs, cardNumber, cardHolder, receiptSent }: PaymentViewProps) {
+export function PaymentView({
+  usd,
+  rate,
+  uzs,
+  cardNumber,
+  cardHolder,
+  receiptSent,
+  endpoint = "/api/payment/receipt",
+  idPayload = {},
+  amountLabel = "Avans (oldindan)",
+}: PaymentViewProps) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
@@ -42,9 +54,9 @@ export function PaymentView({ appId, usd, rate, uzs, cardNumber, cardHolder, rec
     setError("");
     try {
       const fd = new FormData();
-      fd.append("appId", appId);
+      Object.entries(idPayload).forEach(([k, v]) => fd.append(k, v));
       fd.append("receipt", file);
-      const res = await fetch("/api/payment/receipt", { method: "POST", body: fd });
+      const res = await fetch(endpoint, { method: "POST", body: fd });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Xato yuz berdi");
       setStatus("done");
@@ -73,7 +85,7 @@ export function PaymentView({ appId, usd, rate, uzs, cardNumber, cardHolder, rec
       {/* Summa */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-white rounded-lg px-3 py-2 ring-1 ring-amber-100">
-          <p className="text-[10px] text-slate-400">Avans (oldindan)</p>
+          <p className="text-[10px] text-slate-400">{amountLabel}</p>
           <p className="text-lg font-bold text-slate-900">${usd}</p>
         </div>
         <div className="bg-white rounded-lg px-3 py-2 ring-1 ring-amber-100">

@@ -14,7 +14,9 @@ export type AppStatus =
   | "published"
   // transfer (google, apple)
   | "transferring"
-  | "completed";
+  | "completed"
+  // ilova boshqa akkauntga transfer qilingan (terminal)
+  | "transferred";
 
 // Chiqarish xizmatlari oqimi (6 bosqich).
 export const PUBLISH_FLOW: AppStatus[] = [

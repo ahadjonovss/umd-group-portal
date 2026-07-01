@@ -8,6 +8,7 @@ import { getAllApps } from "@/lib/firestore/apps";
 import { getAllReviews } from "@/lib/firestore/reviews";
 import { getAllUsers } from "@/lib/firestore/users";
 import { getAllPayments } from "@/lib/firestore/payments";
+import { getAllRequests } from "@/lib/firestore/requests";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 
 export const metadata: Metadata = { title: "Admin panel — UMD GROUP" };
@@ -15,11 +16,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   await requireAdmin();
-  const [apps, reviews, users, payments, pricing, payment] = await Promise.all([
+  const [apps, reviews, users, payments, requests, pricing, payment] = await Promise.all([
     getAllApps(),
     getAllReviews(),
     getAllUsers(),
     getAllPayments(),
+    getAllRequests(),
     getPricing(),
     getPaymentInfo(),
   ]);
@@ -54,6 +56,7 @@ export default async function AdminPage() {
           users={usersWithCount}
           reviews={reviews}
           payments={payments}
+          requests={requests}
           pricing={pricing}
           payment={payment}
         />
