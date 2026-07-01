@@ -214,13 +214,13 @@ export function AdminTabs({
   }));
 
   const tabs: { key: TabKey; label: string; count: number; badge?: number }[] = [
-    { key: "users", label: "Userlar", count: users.length },
     { key: "apps", label: "Arizalar", count: arizaApps.length },
-    { key: "live", label: "Ilovalar", count: liveApps.length },
-    { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
-    { key: "finance", label: "Moliya", count: 0 },
     { key: "requests", label: "So'rovlar", count: requests.length, badge: activeRequests },
+    { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
+    { key: "live", label: "Ilovalar", count: liveApps.length },
+    { key: "finance", label: "Moliya", count: 0 },
+    { key: "users", label: "Userlar", count: users.length },
     { key: "settings", label: "Sozlamalar", count: 0 },
   ];
 
