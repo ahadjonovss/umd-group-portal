@@ -26,6 +26,17 @@ export function AdminAppRow({ app }: { app: AppView }) {
   const [url, setUrl] = useState(app.publication.storeUrl ?? "");
   const [copied, setCopied] = useState(false);
   const [reviewCopied, setReviewCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  async function copyReviewLink() {
+    try {
+      await navigator.clipboard.writeText(`${SITE_URL}/review/${app.id}`);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch {
+      // jim
+    }
+  }
 
   async function copyPaymentMessage() {
     const name = app.contact?.fullName || "mijoz";
@@ -221,6 +232,12 @@ export function AdminAppRow({ app }: { app: AppView }) {
                   {reviewCopied ? "✓ Nusxalandi" : "Review uchun so'rov xabarini ko'chirish"}
                 </button>
               )}
+              <button
+                onClick={copyReviewLink}
+                className="text-xs font-medium text-slate-500 hover:text-slate-700 hover:underline"
+              >
+                {linkCopied ? "✓ Nusxalandi" : "Review havolasi"}
+              </button>
             <button
               disabled={pending}
               onClick={() => {
