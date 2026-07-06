@@ -6,9 +6,14 @@ import type { AppView } from "@/lib/firestore/apps";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { STATUS_META, SERVICE_LABELS, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
+import { RENEWAL_FACTOR } from "@/lib/payment";
 import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actDeleteApp } from "@/app/admin/actions";
 
 const SITE_URL = "https://umdgroup.uz";
+
+function storeName(serviceType: AppView["serviceType"]): string {
+  return serviceType === "app-store" || serviceType === "apple-transfer" ? "App Store" : "Play Market";
+}
 
 export function AdminAppRow({ app }: { app: AppView }) {
   const router = useRouter();
@@ -20,6 +25,7 @@ export function AdminAppRow({ app }: { app: AppView }) {
   const [date, setDate] = useState("");
   const [url, setUrl] = useState(app.publication.storeUrl ?? "");
   const [copied, setCopied] = useState(false);
+  const [reviewCopied, setReviewCopied] = useState(false);
 
   async function copyPaymentMessage() {
     const name = app.contact?.fullName || "mijoz";
@@ -32,6 +38,29 @@ export function AdminAppRow({ app }: { app: AppView }) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // clipboard bloklangan bo'lsa — jim
+    }
+  }
+
+  async function copyReviewMessage() {
+    const name = app.contact?.fullName || "mijoz";
+    const link = `${SITE_URL}/review/${app.id}`;
+    const store = storeName(app.serviceType);
+    const pubDate = formatDate(app.publication.publishedAt);
+    const endDate = app.subscription?.endDate ? formatDate(app.subscription.endDate) : null;
+    const discount = Math.round((1 - RENEWAL_FACTOR) * 100);
+    const msg =
+      `Assalomu alaykum, ${name}! Sizning "${title}" ilovangiz ${pubDate} sanasida ${store}ga muvaffaqiyatli chiqarildi. ` +
+      `Iltimos, xizmatimizni quyidagi havola orqali baholang:\n${link}` +
+      (endDate
+        ? `\n\nEslatib o'tamiz: ilova ${endDate} gacha store'da turishi kafolatlanadi. ` +
+          `Muddatni istalgan vaqt platformamiz orqali ${discount}% chegirma bilan uzaytirishingiz mumkin.`
+        : "");
+    try {
+      await navigator.clipboard.writeText(msg);
+      setReviewCopied(true);
+      setTimeout(() => setReviewCopied(false), 2000);
+    } catch {
+      // jim
     }
   }
 
@@ -182,6 +211,14 @@ export function AdminAppRow({ app }: { app: AppView }) {
                   className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"
                 >
                   {copied ? "✓ Nusxalandi" : "Xabar nusxalash"}
+                </button>
+              )}
+              {app.status === "published" && (
+                <button
+                  onClick={copyReviewMessage}
+                  className="text-xs font-medium text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  {reviewCopied ? "✓ Nusxalandi" : "Review uchun so'rov xabarini ko'chirish"}
                 </button>
               )}
             <button

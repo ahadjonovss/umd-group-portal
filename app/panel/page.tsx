@@ -6,6 +6,7 @@ import { AuthButtons } from "@/components/auth/AuthButtons";
 import { AppCard } from "@/components/panel/AppCard";
 import { DraftButton } from "@/components/panel/DraftButton";
 import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelReviewLauncher";
+import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess } from "@/lib/app-status";
@@ -44,6 +45,19 @@ export default async function PanelPage() {
     canReview: isTerminalSuccess(a.status),
   }));
 
+  // Store'ga chiqqan, lekin hali baholanmagan ilovalar — eslatma banneri uchun
+  let publishedUnreviewed = reviewItems
+    .filter((a) => a.canReview && !a.reviewed)
+    .map((a) => ({ id: a.id, label: a.label }));
+
+  // TEST (vaqtincha): dev'da chiqarilgan ilova bo'lmasa ham alertni ko'rsatamiz
+  if (process.env.NODE_ENV === "development" && publishedUnreviewed.length === 0 && reviewItems[0]) {
+    const first = reviewItems[0];
+    publishedUnreviewed = [{ id: first.id, label: first.label }];
+    // launcher shu ilovani baholashga ruxsat bersin (aks holda "Baholab bo'lmaydi")
+    reviewItems[0] = { ...first, canReview: true, reviewed: false };
+  }
+
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <Suspense fallback={null}>
@@ -70,6 +84,8 @@ export default async function PanelPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-10">
+        <PublishedReviewAlert apps={publishedUnreviewed} />
+
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">
