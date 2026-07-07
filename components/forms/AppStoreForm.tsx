@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
+import { compressImages } from "@/lib/image-compress";
 
 import {
   appStoreStep1Schema,
@@ -140,10 +141,15 @@ export function AppStoreForm() {
     const allData = { ...newState.step1, ...newState.step2, ...newState.step3, ...data };
     Object.entries(allData).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
 
-    iphoneScreenshots.forEach((s, i) => formData.append(`iphone_${i}`, s));
-    formData.append("iphoneCount", String(iphoneScreenshots.length));
-    ipadScreenshots.forEach((s, i) => formData.append(`ipad_${i}`, s));
-    formData.append("ipadCount", String(ipadScreenshots.length));
+    // Skrinshotlarni siqamiz (o'lcham saqlanadi) — katta PNG'lar 413 bermasligi uchun
+    const [iphoneC, ipadC] = await Promise.all([
+      compressImages(iphoneScreenshots),
+      compressImages(ipadScreenshots),
+    ]);
+    iphoneC.forEach((s, i) => formData.append(`iphone_${i}`, s));
+    formData.append("iphoneCount", String(iphoneC.length));
+    ipadC.forEach((s, i) => formData.append(`ipad_${i}`, s));
+    formData.append("ipadCount", String(ipadC.length));
 
     let serverIntervalId: ReturnType<typeof setInterval> | null = null;
 

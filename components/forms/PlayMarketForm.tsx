@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
+import { compressImages } from "@/lib/image-compress";
 
 import {
   playMarketStep1Schema,
@@ -135,10 +136,12 @@ export function PlayMarketForm() {
     const formData = new FormData();
     const allData = { ...formState.step1, ...formState.step2, ...formState.step4 };
     Object.entries(allData).forEach(([k, v]) => { if (v) formData.append(k, String(v)); });
-    formData.append("icon", icon!);
+    formData.append("icon", icon!); // ikonka PNG bo'lib qoladi (Play Store talabi)
     formData.append("banner", banner!);
-    screenshots.forEach((s, i) => formData.append(`screenshot_${i}`, s));
-    formData.append("screenshotCount", String(screenshots.length));
+    // Skrinshotlarni siqamiz (o'lcham saqlanadi) — 413 bermasligi uchun
+    const screenshotsC = await compressImages(screenshots);
+    screenshotsC.forEach((s, i) => formData.append(`screenshot_${i}`, s));
+    formData.append("screenshotCount", String(screenshotsC.length));
 
     let serverIntervalId: ReturnType<typeof setInterval> | null = null;
 
