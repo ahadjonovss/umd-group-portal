@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import type { Pricing } from "@/lib/firestore/settings";
 import { actSavePricing } from "@/app/admin/actions";
 
-type SubKey = "publish" | "transfer" | "update";
+type SubKey = "publish" | "transfer" | "update" | "account";
 
 function NumField({
   label,
@@ -56,6 +56,7 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
     { key: "publish", label: "Store'ga chiqarish" },
     { key: "transfer", label: "Transfer" },
     { key: "update", label: "Update" },
+    { key: "account", label: "Akkaunt ochish" },
   ];
 
   return (
@@ -86,6 +87,7 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="App Store (iOS)" value={p.appStorePublish} onChange={(v) => set("appStorePublish", v)} />
             <NumField unit="$" label="Play Market (Android)" value={p.playMarketPublish} onChange={(v) => set("playMarketPublish", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.publishAdvance} onChange={(v) => set("publishAdvance", v)} />
+            <NumField unit="%" max={100} label="Voz kechish jarimasi (umumiy narxdan)" value={p.publishCancelFee} onChange={(v) => set("publishCancelFee", v)} />
           </>
         )}
         {sub === "transfer" && (
@@ -100,6 +102,16 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="Android update (har biri)" value={p.updateAndroid} onChange={(v) => set("updateAndroid", v)} />
             <NumField unit="$" label="iOS update (har biri)" value={p.updateIos} onChange={(v) => set("updateIos", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.updateAdvance} onChange={(v) => set("updateAdvance", v)} />
+          </>
+        )}
+        {sub === "account" && (
+          <>
+            <NumField unit="$" label="Google Play — shaxsiy" value={p.accountGooglePersonal} onChange={(v) => set("accountGooglePersonal", v)} />
+            <NumField unit="$" label="Google Play — korporativ" value={p.accountGoogleCorporate} onChange={(v) => set("accountGoogleCorporate", v)} />
+            <NumField unit="$" label="App Store — shaxsiy" value={p.accountApplePersonal} onChange={(v) => set("accountApplePersonal", v)} />
+            <NumField unit="$" label="App Store — korporativ" value={p.accountAppleCorporate} onChange={(v) => set("accountAppleCorporate", v)} />
+            <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.accountAdvance} onChange={(v) => set("accountAdvance", v)} />
+            <NumField unit="%" max={100} label="Voz kechish jarimasi (umumiy narxdan)" value={p.accountCancelFee} onChange={(v) => set("accountCancelFee", v)} />
           </>
         )}
       </div>

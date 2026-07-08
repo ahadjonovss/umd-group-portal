@@ -65,3 +65,36 @@ export function transferUsd(appServiceType: ServiceType, p: Pricing): number {
   const base = appServiceType === "app-store" || appServiceType === "apple-transfer" ? p.appleTransfer : p.googleTransfer;
   return (base * p.transferAdvance) / 100;
 }
+
+// ── Developer akkaunt ochish ──────────────────────────────
+export type AccountPlatform = "google" | "apple";
+export type AccountType = "personal" | "corporate";
+
+// Platforma + tur bo'yicha akkaunt ochish narxi ($).
+export function accountBaseUsd(platform: AccountPlatform, type: AccountType, p: Pricing): number {
+  if (platform === "apple") return type === "corporate" ? p.accountAppleCorporate : p.accountApplePersonal;
+  return type === "corporate" ? p.accountGoogleCorporate : p.accountGooglePersonal;
+}
+
+// ── App-aware to'lov hisob-kitobi ─────────────────────────
+// Akkaunt xizmatida narx platforma+turga bog'liq, shuning uchun ariza yaratilganda
+// hisoblangan narx `servicePrice` maydonida saqlanadi. Boshqa xizmatlarda fullUsd.
+type PricedApp = { serviceType: ServiceType; servicePrice?: number | null };
+
+export function serviceBaseUsd(app: PricedApp, p: Pricing): number {
+  if (app.serviceType === "account") return app.servicePrice ?? 0;
+  return fullUsd(app.serviceType, p);
+}
+
+export function advancePercentForApp(app: PricedApp, p: Pricing): number {
+  if (app.serviceType === "account") return p.accountAdvance;
+  return advancePercentFor(app.serviceType, p);
+}
+
+export function advanceUsdApp(app: PricedApp, p: Pricing): number {
+  return (serviceBaseUsd(app, p) * advancePercentForApp(app, p)) / 100;
+}
+
+export function finalUsdApp(app: PricedApp, p: Pricing): number {
+  return (serviceBaseUsd(app, p) * (100 - advancePercentForApp(app, p))) / 100;
+}

@@ -6,6 +6,7 @@ export const SERVICE_LABELS: Record<ServiceType, string> = {
   "app-store": "App Store — Joylashtirish",
   "google-transfer": "Google Play — Transfer",
   "apple-transfer": "Apple App Store — Transfer",
+  account: "Developer akkaunt ochish",
 };
 
 // Platforma: App Store / Apple transfer -> iOS, qolgani -> Android
@@ -26,6 +27,7 @@ export const SERVICE_SHORT: Record<ServiceType, string> = {
   "app-store": "App Store",
   "google-transfer": "Google Transfer",
   "apple-transfer": "Apple Transfer",
+  account: "Akkaunt ochish",
 };
 
 // Xizmat rangi (chip)
@@ -34,6 +36,7 @@ export const SERVICE_BADGE: Record<ServiceType, string> = {
   "app-store": "bg-blue-50 text-blue-700 ring-blue-200",
   "google-transfer": "bg-orange-50 text-orange-700 ring-orange-200",
   "apple-transfer": "bg-purple-50 text-purple-700 ring-purple-200",
+  account: "bg-teal-50 text-teal-700 ring-teal-200",
 };
 
 export const STATUS_META: Record<

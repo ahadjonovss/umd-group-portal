@@ -12,6 +12,12 @@ export const APPLE_ICON = (
   </svg>
 );
 
+export const ACCOUNT_ICON = (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+  </svg>
+);
+
 export const SERVICE_THEME: Record<
   ServiceType,
   { gradient: string; accent: string; soft: string; text: string; icon: ReactNode }
@@ -43,6 +49,13 @@ export const SERVICE_THEME: Record<
     soft: "bg-purple-50",
     text: "text-purple-600",
     icon: APPLE_ICON,
+  },
+  account: {
+    gradient: "from-teal-400 to-teal-600",
+    accent: "from-teal-400 to-teal-600",
+    soft: "bg-teal-50",
+    text: "text-teal-600",
+    icon: ACCOUNT_ICON,
   },
 };
 

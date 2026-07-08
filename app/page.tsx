@@ -128,6 +128,19 @@ export default async function Home() {
               </svg>
             }
           />
+          <ServiceCard
+            title="Developer akkaunt ochish"
+            description="Google Play yoki App Store uchun rasmiy developer akkaunt ochib beramiz (shaxsiy yoki korporativ)"
+            href="/submit/account"
+            badge="Yangi"
+            badgeColor="teal"
+            delay={300}
+            icon={
+              <svg className="w-5 h-5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            }
+          />
         </div>
 
         {/* Reviews */}

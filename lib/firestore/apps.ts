@@ -43,6 +43,7 @@ export interface CreateAppInput {
   appName: string | null;
   contact: { fullName: string; phone: string; email: string };
   submission: Record<string, string>;
+  servicePrice?: number | null; // narx platforma/turga bog'liq xizmatlar uchun (akkaunt ochish)
 }
 
 const APPS = "apps";
@@ -78,6 +79,7 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     appName: input.appName,
     contact: input.contact,
     submission: input.submission,
+    servicePrice: input.servicePrice ?? null,
     iconUrl: null, // Storage'ga yuklangach to'ladi
     status: "submitted" satisfies AppStatus,
     statusUpdatedAt: FieldValue.serverTimestamp(),
@@ -175,6 +177,7 @@ export interface AppView {
   finalReceiptSent: boolean;
   finalPaid: boolean;
   publishedPrice: number | null; // store'ga chiqarilgan paytdagi to'liq narx ($)
+  servicePrice: number | null; // akkaunt ochish kabi xizmatlar uchun saqlangan narx ($)
   ownerUid: string;
   ownerEmail: string | null;
   contact: { fullName: string; phone: string; email: string } | null;
@@ -210,6 +213,7 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
     finalReceiptSent: Boolean(x.finalReceiptSent),
     finalPaid: Boolean(x.finalPaid),
     publishedPrice: typeof x.publishedPrice === "number" ? x.publishedPrice : null,
+    servicePrice: typeof x.servicePrice === "number" ? x.servicePrice : null,
     ownerUid: x.ownerUid ?? "",
     ownerEmail: x.ownerEmail ?? null,
     contact: x.contact ?? null,

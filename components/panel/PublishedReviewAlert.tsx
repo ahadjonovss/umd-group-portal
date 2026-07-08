@@ -1,11 +1,19 @@
 import Link from "next/link";
+import type { ServiceType } from "@/types";
 
 export interface PublishedItem {
   id: string;
   label: string;
+  serviceType: ServiceType;
 }
 
-// Store'ga chiqqan, lekin hali baholanmagan ilovalar uchun eslatma banneri.
+function doneText(serviceType: ServiceType): string {
+  if (serviceType === "account") return "developer akkauntingiz tayyor bo'ldi";
+  if (serviceType === "google-transfer" || serviceType === "apple-transfer") return "transferi yakunlandi";
+  return "store'ga chiqdi";
+}
+
+// Yakunlangan, lekin hali baholanmagan xizmatlar uchun eslatma banneri.
 export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
   if (!apps.length) return null;
 
@@ -19,7 +27,7 @@ export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
           <div className="text-2xl flex-shrink-0">🎉</div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-emerald-800">
-              Sizning <span className="font-bold">{a.label}</span> ilovangiz store&apos;ga chiqdi!
+              Sizning <span className="font-bold">{a.label}</span> {doneText(a.serviceType)}!
             </p>
             <p className="text-xs text-emerald-700">Xizmatimizni baholab, fikringizni qoldiring.</p>
           </div>

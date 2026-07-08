@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
 import { compressImages } from "@/lib/image-compress";
+import { TermsConfirmModal } from "@/components/TermsConfirmModal";
+import type { Pricing } from "@/lib/firestore/settings";
 
 import {
   appStoreStep1Schema,
@@ -35,14 +37,16 @@ interface FormState {
   step5?: AppStoreStep5;
 }
 
-export function AppStoreForm() {
+export function AppStoreForm({ pricing }: { pricing: Pricing }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formState, setFormState] = useState<FormState>({});
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [progress, setProgress] = useState(0);
+  const [showTerms, setShowTerms] = useState(false);
   const progressRef = useRef(0);
+  const pendingStep5 = useRef<AppStoreStep5 | null>(null);
   function setP(v: number) { const c = Math.min(100, Math.round(v)); progressRef.current = c; setProgress(c); }
 
   // Step 4 graphics
@@ -130,9 +134,19 @@ export function AppStoreForm() {
     setStep(5);
   }
 
-  async function onStep5Submit(data: AppStoreStep5) {
+  // Step 5 to'g'ri to'ldirilgach — shartlar modalini ochamiz
+  function onStep5Submit(data: AppStoreStep5) {
+    setFormState((s) => ({ ...s, step5: data }));
+    pendingStep5.current = data;
+    setShowTerms(true);
+  }
+
+  // Shartlar tasdiqlangach — haqiqiy yuborish
+  async function doSubmit() {
+    const data = pendingStep5.current;
+    if (!data) return;
+    setShowTerms(false);
     const newState = { ...formState, step5: data };
-    setFormState(newState);
     setSubmitStatus("loading");
     setSubmitError("");
     setP(0);
@@ -231,6 +245,9 @@ export function AppStoreForm() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {showTerms && (
+        <TermsConfirmModal service="publish" pricing={pricing} onConfirm={doSubmit} onClose={() => setShowTerms(false)} />
+      )}
       {submitStatus === "loading" && <SubmitProgressOverlay progress={progress} />}
       {submitStatus === "error" && (
         <SubmitProgressOverlay

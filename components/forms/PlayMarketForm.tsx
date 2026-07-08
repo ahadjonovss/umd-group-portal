@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { ImageUpload } from "@/components/ImageUpload";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
 import { compressImages } from "@/lib/image-compress";
+import { TermsConfirmModal } from "@/components/TermsConfirmModal";
+import type { Pricing } from "@/lib/firestore/settings";
 
 import {
   playMarketStep1Schema,
@@ -32,13 +34,14 @@ interface FormState {
   step4?: PlayMarketStep5;
 }
 
-export function PlayMarketForm() {
+export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formState, setFormState] = useState<FormState>({});
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [progress, setProgress] = useState(0);
+  const [showTerms, setShowTerms] = useState(false);
   const progressRef = useRef(0);
   function setP(v: number) { const c = Math.min(100, Math.round(v)); progressRef.current = c; setProgress(c); }
 
@@ -128,7 +131,14 @@ export function PlayMarketForm() {
     setStep(5);
   }
 
-  async function onStep5Submit() {
+  // Yakuniy tugma — avval shartlar modalini ochamiz
+  function onStep5Submit() {
+    setShowTerms(true);
+  }
+
+  // Shartlar tasdiqlangach — haqiqiy yuborish
+  async function doSubmit() {
+    setShowTerms(false);
     setSubmitStatus("loading");
     setSubmitError("");
     setP(0);
@@ -227,6 +237,9 @@ export function PlayMarketForm() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {showTerms && (
+        <TermsConfirmModal service="publish" pricing={pricing} onConfirm={doSubmit} onClose={() => setShowTerms(false)} />
+      )}
       {submitStatus === "loading" && (
         <SubmitProgressOverlay progress={progress} />
       )}

@@ -6,7 +6,7 @@ import { readFormFile } from "@/lib/form-utils";
 import { sendPhotoToTelegram } from "@/lib/telegram";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
-import { advanceUsd, finalUsd, fullUsd, advancePercentFor } from "@/lib/payment";
+import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
@@ -47,11 +47,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Ruxsat yo'q" }, { status: 403 });
   }
 
+  const serviceType = app.serviceType as ServiceType;
+  // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
+  const finalStage = serviceType === "account" ? "completed" : "published";
+
   // Bosqichga mos tekshiruv
   if (kind === "advance" && app.status !== "payment_pending") {
     return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
   }
-  if (kind === "final" && (app.status !== "published" || app.finalPaid)) {
+  if (kind === "final" && (app.status !== finalStage || app.finalPaid)) {
     return NextResponse.json({ success: false, error: "Yakuniy to'lov talab qilinmayapti" }, { status: 400 });
   }
 
@@ -60,9 +64,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Chek rasmi yuklanmadi" }, { status: 400 });
   }
 
-  const serviceType = app.serviceType as ServiceType;
+  const pricedApp = { serviceType, servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null };
   const [pricing, payment, rate] = await Promise.all([getPricing(), getPaymentInfo(), getUsdRate()]);
-  const usd = Math.round(kind === "final" ? finalUsd(serviceType, pricing) : advanceUsd(serviceType, pricing));
+  const usd = Math.round(kind === "final" ? finalUsdApp(pricedApp, pricing) : advanceUsdApp(pricedApp, pricing));
   const uzs = rate ? Math.round(usd * rate) : null;
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
   const ownerName = app.contact?.fullName || user.name || user.email || "Mijoz";
@@ -82,8 +86,8 @@ export async function POST(req: NextRequest) {
       amountUsd: usd,
       rate,
       amountUzs: uzs,
-      totalUsd: Math.round(fullUsd(serviceType, pricing)),
-      advancePercent: advancePercentFor(serviceType, pricing),
+      totalUsd: Math.round(serviceBaseUsd(pricedApp, pricing)),
+      advancePercent: advancePercentForApp(pricedApp, pricing),
     });
   } catch (e) {
     console.error("[payment/receipt] createPayment xato:", e);

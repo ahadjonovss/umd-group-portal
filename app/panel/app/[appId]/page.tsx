@@ -9,7 +9,7 @@ import { getAppPayments } from "@/lib/firestore/payments";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { advanceUsd, finalUsd } from "@/lib/payment";
+import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { SERVICE_LABELS, STATUS_META, formatDate } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
@@ -53,6 +53,25 @@ const FIELD_LABELS: Record<string, string> = {
   googlePaymentsProfileId: "Payments Profile ID",
   appStoreConnectTeamId: "App Store Connect Team ID",
   appleDevAccountEmail: "Apple Dev akkaunt email",
+  // Akkaunt ochish
+  platform: "Platforma",
+  accountType: "Akkaunt turi",
+  login: "Akkaunt login",
+  loginPassword: "Akkaunt paroli",
+  holderName: "Akkaunt egasi (F.I.O.)",
+  holderPhone: "Telefon",
+  country: "Mamlakat",
+  companyName: "Yuridik kompaniya nomi",
+  legalAddress: "Yuridik manzil",
+  companyPhone: "Kompaniya telefoni",
+  companyEmail: "Kompaniya email",
+  website: "Veb-sayt",
+  companyType: "Kompaniya turi",
+  activityType: "Faoliyat turi",
+  cpName: "Kontakt/Signatory F.I.O.",
+  cpPosition: "Lavozim",
+  cpPhone: "Kontakt telefon",
+  cpEmail: "Kontakt email",
 };
 
 const PAYMENT_KIND_LABEL: Record<string, string> = {
@@ -117,13 +136,15 @@ export default async function AppDetailPage({
   const canReview = isTerminalSuccess(app.status);
 
   const rate = usdRate ?? null;
-  const advanceAmount = Math.round(advanceUsd(app.serviceType, pricing));
+  const advanceAmount = Math.round(advanceUsdApp(app, pricing));
   const advanceUzs = rate ? Math.round(advanceAmount * rate) : null;
-  const finalAmount = Math.round(finalUsd(app.serviceType, pricing));
+  const finalAmount = Math.round(finalUsdApp(app, pricing));
   const finalUzs = rate ? Math.round(finalAmount * rate) : null;
 
+  // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
+  const finalStage = app.serviceType === "account" ? "completed" : "published";
   const showAdvance = app.status === "payment_pending";
-  const showFinal = app.status === "published" && !app.finalPaid && finalAmount > 0;
+  const showFinal = app.status === finalStage && !app.finalPaid && finalAmount > 0;
   const paymentDone = app.finalPaid || finalAmount === 0;
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
@@ -246,8 +267,9 @@ export default async function AppDetailPage({
                 <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 flex flex-col gap-2">
                   <p className="text-sm font-semibold text-amber-800">Qolgan to&apos;lovni amalga oshiring</p>
                   <p className="text-xs text-amber-700 leading-snug">
-                    ⚠️ To&apos;lovning qolgan qismini o&apos;z vaqtida to&apos;lang. Aks holda ilova store&apos;dan
-                    olib tashlanishi mumkin.
+                    {app.serviceType === "account"
+                      ? "Akkaunt tayyor. Xizmatni yakunlash uchun qolgan to'lovni amalga oshiring."
+                      : "⚠️ To'lovning qolgan qismini o'z vaqtida to'lang. Aks holda ilova store'dan olib tashlanishi mumkin."}
                   </p>
                   <PaymentView
                     endpoint="/api/payment/receipt"

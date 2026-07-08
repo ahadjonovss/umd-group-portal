@@ -45,18 +45,14 @@ export default async function PanelPage() {
     canReview: isTerminalSuccess(a.status),
   }));
 
-  // Store'ga chiqqan, lekin hali baholanmagan ilovalar — eslatma banneri uchun
-  let publishedUnreviewed = reviewItems
-    .filter((a) => a.canReview && !a.reviewed)
-    .map((a) => ({ id: a.id, label: a.label }));
-
-  // TEST (vaqtincha): dev'da chiqarilgan ilova bo'lmasa ham alertni ko'rsatamiz
-  if (process.env.NODE_ENV === "development" && publishedUnreviewed.length === 0 && reviewItems[0]) {
-    const first = reviewItems[0];
-    publishedUnreviewed = [{ id: first.id, label: first.label }];
-    // launcher shu ilovani baholashga ruxsat bersin (aks holda "Baholab bo'lmaydi")
-    reviewItems[0] = { ...first, canReview: true, reviewed: false };
-  }
+  // Yakunlangan (chiqarilgan / transfer / akkaunt), lekin hali baholanmagan xizmatlar — eslatma banneri
+  const publishedUnreviewed = apps
+    .filter((a) => isTerminalSuccess(a.status) && !a.reviewed)
+    .map((a) => ({
+      id: a.id,
+      label: a.appName || SERVICE_LABELS[a.serviceType],
+      serviceType: a.serviceType,
+    }));
 
   return (
     <div className="min-h-screen bg-gradient-subtle">

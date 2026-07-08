@@ -175,10 +175,46 @@ export default async function XizmatNarxlariPage() {
           </p>
         </div>
 
-        {/* 5. Obuna yangilash */}
+        {/* 5. Developer akkaunt ochish */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">5</span>
+              <div>
+                <h2 className="font-semibold text-slate-900">Developer akkaunt ochish</h2>
+                <p className="text-xs text-slate-500">Google Play va App Store uchun (shaxsiy / korporativ)</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3 mt-3 ml-10">
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">Google Play — shaxsiy</p>
+              <p className="text-xl font-bold text-slate-900">${p.accountGooglePersonal}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">Google Play — korporativ</p>
+              <p className="text-xl font-bold text-slate-900">${p.accountGoogleCorporate}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">App Store — shaxsiy</p>
+              <p className="text-xl font-bold text-slate-900">${p.accountApplePersonal}</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">App Store — korporativ</p>
+              <p className="text-xl font-bold text-slate-900">${p.accountAppleCorporate}</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-3 ml-10">
+            Bu — <strong>bizning xizmat haqimiz</strong>. To&apos;lov <strong>{p.accountAdvance}% oldindan</strong>
+            {p.accountAdvance < 100 ? `, ${100 - p.accountAdvance}% akkaunt ochilgach` : ""}. Platformaning rasmiy to&apos;lovi
+            (Google $25, Apple $99/yil) narxga <strong>kirmaydi</strong> — u to&apos;g&apos;ridan-to&apos;g&apos;ri Google/Apple&apos;ga alohida to&apos;lanadi.
+          </p>
+        </div>
+
+        {/* 6. Obuna yangilash */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">5</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">6</span>
             <h2 className="font-semibold text-slate-900">Obunani uzaytirish (+9 oy)</h2>
           </div>
           <p className="ml-10 text-sm text-slate-600">

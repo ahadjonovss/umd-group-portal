@@ -38,12 +38,22 @@ export const TRANSFER_FLOW: AppStatus[] = [
   "completed",
 ];
 
+// Developer akkaunt ochish oqimi (5 bosqich).
+export const ACCOUNT_FLOW: AppStatus[] = [
+  "submitted",
+  "review",
+  "payment_pending",
+  "preparing",
+  "completed",
+];
+
 // Oqimdan tashqari maxsus (terminal) holatlar.
 export const TERMINAL_ERROR: AppStatus[] = ["rejected", "cancelled"];
 
 const TRANSFER_SERVICES: ServiceType[] = ["google-transfer", "apple-transfer"];
 
 export function getStatusFlow(serviceType: ServiceType): AppStatus[] {
+  if (serviceType === "account") return ACCOUNT_FLOW;
   return TRANSFER_SERVICES.includes(serviceType) ? TRANSFER_FLOW : PUBLISH_FLOW;
 }
 

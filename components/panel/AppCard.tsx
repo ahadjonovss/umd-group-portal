@@ -6,7 +6,7 @@ import { isRequestActive } from "@/lib/request-status";
 import { SERVICE_LABELS, STATUS_META, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { StatusProgress, SubscriptionProgress, ClockIcon } from "@/components/panel/AppSections";
-import { finalUsd } from "@/lib/payment";
+import { finalUsdApp } from "@/lib/payment";
 import type { Pricing } from "@/lib/firestore/settings";
 
 // Kartochkada ko'rsatiladigan "amal talab qilinadi" belgisi.
@@ -39,9 +39,11 @@ export function AppCard({
   const transferred = app.status === "transferred";
 
   // Amal talab qiladigan holatlar (kartochkada ogohlantirish uchun)
-  const finalAmount = pricing ? Math.round(finalUsd(app.serviceType, pricing)) : 0;
+  // Akkaunt xizmatida "chiqarildi" o'rniga "yakunlandi" bosqichida qolgan to'lov.
+  const finalStage = app.serviceType === "account" ? "completed" : "published";
+  const finalAmount = pricing ? Math.round(finalUsdApp(app, pricing)) : 0;
   const needsAdvance = app.status === "payment_pending" && !app.receiptSent;
-  const needsFinal = app.status === "published" && !app.finalPaid && finalAmount > 0 && !app.finalReceiptSent;
+  const needsFinal = app.status === finalStage && !app.finalPaid && finalAmount > 0 && !app.finalReceiptSent;
   const needsRequestPay =
     (transferRequest?.status === "payment_pending" && !transferRequest.receiptSent) ||
     (updateRequest?.status === "payment_pending" && !updateRequest.receiptSent) ||

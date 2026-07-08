@@ -9,9 +9,16 @@ export interface Pricing {
   appleTransfer: number; // App Store transfer
   updateAndroid: number; // Android update (har biri)
   updateIos: number; // iOS update (har biri)
+  accountGooglePersonal: number; // Google Play — shaxsiy akkaunt ochish
+  accountGoogleCorporate: number; // Google Play — korporativ akkaunt ochish
+  accountApplePersonal: number; // App Store — shaxsiy akkaunt ochish
+  accountAppleCorporate: number; // App Store — korporativ akkaunt ochish
   publishAdvance: number; // chiqarish — avans (oldindan to'lov) %
   transferAdvance: number; // transfer — avans %
   updateAdvance: number; // update — avans %
+  accountAdvance: number; // akkaunt ochish — avans %
+  publishCancelFee: number; // chiqarishdan voz kechilsa ushlab qolinadigan % (umumiy narxdan)
+  accountCancelFee: number; // akkaunt ochishdan voz kechilsa ushlab qolinadigan % (umumiy narxdan)
 }
 
 export const DEFAULT_PRICING: Pricing = {
@@ -21,9 +28,16 @@ export const DEFAULT_PRICING: Pricing = {
   appleTransfer: 5,
   updateAndroid: 3,
   updateIos: 5,
+  accountGooglePersonal: 50,
+  accountGoogleCorporate: 90,
+  accountApplePersonal: 150,
+  accountAppleCorporate: 250,
   publishAdvance: 70,
   transferAdvance: 100,
   updateAdvance: 100,
+  accountAdvance: 70,
+  publishCancelFee: 20,
+  accountCancelFee: 20,
 };
 
 function num(v: unknown, fallback: number): number {
@@ -41,9 +55,16 @@ function normalize(x: Partial<Pricing>): Pricing {
     appleTransfer: num(x.appleTransfer, DEFAULT_PRICING.appleTransfer),
     updateAndroid: num(x.updateAndroid, DEFAULT_PRICING.updateAndroid),
     updateIos: num(x.updateIos, DEFAULT_PRICING.updateIos),
+    accountGooglePersonal: num(x.accountGooglePersonal, DEFAULT_PRICING.accountGooglePersonal),
+    accountGoogleCorporate: num(x.accountGoogleCorporate, DEFAULT_PRICING.accountGoogleCorporate),
+    accountApplePersonal: num(x.accountApplePersonal, DEFAULT_PRICING.accountApplePersonal),
+    accountAppleCorporate: num(x.accountAppleCorporate, DEFAULT_PRICING.accountAppleCorporate),
     publishAdvance: pct(x.publishAdvance, DEFAULT_PRICING.publishAdvance),
     transferAdvance: pct(x.transferAdvance, DEFAULT_PRICING.transferAdvance),
     updateAdvance: pct(x.updateAdvance, DEFAULT_PRICING.updateAdvance),
+    accountAdvance: pct(x.accountAdvance, DEFAULT_PRICING.accountAdvance),
+    publishCancelFee: pct(x.publishCancelFee, DEFAULT_PRICING.publishCancelFee),
+    accountCancelFee: pct(x.accountCancelFee, DEFAULT_PRICING.accountCancelFee),
   };
 }
 
