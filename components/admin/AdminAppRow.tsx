@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AppView } from "@/lib/firestore/apps";
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
-import { STATUS_META, SERVICE_LABELS, formatDate } from "@/lib/labels";
+import { STATUS_META, SERVICE_LABELS, accountLabel, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { RENEWAL_FACTOR } from "@/lib/payment";
 import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actDeleteApp } from "@/app/admin/actions";
@@ -95,7 +95,10 @@ export function AdminAppRow({ app }: { app: AppView }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-semibold text-slate-900 truncate">{title}</p>
-              <p className={`text-xs font-medium truncate ${theme.text}`}>{SERVICE_LABELS[app.serviceType]}</p>
+              <p className={`text-xs font-medium truncate ${theme.text}`}>
+                {SERVICE_LABELS[app.serviceType]}
+                {app.serviceType === "account" && app.accountPlatform ? ` · ${accountLabel(app.accountPlatform, app.accountType)}` : ""}
+              </p>
               <p className="text-xs text-slate-400 truncate mt-0.5">
                 {app.ownerEmail || "—"}
                 {app.contact ? ` · ${app.contact.fullName} · ${app.contact.phone}` : ""}

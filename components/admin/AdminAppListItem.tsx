@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
-import { SERVICE_LABELS, STATUS_META } from "@/lib/labels";
+import { SERVICE_LABELS, STATUS_META, accountLabel } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 
 export function AdminAppListItem({ app, spentUsd }: { app: AppView; spentUsd?: number }) {
@@ -18,7 +18,10 @@ export function AdminAppListItem({ app, spentUsd }: { app: AppView; spentUsd?: n
 
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-slate-900 truncate">{title}</p>
-        <p className={`text-xs font-medium truncate ${theme.text}`}>{SERVICE_LABELS[app.serviceType]}</p>
+        <p className={`text-xs font-medium truncate ${theme.text}`}>
+          {SERVICE_LABELS[app.serviceType]}
+          {app.serviceType === "account" && app.accountPlatform ? ` · ${accountLabel(app.accountPlatform, app.accountType)}` : ""}
+        </p>
         <p className="text-xs text-slate-400 truncate mt-0.5">{app.ownerEmail || "—"}</p>
         {typeof spentUsd === "number" && (
           <p className="text-xs font-semibold text-emerald-600 mt-0.5">Sarflangan: ${spentUsd}</p>

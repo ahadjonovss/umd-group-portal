@@ -21,6 +21,23 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   ios: "iOS",
 };
 
+// Akkaunt ochish: platforma / tur yorliqlari
+export const ACCOUNT_PLATFORM_LABEL: Record<string, string> = {
+  google: "Google Play",
+  apple: "App Store",
+};
+export const ACCOUNT_TYPE_LABEL: Record<string, string> = {
+  personal: "Shaxsiy",
+  corporate: "Korporativ",
+};
+
+// Akkaunt arizasi uchun qisqa yorliq: "Google Play · Korporativ"
+export function accountLabel(platform: string | null, type: string | null): string {
+  const p = platform ? ACCOUNT_PLATFORM_LABEL[platform] ?? platform : "";
+  const t = type ? ACCOUNT_TYPE_LABEL[type] ?? type : "";
+  return [p, t].filter(Boolean).join(" · ");
+}
+
 // Qisqa nom (chiplar uchun)
 export const SERVICE_SHORT: Record<ServiceType, string> = {
   "play-market": "Play Market",

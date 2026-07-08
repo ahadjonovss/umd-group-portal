@@ -44,6 +44,8 @@ export interface CreateAppInput {
   contact: { fullName: string; phone: string; email: string };
   submission: Record<string, string>;
   servicePrice?: number | null; // narx platforma/turga bog'liq xizmatlar uchun (akkaunt ochish)
+  accountPlatform?: string | null; // "google" | "apple" (akkaunt ochish)
+  accountType?: string | null; // "personal" | "corporate" (akkaunt ochish)
 }
 
 const APPS = "apps";
@@ -80,6 +82,8 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     contact: input.contact,
     submission: input.submission,
     servicePrice: input.servicePrice ?? null,
+    accountPlatform: input.accountPlatform ?? null,
+    accountType: input.accountType ?? null,
     iconUrl: null, // Storage'ga yuklangach to'ladi
     status: "submitted" satisfies AppStatus,
     statusUpdatedAt: FieldValue.serverTimestamp(),
@@ -183,6 +187,8 @@ export interface AppView {
   finalPaid: boolean;
   publishedPrice: number | null; // store'ga chiqarilgan paytdagi to'liq narx ($)
   servicePrice: number | null; // akkaunt ochish kabi xizmatlar uchun saqlangan narx ($)
+  accountPlatform: string | null; // "google" | "apple"
+  accountType: string | null; // "personal" | "corporate"
   taxPhone: string | null; // yakuniy to'lovda soliq cheki uchun berilgan telefon
   ownerUid: string;
   ownerEmail: string | null;
@@ -220,6 +226,8 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
     finalPaid: Boolean(x.finalPaid),
     publishedPrice: typeof x.publishedPrice === "number" ? x.publishedPrice : null,
     servicePrice: typeof x.servicePrice === "number" ? x.servicePrice : null,
+    accountPlatform: x.accountPlatform ?? null,
+    accountType: x.accountType ?? null,
     taxPhone: x.taxPhone ?? null,
     ownerUid: x.ownerUid ?? "",
     ownerEmail: x.ownerEmail ?? null,

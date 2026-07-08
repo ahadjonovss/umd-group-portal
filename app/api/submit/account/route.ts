@@ -56,6 +56,8 @@ export async function POST(req: NextRequest) {
       contact: { fullName, phone, email },
       submission,
       servicePrice,
+      accountPlatform: platform,
+      accountType,
     });
   } catch (e) {
     console.error("[submit/account] Firestore xato:", e);

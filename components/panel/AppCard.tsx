@@ -3,7 +3,7 @@ import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isTerminalError } from "@/lib/app-status";
 import { isRequestActive } from "@/lib/request-status";
-import { SERVICE_LABELS, STATUS_META, formatDate } from "@/lib/labels";
+import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { StatusProgress, SubscriptionProgress, ClockIcon } from "@/components/panel/AppSections";
 import { finalUsdApp } from "@/lib/payment";
@@ -66,7 +66,10 @@ export function AppCard({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-semibold text-slate-900 truncate group-hover:text-blue-700 transition-colors">{title}</p>
-              <p className={`text-xs font-medium truncate ${theme.text}`}>{SERVICE_LABELS[app.serviceType]}</p>
+              <p className={`text-xs font-medium truncate ${theme.text}`}>
+                {SERVICE_LABELS[app.serviceType]}
+                {app.serviceType === "account" && app.accountPlatform ? ` · ${accountLabel(app.accountPlatform, app.accountType)}` : ""}
+              </p>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${status.badge}`}>

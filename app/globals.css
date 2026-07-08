@@ -131,6 +131,21 @@ body {
   background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 100%);
 }
 
+/* Reviewlar karuseli — cheksiz aylanish */
+@keyframes umd-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: umd-marquee var(--marquee-duration, 40s) linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee { animation: none; }
+}
+
 .text-gradient {
   background: linear-gradient(135deg, #2563eb, #7c3aed);
   -webkit-background-clip: text;

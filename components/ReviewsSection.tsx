@@ -38,13 +38,9 @@ function ReviewCard({ review }: { review: Review }) {
   const initial = review.name.charAt(0).toUpperCase();
   const colors = ["bg-blue-600","bg-violet-600","bg-emerald-600","bg-orange-500","bg-pink-600"];
   const color = colors[initial.charCodeAt(0) % colors.length];
-  const [expanded, setExpanded] = useState(false);
-  const maxLen = 120;
-  const isLong = review.comment.length > maxLen;
-  const displayText = expanded || !isLong ? review.comment : review.comment.slice(0, maxLen) + "...";
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
+    <div className="h-full bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 hover:shadow-md transition-all duration-200">
 
       {/* Avatar + ism + sana */}
       <div className="flex items-center gap-3">
@@ -61,16 +57,8 @@ function ReviewCard({ review }: { review: Review }) {
       <StarDisplay rating={review.rating} />
 
       {/* Izoh */}
-      <p className="text-sm text-slate-700 leading-relaxed">
-        {displayText}
-        {isLong && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="ml-1 text-blue-600 font-medium hover:underline focus:outline-none"
-          >
-            {expanded ? "Yig'ish" : "Ko'proq"}
-          </button>
-        )}
+      <p className="text-sm text-slate-700 leading-relaxed line-clamp-4">
+        {review.comment}
       </p>
 
       {/* Ilova / xizmat ma'lumoti — izoh ostida */}
@@ -174,14 +162,22 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
         </div>
       )}
 
-      {/* Reviews grid */}
+      {/* Reviews karuseli — avtomatik aylanadi, hover'da to'xtaydi */}
       {reviews.length > 0 ? (
-        <div className="grid sm:grid-cols-3 gap-3">
-          {reviews.slice(0, 6).map((r, i) => (
-            <div key={r.id || i} className="animate-slide-up" style={{ animationDelay: `${300 + i * 75}ms` }}>
-              <ReviewCard review={r} />
-            </div>
-          ))}
+        <div
+          className="relative overflow-hidden -mx-4 sm:-mx-6 animate-slide-up delay-300"
+          style={{ maskImage: "linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)" }}
+        >
+          <div
+            className="flex w-max will-change-transform animate-marquee"
+            style={{ ["--marquee-duration" as string]: `${Math.max(reviews.length * 6, 24)}s` }}
+          >
+            {[...reviews, ...reviews].map((r, i) => (
+              <div key={i} className="w-[280px] sm:w-[320px] flex-shrink-0 pr-3">
+                <ReviewCard review={r} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200/80 p-8 text-center animate-slide-up delay-300">

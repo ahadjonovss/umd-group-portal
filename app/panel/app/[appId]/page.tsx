@@ -10,7 +10,7 @@ import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
-import { SERVICE_LABELS, STATUS_META, formatDate } from "@/lib/labels";
+import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { PaymentView } from "@/components/panel/PaymentView";
@@ -154,7 +154,12 @@ export default async function AppDetailPage({
   // Umumiy metama'lumot
   const generalRows: [string, string][] = [];
   if (app.appName) generalRows.push(["Ilova nomi", app.appName]);
-  generalRows.push(["Xizmat turi", SERVICE_LABELS[app.serviceType]]);
+  generalRows.push([
+    "Xizmat turi",
+    app.serviceType === "account" && app.accountPlatform
+      ? `${SERVICE_LABELS[app.serviceType]} · ${accountLabel(app.accountPlatform, app.accountType)}`
+      : SERVICE_LABELS[app.serviceType],
+  ]);
   generalRows.push(["Holati", status.label]);
   generalRows.push(["Yuborilgan sana", formatDate(app.createdAt)]);
   if (app.publication.published) generalRows.push(["Store'ga chiqarilgan", formatDate(app.publication.publishedAt)]);
