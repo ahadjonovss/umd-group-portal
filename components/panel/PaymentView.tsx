@@ -13,7 +13,10 @@ export interface PaymentViewProps {
   endpoint?: string;
   idPayload?: Record<string, string>;
   amountLabel?: string;
+  askTaxPhone?: boolean; // yakuniy/to'liq to'lovda soliq cheki uchun telefon so'ralsin
 }
+
+const UZ_PHONE_RE = /^\+998\d{9}$/;
 
 export function PaymentView({
   usd,
@@ -25,11 +28,13 @@ export function PaymentView({
   endpoint = "/api/payment/receipt",
   idPayload = {},
   amountLabel = "Avans (oldindan)",
+  askTaxPhone = false,
 }: PaymentViewProps) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [taxPhone, setTaxPhone] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error" | "done">(receiptSent ? "done" : "idle");
   const [error, setError] = useState("");
 
@@ -50,11 +55,16 @@ export function PaymentView({
 
   async function send() {
     if (!file) { setError("Chek rasmini yuklang"); return; }
+    if (askTaxPhone && !UZ_PHONE_RE.test(taxPhone.trim())) {
+      setError("Soliq cheki uchun telefon: +998XXXXXXXXX");
+      return;
+    }
     setStatus("loading");
     setError("");
     try {
       const fd = new FormData();
       Object.entries(idPayload).forEach(([k, v]) => fd.append(k, v));
+      if (askTaxPhone) fd.append("taxPhone", taxPhone.trim());
       fd.append("receipt", file);
       const res = await fetch(endpoint, { method: "POST", body: fd });
       const json = await res.json();
@@ -113,6 +123,23 @@ export function PaymentView({
         </div>
       ) : (
         <p className="text-xs text-slate-500">Karta raqami hali sozlanmagan. Admin bilan bog&apos;laning.</p>
+      )}
+
+      {/* Soliq cheki uchun telefon (yakuniy/to'liq to'lovda) */}
+      {askTaxPhone && (
+        <div className="bg-white rounded-lg px-3 py-2 ring-1 ring-amber-100">
+          <p className="text-[11px] text-slate-500 mb-1">
+            Telefon raqami — soliqdan elektron chekni SMS orqali yuborishimiz uchun
+          </p>
+          <input
+            type="tel"
+            inputMode="tel"
+            value={taxPhone}
+            onChange={(e) => { setTaxPhone(e.target.value); setError(""); }}
+            placeholder="+998901234567"
+            className="w-full h-9 rounded-lg border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400"
+          />
+        </div>
       )}
 
       {/* Chek yuklash */}

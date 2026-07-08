@@ -345,7 +345,7 @@ export function AdminTabs({
                 value: payStatus,
                 onChange: setPayStatus,
                 allLabel: "Barcha statuslar",
-                options: [{ value: "pending", label: "Kutilmoqda" }, { value: "confirmed", label: "Tasdiqlangan" }],
+                options: [{ value: "pending", label: "Kutilmoqda" }, { value: "confirmed", label: "Tasdiqlangan" }, { value: "rejected", label: "Rad etilgan" }],
               }]}
             />
             {fPay.length ? (

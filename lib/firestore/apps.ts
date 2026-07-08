@@ -124,6 +124,11 @@ export async function setFinalPaid(appId: string): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({ finalPaid: true });
 }
 
+// Soliq cheki uchun berilgan telefon (yakuniy/to'liq to'lovda).
+export async function setAppTaxPhone(appId: string, phone: string): Promise<void> {
+  await adminDb.collection(APPS).doc(appId).update({ taxPhone: phone });
+}
+
 // Admin: arizani o'chiradi + unga bog'liq to'lov va sharhlarni.
 export async function deleteApp(appId: string): Promise<void> {
   const [pays, revs] = await Promise.all([
@@ -178,6 +183,7 @@ export interface AppView {
   finalPaid: boolean;
   publishedPrice: number | null; // store'ga chiqarilgan paytdagi to'liq narx ($)
   servicePrice: number | null; // akkaunt ochish kabi xizmatlar uchun saqlangan narx ($)
+  taxPhone: string | null; // yakuniy to'lovda soliq cheki uchun berilgan telefon
   ownerUid: string;
   ownerEmail: string | null;
   contact: { fullName: string; phone: string; email: string } | null;
@@ -214,6 +220,7 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
     finalPaid: Boolean(x.finalPaid),
     publishedPrice: typeof x.publishedPrice === "number" ? x.publishedPrice : null,
     servicePrice: typeof x.servicePrice === "number" ? x.servicePrice : null,
+    taxPhone: x.taxPhone ?? null,
     ownerUid: x.ownerUid ?? "",
     ownerEmail: x.ownerEmail ?? null,
     contact: x.contact ?? null,

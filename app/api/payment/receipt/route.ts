@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { adminDb } from "@/lib/firebase/admin";
-import { markReceiptSent, markFinalReceiptSent } from "@/lib/firestore/apps";
+import { markReceiptSent, markFinalReceiptSent, setAppTaxPhone } from "@/lib/firestore/apps";
 import { readFormFile } from "@/lib/form-utils";
-import { sendPhotoToTelegram } from "@/lib/telegram";
+import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp } from "@/lib/payment";
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
 
   const appId = String(formData.get("appId") || "");
   const kind: PaymentKind = formData.get("kind") === "final" ? "final" : "advance";
+  const taxPhone = String(formData.get("taxPhone") || "").trim();
   if (!appId) {
     return NextResponse.json({ success: false, error: "appId yo'q" }, { status: 400 });
   }
@@ -74,8 +75,9 @@ export async function POST(req: NextRequest) {
   const kindLabel = kind === "final" ? "Yakuniy to'lov" : "Avans";
 
   // To'lov yozuvi
+  let paymentId: string | null = null;
   try {
-    await createPayment({
+    paymentId = await createPayment({
       appId,
       ownerUid: user.uid,
       ownerName,
@@ -102,11 +104,17 @@ export async function POST(req: NextRequest) {
     `💵 $${esc(String(usd))}` +
     (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
     `\n💳 Karta: ${esc(payment.cardNumber || "-")}` +
+    (taxPhone ? `\n📇 Soliq cheki tel: ${esc(taxPhone)}` : "") +
     tgAdminLink(appId);
 
   try {
     const ext = receipt.name.split(".").pop()?.toLowerCase();
-    await sendPhotoToTelegram(receipt.buffer, `chek_${appId}.${ext || "jpg"}`, caption);
+    await sendPhotoToTelegram(
+      receipt.buffer,
+      `chek_${appId}.${ext || "jpg"}`,
+      caption,
+      paymentId ? paymentButtons(paymentId) : undefined
+    );
   } catch (e) {
     console.error("[payment/receipt] Telegram xato (chek belgilangan):", e);
   }
@@ -114,6 +122,7 @@ export async function POST(req: NextRequest) {
   try {
     if (kind === "final") await markFinalReceiptSent(appId);
     else await markReceiptSent(appId);
+    if (taxPhone) await setAppTaxPhone(appId, taxPhone);
   } catch (e) {
     console.error("[payment/receipt] mark xato:", e);
     return NextResponse.json({ success: false, error: "Saqlashda xato" }, { status: 500 });

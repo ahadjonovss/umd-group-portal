@@ -52,7 +52,7 @@ export interface PaymentView {
   amountUzs: number | null;
   totalUsd: number;
   advancePercent: number;
-  status: "pending" | "confirmed";
+  status: "pending" | "confirmed" | "rejected";
   note: string;
   createdAt: string | null;
 }
@@ -78,7 +78,7 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     amountUzs: typeof x.amountUzs === "number" ? x.amountUzs : null,
     totalUsd: x.totalUsd ?? 0,
     advancePercent: x.advancePercent ?? 0,
-    status: x.status === "confirmed" ? "confirmed" : "pending",
+    status: x.status === "confirmed" ? "confirmed" : x.status === "rejected" ? "rejected" : "pending",
     note: x.note ?? "",
     createdAt: iso(x.createdAt),
   };
@@ -147,4 +147,25 @@ export async function confirmPayment(paymentId: string): Promise<void> {
   }
 
   await ref.update({ status: "confirmed", confirmedAt: FieldValue.serverTimestamp() });
+}
+
+// To'lovni rad etish: faqat to'lov yozuvi rad etiladi, ariza/so'rov statusi
+// o'zgarmaydi. Chek belgisi tozalanadi — mijoz qayta yuborishi mumkin.
+export async function rejectPayment(paymentId: string): Promise<void> {
+  const ref = adminDb.collection(PAYMENTS).doc(paymentId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("To'lov topilmadi");
+  const p = snap.data()!;
+  if (p.status === "confirmed") return; // tasdiqlangan to'lovni rad etib bo'lmaydi
+
+  await ref.update({ status: "rejected", rejectedAt: FieldValue.serverTimestamp() });
+
+  const requestId = p.requestId as string | null | undefined;
+  if (requestId) {
+    await adminDb.collection("requests").doc(requestId).update({ receiptSent: false });
+  } else if (p.kind === "final") {
+    await adminDb.collection("apps").doc(p.appId as string).update({ finalReceiptSent: false });
+  } else {
+    await adminDb.collection("apps").doc(p.appId as string).update({ receiptSent: false });
+  }
 }

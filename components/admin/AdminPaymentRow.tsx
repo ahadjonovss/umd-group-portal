@@ -30,6 +30,7 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const confirmed = payment.status === "confirmed";
+  const rejected = payment.status === "rejected";
   const title = payment.appName || SERVICE_SHORT[payment.serviceType];
   const style = KIND_STYLE[payment.kind] ?? KIND_STYLE.advance;
 
@@ -54,10 +55,12 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
             className={`px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${
               confirmed
                 ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                : "bg-amber-50 text-amber-700 ring-amber-200"
+                : rejected
+                  ? "bg-red-50 text-red-700 ring-red-200"
+                  : "bg-amber-50 text-amber-700 ring-amber-200"
             }`}
           >
-            {confirmed ? "Tasdiqlangan" : "Kutilmoqda"}
+            {confirmed ? "Tasdiqlangan" : rejected ? "Rad etilgan" : "Kutilmoqda"}
           </span>
           <button
             disabled={pending}
@@ -98,7 +101,7 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
       </div>
 
       {/* Tasdiqlash (faqat kutilayotgan) */}
-      {!confirmed && (
+      {payment.status === "pending" && (
         <button
           disabled={pending}
           onClick={() => start(() => actConfirmPayment(payment.id))}

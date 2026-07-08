@@ -100,6 +100,9 @@ export function AdminAppRow({ app }: { app: AppView }) {
                 {app.ownerEmail || "—"}
                 {app.contact ? ` · ${app.contact.fullName} · ${app.contact.phone}` : ""}
               </p>
+              {app.taxPhone && (
+                <p className="text-xs text-teal-600 truncate mt-0.5">📇 Soliq cheki tel: {app.taxPhone}</p>
+              )}
             </div>
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${status.badge}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />

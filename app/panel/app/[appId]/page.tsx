@@ -159,6 +159,7 @@ export default async function AppDetailPage({
   generalRows.push(["Yuborilgan sana", formatDate(app.createdAt)]);
   if (app.publication.published) generalRows.push(["Store'ga chiqarilgan", formatDate(app.publication.publishedAt)]);
   if (app.publishedPrice) generalRows.push(["Chiqarilgan narx", `$${app.publishedPrice}`]);
+  if (app.taxPhone) generalRows.push(["Soliq cheki telefoni", app.taxPhone]);
   if (app.subscription?.startDate) {
     generalRows.push(["Obuna boshlangan", formatDate(app.subscription.startDate)]);
     generalRows.push(["Obuna tugashi", formatDate(app.subscription.endDate)]);
@@ -260,6 +261,7 @@ export default async function AppDetailPage({
                   cardNumber={cardNumber}
                   cardHolder={cardHolder}
                   receiptSent={app.receiptSent}
+                  askTaxPhone={finalAmount === 0}
                 />
               )}
 
@@ -281,6 +283,7 @@ export default async function AppDetailPage({
                     cardNumber={cardNumber}
                     cardHolder={cardHolder}
                     receiptSent={app.finalReceiptSent}
+                    askTaxPhone
                   />
                 </div>
               )}

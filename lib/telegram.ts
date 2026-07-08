@@ -45,16 +45,31 @@ export async function sendTelegramMessage(text: string): Promise<void> {
   }
 }
 
+// Inline tugma (callback) tipi
+export type InlineKeyboard = { inline_keyboard: { text: string; callback_data: string }[][] };
+
+// To'lov xabari uchun tasdiqlash/rad etish tugmalari
+export function paymentButtons(paymentId: string): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: "✅ Tasdiqlash", callback_data: `pc:${paymentId}` },
+      { text: "❌ Rad etish", callback_data: `pr:${paymentId}` },
+    ]],
+  };
+}
+
 export async function sendPhotoToTelegram(
   photoBuffer: Buffer,
   filename: string,
-  caption: string
+  caption: string,
+  replyMarkup?: InlineKeyboard
 ): Promise<void> {
   const form = new FormData();
   form.append("chat_id", CHANNEL_ID);
   form.append("photo", photoBuffer, { filename, contentType: "image/jpeg" });
   form.append("caption", caption);
   form.append("parse_mode", "MarkdownV2");
+  if (replyMarkup) form.append("reply_markup", JSON.stringify(replyMarkup));
 
   const response = await axios.post(`${BASE_URL}/sendPhoto`, form, {
     headers: form.getHeaders(),
@@ -65,6 +80,32 @@ export async function sendPhotoToTelegram(
 
   if (!response.data.ok) {
     throw new Error(`Telegram xatosi: ${JSON.stringify(response.data)}`);
+  }
+}
+
+// Callback tugma bosilganda javob (yuqorida toast ko'rinadi)
+export async function answerCallbackQuery(callbackQueryId: string, text: string): Promise<void> {
+  try {
+    await axios.post(`${BASE_URL}/answerCallbackQuery`, { callback_query_id: callbackQueryId, text });
+  } catch {
+    // jim
+  }
+}
+
+// Xabar tugmalarini yangilaydi (natijani ko'rsatish / tugmalarni bloklash uchun)
+export async function editMessageReplyMarkup(
+  chatId: number | string,
+  messageId: number,
+  replyMarkup: InlineKeyboard
+): Promise<void> {
+  try {
+    await axios.post(`${BASE_URL}/editMessageReplyMarkup`, {
+      chat_id: chatId,
+      message_id: messageId,
+      reply_markup: replyMarkup,
+    });
+  } catch (e) {
+    console.error("[telegram] editMessageReplyMarkup xato:", e);
   }
 }
 

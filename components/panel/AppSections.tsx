@@ -75,6 +75,7 @@ export function RenewalSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           receiptSent={req.receiptSent}
+          askTaxPhone
         />
       )}
       {req.status === "in_progress" && (
@@ -241,6 +242,7 @@ export function TransferSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           receiptSent={req.receiptSent}
+          askTaxPhone
         />
       )}
     </div>
@@ -307,6 +309,7 @@ export function UpdateSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           receiptSent={req.receiptSent}
+          askTaxPhone
         />
       )}
       {req.status === "in_progress" && (
