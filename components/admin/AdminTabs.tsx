@@ -130,7 +130,7 @@ type ItemState = "active" | "done" | "cancelled";
 
 function appState(a: AppView): ItemState {
   if (a.status === "rejected" || a.status === "cancelled") return "cancelled";
-  if (a.status === "published" || a.status === "transferred") return "done";
+  if (["published", "transferred", "completed", "subscription_ended"].includes(a.status)) return "done";
   return "active";
 }
 function reqState(r: RequestView): ItemState {
