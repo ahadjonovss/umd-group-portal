@@ -20,7 +20,7 @@ async function getReviews() {
 export default async function Home() {
   const reviews = await getReviews();
   return (
-    <div className="min-h-screen bg-gradient-subtle">
+    <div className="min-h-screen bg-gradient-subtle overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
         <div className="max-w-4xl mx-auto px-4 py-3.5 flex items-center gap-3">

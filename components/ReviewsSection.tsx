@@ -123,6 +123,13 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
     ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
     : null;
 
+  // Karusel uzluksiz aylanishi uchun bitta "loop birligi" ekran kengligidan
+  // kengroq bo'lishi kerak. Sharhlar kam bo'lsa ro'yxatni takrorlaymiz, so'ng
+  // -50% siljish uchun ikkilantiramiz (marqueeItems + marqueeItems).
+  const MIN_CARDS = 12;
+  const repeats = reviews.length ? Math.max(2, Math.ceil(MIN_CARDS / reviews.length)) : 1;
+  const marqueeItems = Array.from({ length: repeats }).flatMap(() => reviews);
+
   return (
     <>
       {/* Section header */}
@@ -165,14 +172,14 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
       {/* Reviews karuseli — avtomatik aylanadi, hover'da to'xtaydi */}
       {reviews.length > 0 ? (
         <div
-          className="relative overflow-hidden -mx-4 sm:-mx-6 animate-slide-up delay-300"
+          className="relative overflow-hidden w-screen left-1/2 -ml-[50vw] animate-slide-up delay-300"
           style={{ maskImage: "linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 5%, #000 95%, transparent)" }}
         >
           <div
             className="flex w-max will-change-transform animate-marquee"
-            style={{ ["--marquee-duration" as string]: `${Math.max(reviews.length * 6, 24)}s` }}
+            style={{ ["--marquee-duration" as string]: `${Math.max(marqueeItems.length * 6, 24)}s` }}
           >
-            {[...reviews, ...reviews].map((r, i) => (
+            {[...marqueeItems, ...marqueeItems].map((r, i) => (
               <div key={i} className="w-[280px] sm:w-[320px] flex-shrink-0 pr-3">
                 <ReviewCard review={r} />
               </div>
