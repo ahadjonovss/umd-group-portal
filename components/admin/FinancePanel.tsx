@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { PaymentView } from "@/lib/firestore/payments";
+import type { DiscountView } from "@/lib/firestore/discounts";
 import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
 import type { ServiceType } from "@/types";
 
@@ -143,7 +144,63 @@ function Distribution({ title, segs, total }: { title: string; segs: Seg[]; tota
   );
 }
 
-export function FinancePanel({ payments }: { payments: PaymentView[] }) {
+interface RankItem {
+  key: string;
+  label: string;
+  sub?: string;
+  usd: number;
+  uzs: number;
+  count: number;
+}
+
+function RankList({ title, items }: { title: string; items: RankItem[] }) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+      <h3 className="font-semibold text-slate-900 text-sm mb-4">{title}</h3>
+      {items.length ? (
+        <div className="flex flex-col gap-3">
+          {items.map((it, i) => (
+            <div key={it.key} className="flex items-center gap-3">
+              <span
+                className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 ${
+                  i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-slate-200 text-slate-600" : i === 2 ? "bg-orange-100 text-orange-700" : "bg-slate-100 text-slate-400"
+                }`}
+              >
+                {i + 1}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm text-slate-800 truncate">{it.label}</span>
+                {it.sub && <span className="block text-[11px] text-slate-400 truncate">{it.sub}</span>}
+              </span>
+              <span className="text-right flex-shrink-0">
+                <span className="font-semibold text-slate-900 text-sm">{usd(it.usd)}</span>
+                <span className="text-slate-400 text-xs ml-1">· {it.count} ta</span>
+                {it.uzs > 0 && <span className="block text-[11px] text-slate-400">{uzs(it.uzs)}</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400">Bu davrda ma&apos;lumot yo&apos;q.</p>
+      )}
+    </div>
+  );
+}
+
+function topBy(rows: PaymentView[], keyOf: (p: PaymentView) => string, labelOf: (p: PaymentView) => string, subOf?: (p: PaymentView) => string | undefined): RankItem[] {
+  const map = new Map<string, RankItem>();
+  for (const p of rows) {
+    const k = keyOf(p);
+    const cur = map.get(k) ?? { key: k, label: labelOf(p), sub: subOf?.(p), usd: 0, uzs: 0, count: 0 };
+    cur.usd += p.amountUsd;
+    cur.uzs += p.amountUzs ?? 0;
+    cur.count += 1;
+    map.set(k, cur);
+  }
+  return Array.from(map.values()).sort((a, b) => b.usd - a.usd).slice(0, 5);
+}
+
+export function FinancePanel({ payments, discounts = [] }: { payments: PaymentView[]; discounts?: DiscountView[] }) {
   const [period, setPeriod] = useState<Period>("month");
 
   const data = useMemo(() => {
@@ -189,6 +246,35 @@ export function FinancePanel({ payments }: { payments: PaymentView[] }) {
     const byKind = aggregate(rows, (p) => p.kind, (k) => KIND_LABEL[k], (k) => KIND_COLOR[k]);
     const topService = byService[0] ?? null;
 
+    // Top ilovalar / mijozlar (davr bo'yicha)
+    const topApps = topBy(
+      rows,
+      (p) => p.appId,
+      (p) => p.appName || SERVICE_LABELS[p.serviceType],
+      (p) => SERVICE_LABELS[p.serviceType]
+    );
+    const topUsers = topBy(
+      rows,
+      (p) => p.ownerUid,
+      (p) => p.ownerName || p.ownerPhone || "Noma'lum",
+      (p) => p.ownerPhone || undefined
+    );
+
+    // Chegirmalar
+    const discountedRows = rows.filter((p) => p.discountPercent > 0);
+    const discountSavedUsd = discountedRows.reduce(
+      (s, p) => s + (p.discountPercent < 100 ? p.amountUsd * (p.discountPercent / 100) / (1 - p.discountPercent / 100) : 0),
+      0
+    );
+    const disc = {
+      appliedCount: discountedRows.length,
+      savedUsd: discountSavedUsd,
+      issued: discounts.length,
+      active: discounts.filter((d) => d.status === "active").length,
+      used: discounts.filter((d) => d.status === "used").length,
+      expired: discounts.filter((d) => d.status === "expired").length,
+    };
+
     // Oxirgi 12 oy timeline (davrdan mustaqil)
     const months12: { key: string; label: string; usd: number; count: number }[] = [];
     for (let i = 11; i >= 0; i--) {
@@ -218,11 +304,14 @@ export function FinancePanel({ payments }: { payments: PaymentView[] }) {
       byPlatform,
       byKind,
       topService,
+      topApps,
+      topUsers,
+      disc,
       months12,
       maxMonth,
       curMonthKey: curMonth,
     };
-  }, [payments, period]);
+  }, [payments, discounts, period]);
 
   if (!payments.length) {
     return <p className="text-sm text-slate-400 py-10 text-center">Hali to&apos;lovlar yo&apos;q.</p>;
@@ -303,11 +392,35 @@ export function FinancePanel({ payments }: { payments: PaymentView[] }) {
         </div>
       </div>
 
-      {/* Taqsimotlar */}
-      <Distribution title={`Servislar bo'yicha · ${PERIOD_LABEL[period]}`} segs={data.byService} total={data.totalUsd} />
+      {/* Top ilova / mijoz */}
       <div className="grid lg:grid-cols-2 gap-5">
-        <Distribution title="Platforma bo'yicha" segs={data.byPlatform} total={data.totalUsd} />
-        <Distribution title="To'lov turlari bo'yicha" segs={data.byKind} total={data.totalUsd} />
+        <RankList title={`Eng ko'p to'lov qilingan ilovalar · ${PERIOD_LABEL[period]}`} items={data.topApps} />
+        <RankList title={`Eng ko'p to'lagan mijozlar · ${PERIOD_LABEL[period]}`} items={data.topUsers} />
+      </div>
+
+      {/* Chegirmalar */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+        <h3 className="font-semibold text-slate-900 text-sm mb-4">Chegirmalar</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="rounded-xl bg-rose-50 border border-rose-100 p-3.5">
+            <p className="text-xs text-rose-500">Qo&apos;llangan chegirma ({PERIOD_LABEL[period]})</p>
+            <p className="text-2xl font-bold mt-1 text-rose-600">−{usd(data.disc.savedUsd)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{data.disc.appliedCount} ta to&apos;lovda</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+            <p className="text-xs text-slate-400">Berilgan chegirmalar</p>
+            <p className="text-2xl font-bold mt-1 text-slate-900">{data.disc.issued} ta</p>
+            <p className="text-xs text-slate-400 mt-0.5">jami barcha davr</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+            <p className="text-xs text-slate-400">Holati bo&apos;yicha</p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-semibold">Faol: {data.disc.active}</span>
+              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold">Ishlatilgan: {data.disc.used}</span>
+              <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[11px] font-semibold">Muddati o&apos;tgan: {data.disc.expired}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

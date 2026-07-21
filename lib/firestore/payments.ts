@@ -63,6 +63,7 @@ export interface PaymentView {
   note: string;
   taxPhone: string | null; // mijoz bergan soliq cheki telefoni
   taxReceiptUrl: string | null; // soliqdan berilgan chek havolasi (tasdiqlashda)
+  discountPercent: number; // qo'llangan chegirma foizi (0 = yo'q)
   createdAt: string | null;
 }
 
@@ -91,6 +92,7 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     note: x.note ?? "",
     taxPhone: x.taxPhone ?? null,
     taxReceiptUrl: x.taxReceiptUrl ?? null,
+    discountPercent: typeof x.discountPercent === "number" ? x.discountPercent : 0,
     createdAt: iso(x.createdAt),
   };
 }
