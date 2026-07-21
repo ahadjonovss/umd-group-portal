@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
-import { setAppStatus, markPublished, markAppTransferred, endSubscription, deleteApp } from "@/lib/firestore/apps";
+import { setAppStatus, markPublished, markAppTransferred, endSubscription, renewSubscription, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser } from "@/lib/firestore/users";
 import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/payments";
@@ -35,6 +35,13 @@ export async function actMarkTransferred(appId: string) {
 export async function actEndSubscription(appId: string) {
   await requireAdmin();
   await endSubscription(appId);
+  revalidatePath("/admin");
+}
+
+// Admin: obunani qo'lda 9 oyga uzaytirish (to'lovsiz)
+export async function actRenewSubscription(appId: string) {
+  await requireAdmin();
+  await renewSubscription(appId);
   revalidatePath("/admin");
 }
 

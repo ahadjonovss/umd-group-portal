@@ -65,11 +65,47 @@ function Empty({ text }: { text: string }) {
   return <p className="text-sm text-slate-400 py-10 text-center">{text}</p>;
 }
 
+const UZ_MONTHS = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
+
+// Ilova "chiqqan" sana: store'ga chiqarilgan → obuna boshlangan → yaratilgan
+function appDate(a: AppView): string {
+  return a.publication?.publishedAt || a.subscription?.startDate || a.createdAt || "";
+}
+
 function List({ apps }: { apps: AppView[] }) {
   if (!apps.length) return <Empty text="Topilmadi." />;
+
+  // Oy bo'yicha guruhlash — eng yangi oy tepada, oy ichida ham yangisi tepada
+  const sorted = [...apps].sort((a, b) => appDate(b).localeCompare(appDate(a)));
+  const groups = new Map<string, AppView[]>();
+  for (const a of sorted) {
+    const d = appDate(a);
+    const key = d ? d.slice(0, 7) : "0000-00";
+    const arr = groups.get(key) ?? [];
+    arr.push(a);
+    groups.set(key, arr);
+  }
+  const ordered = Array.from(groups.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+
+  const monthLabel = (key: string) => {
+    if (key === "0000-00") return "Sana ko'rsatilmagan";
+    const [y, m] = key.split("-");
+    return `${UZ_MONTHS[parseInt(m, 10) - 1]} ${y}`;
+  };
+
   return (
-    <div className="flex flex-col gap-3">
-      {apps.map((a) => <AdminAppListItem key={a.id} app={a} />)}
+    <div className="flex flex-col gap-5">
+      {ordered.map(([key, list]) => (
+        <div key={key}>
+          <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+            {monthLabel(key)}
+            <span className="text-slate-400 font-normal">· {list.length} ta</span>
+          </h3>
+          <div className="flex flex-col gap-3">
+            {list.map((a) => <AdminAppListItem key={a.id} app={a} />)}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

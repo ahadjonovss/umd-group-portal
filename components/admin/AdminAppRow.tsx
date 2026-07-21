@@ -7,7 +7,7 @@ import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { STATUS_META, SERVICE_LABELS, accountLabel, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { RENEWAL_FACTOR } from "@/lib/payment";
-import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actDeleteApp } from "@/app/admin/actions";
+import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actRenewSubscription, actDeleteApp } from "@/app/admin/actions";
 
 const SITE_URL = "https://umdgroup.uz";
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -131,6 +131,20 @@ export function AdminAppRow({ app }: { app: AppView }) {
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
                       <div className="absolute right-0 top-full mt-1 z-20 w-60 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                        <button
+                          disabled={pending}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            if (confirm("Obunaga 9 oy (270 kun) qo'shilsinmi?"))
+                              start(() => actRenewSubscription(app.id));
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <svg className="w-4 h-4 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Obunani uzaytirish (+9 oy)
+                        </button>
                         <button
                           disabled={pending}
                           onClick={() => {
