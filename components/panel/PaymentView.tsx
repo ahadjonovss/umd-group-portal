@@ -14,6 +14,7 @@ export interface PaymentViewProps {
   idPayload?: Record<string, string>;
   amountLabel?: string;
   askTaxPhone?: boolean; // yakuniy/to'liq to'lovda soliq cheki uchun telefon so'ralsin
+  discountPercent?: number; // qo'llangan chegirma (%) — belgisi ko'rsatiladi
 }
 
 const UZ_PHONE_RE = /^\+998\d{9}$/;
@@ -29,6 +30,7 @@ export function PaymentView({
   idPayload = {},
   amountLabel = "Avans (oldindan)",
   askTaxPhone = false,
+  discountPercent = 0,
 }: PaymentViewProps) {
   const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
@@ -91,6 +93,13 @@ export function PaymentView({
   return (
     <div className="rounded-xl bg-amber-50/70 ring-1 ring-amber-200 p-3.5 flex flex-col gap-3">
       <p className="text-xs font-semibold text-amber-800">To&apos;lov uchun ma&apos;lumotlar</p>
+
+      {/* Chegirma belgisi */}
+      {discountPercent > 0 && (
+        <div className="inline-flex self-start items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          🎉 Chegirma qo&apos;llandi: −{discountPercent}%
+        </div>
+      )}
 
       {/* Summa */}
       <div className="grid grid-cols-2 gap-2">

@@ -5,6 +5,7 @@ import { markRequestReceiptSent } from "@/lib/firestore/requests";
 import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { setAppTaxPhone } from "@/lib/firestore/apps";
 import { readFormFile } from "@/lib/form-utils";
+import { getUsdRate } from "@/lib/cbu";
 import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
@@ -51,7 +52,9 @@ export async function POST(req: NextRequest) {
     reqType === "update" ? "update" : reqType === "subscription_renewal" ? "renewal" : "transfer";
   const appName = (r.appName as string | null) || SERVICE_LABELS[serviceType];
   const usd = r.amountUsd ?? 0;
-  const uzs = typeof r.amountUzs === "number" ? r.amountUzs : null;
+  // To'lov PAYTIDAGI kurs (so'rov yaratilgan paytdagi emas) — chek uchun aniq summa
+  const rate = await getUsdRate();
+  const uzs = rate ? Math.round(usd * rate) : typeof r.amountUzs === "number" ? r.amountUzs : null;
 
   const caption =
     `💰 *TO'LOV KELDI \\(${esc(typeLabel)}\\)*\n\n` +
@@ -78,11 +81,13 @@ export async function POST(req: NextRequest) {
         appName,
         kind: paymentKind,
         amountUsd: usd,
-        rate: r.rate ?? null,
+        rate,
         amountUzs: uzs,
         totalUsd: usd,
         advancePercent: 100,
         taxPhone: taxPhone || null,
+        discountId: (r.discountId as string | null) ?? null,
+        discountPercent: (r.discountPercent as number) ?? 0,
       });
     } catch (e) {
       console.error("[requests/receipt] createPayment xato:", e);

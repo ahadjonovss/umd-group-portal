@@ -8,6 +8,8 @@ import { getUsdRate } from "@/lib/cbu";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
+import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
+import { categoryForRequest, applyDiscount } from "@/lib/discount";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -63,11 +65,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Avval qolgan to'lovni yakunlang" }, { status: 400 });
   }
 
-  const usd = Math.round(transferUsd(serviceType, pricing));
+  const discount = await getActiveDiscount(user.uid, categoryForRequest("transfer"), appId);
+  const pct = discount?.percent ?? 0;
+  const usd = Math.round(applyDiscount(transferUsd(serviceType, pricing), pct));
   const uzs = rate ? Math.round(usd * rate) : null;
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
   const ownerName = app.contact?.fullName || user.name || user.email || "Mijoz";
   const ownerPhone = app.contact?.phone || "-";
+  if (discount) { try { await bindDiscount(discount.id, appId); } catch {} }
 
   let id: string;
   try {
@@ -83,6 +88,8 @@ export async function POST(req: NextRequest) {
       amountUsd: usd,
       rate,
       amountUzs: uzs,
+      discountId: discount?.id ?? null,
+      discountPercent: pct,
     });
   } catch (e) {
     console.error("[requests/transfer] create xato:", e);

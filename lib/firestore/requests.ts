@@ -18,6 +18,8 @@ export interface CreateRequestInput {
   amountUsd: number;
   rate: number | null;
   amountUzs: number | null;
+  discountId?: string | null;
+  discountPercent?: number;
 }
 
 export interface RequestView {
@@ -36,6 +38,8 @@ export interface RequestView {
   amountUzs: number | null;
   receiptSent: boolean;
   note: string;
+  discountId: string | null;
+  discountPercent: number;
   createdAt: string | null;
 }
 
@@ -61,6 +65,8 @@ function mapRequest(d: DocumentSnapshot): RequestView {
     amountUzs: typeof x.amountUzs === "number" ? x.amountUzs : null,
     receiptSent: Boolean(x.receiptSent),
     note: x.note ?? "",
+    discountId: x.discountId ?? null,
+    discountPercent: x.discountPercent ?? 0,
     createdAt: iso(x.createdAt),
   };
 }
@@ -69,6 +75,8 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
   const ref = adminDb.collection(REQUESTS).doc();
   await ref.set({
     ...input,
+    discountId: input.discountId ?? null,
+    discountPercent: input.discountPercent ?? 0,
     status: "requested" as RequestStatus,
     receiptSent: false,
     note: "",

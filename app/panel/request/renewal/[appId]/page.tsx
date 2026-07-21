@@ -8,6 +8,8 @@ import { hasActiveRequest } from "@/lib/firestore/requests";
 import { getPricing } from "@/lib/firestore/settings";
 import { getUsdRate } from "@/lib/cbu";
 import { renewalUsd, finalUsd } from "@/lib/payment";
+import { getActiveDiscount } from "@/lib/firestore/discounts";
+import { categoryForRequest, applyDiscount } from "@/lib/discount";
 import { SERVICE_LABELS, formatDate } from "@/lib/labels";
 import { RenewalRequestForm } from "@/components/panel/RenewalRequestForm";
 
@@ -34,7 +36,9 @@ export default async function RenewalRequestPage({
   if (!paymentDone) redirect(`/panel/app/${appId}`);
   if (await hasActiveRequest(appId, "subscription_renewal")) redirect(`/panel/app/${appId}`);
 
-  const usd = Math.round(renewalUsd(app, pricing));
+  const disc = await getActiveDiscount(user.uid, categoryForRequest("subscription_renewal"), appId);
+  const discPct = disc?.percent ?? 0;
+  const usd = Math.round(applyDiscount(renewalUsd(app, pricing), discPct));
   const uzs = rate ? Math.round(usd * rate) : null;
   const appName = app.appName || SERVICE_LABELS[app.serviceType];
 
@@ -62,6 +66,7 @@ export default async function RenewalRequestPage({
             uzs={uzs}
             rate={rate}
             currentEnd={formatDate(app.subscription.endDate)}
+            discountPercent={discPct}
           />
         </div>
       </main>

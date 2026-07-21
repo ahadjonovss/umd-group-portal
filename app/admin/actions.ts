@@ -9,6 +9,8 @@ import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/p
 import { setRequestStatus, setRequestNote, deleteRequest } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
+import { createDiscount, deleteDiscount } from "@/lib/firestore/discounts";
+import type { DiscountService } from "@/lib/discount";
 import type { AppStatus } from "@/lib/app-status";
 
 export async function actSetStatus(appId: string, status: AppStatus) {
@@ -100,6 +102,33 @@ export async function actSetUserProfile(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
   }
+}
+
+export async function actCreateDiscount(input: {
+  ownerUid: string;
+  ownerEmail: string | null;
+  ownerName: string | null;
+  service: DiscountService;
+  percent: number;
+  daysValid: number;
+}) {
+  await requireAdmin();
+  if (!input.ownerUid) return { ok: false, error: "Foydalanuvchi tanlanmagan" };
+  if (!input.percent || input.percent < 1 || input.percent > 100) return { ok: false, error: "Foiz 1–100 orasida bo'lsin" };
+  if (!input.daysValid || input.daysValid < 1) return { ok: false, error: "Amal muddati (kun) noto'g'ri" };
+  try {
+    await createDiscount(input);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+export async function actDeleteDiscount(id: string) {
+  await requireAdmin();
+  await deleteDiscount(id);
+  revalidatePath("/admin");
 }
 
 export async function actSavePricing(pricing: Pricing) {

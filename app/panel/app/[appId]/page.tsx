@@ -10,6 +10,8 @@ import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
+import { getActiveDiscount } from "@/lib/firestore/discounts";
+import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
@@ -138,10 +140,15 @@ export default async function AppDetailPage({
   const subStarted = Boolean(app.subscription?.startDate);
   const canReview = isTerminalSuccess(app.status);
 
+  // Chegirma (bo'lsa) — avans va yakuniyга qo'llanadi
+  const discCategory = categoryForServiceType(app.serviceType);
+  const disc = discCategory ? await getActiveDiscount(user.uid, discCategory, appId) : null;
+  const discPct = disc?.percent ?? 0;
+
   const rate = usdRate ?? null;
-  const advanceAmount = Math.round(advanceUsdApp(app, pricing));
+  const advanceAmount = Math.round(applyDiscount(advanceUsdApp(app, pricing), discPct));
   const advanceUzs = rate ? Math.round(advanceAmount * rate) : null;
-  const finalAmount = Math.round(finalUsdApp(app, pricing));
+  const finalAmount = Math.round(applyDiscount(finalUsdApp(app, pricing), discPct));
   const finalUzs = rate ? Math.round(finalAmount * rate) : null;
 
   // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
@@ -270,6 +277,7 @@ export default async function AppDetailPage({
                   cardHolder={cardHolder}
                   receiptSent={app.receiptSent}
                   askTaxPhone={finalAmount === 0}
+                  discountPercent={discPct}
                 />
               )}
 
@@ -292,6 +300,7 @@ export default async function AppDetailPage({
                     cardHolder={cardHolder}
                     receiptSent={app.finalReceiptSent}
                     askTaxPhone
+                    discountPercent={discPct}
                   />
                 </div>
               )}

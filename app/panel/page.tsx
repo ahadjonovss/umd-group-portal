@@ -7,6 +7,8 @@ import { AppCard } from "@/components/panel/AppCard";
 import { DraftButton } from "@/components/panel/DraftButton";
 import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelReviewLauncher";
 import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
+import { DiscountAlert } from "@/components/panel/DiscountAlert";
+import { getUserActiveDiscounts } from "@/lib/firestore/discounts";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess } from "@/lib/app-status";
@@ -21,11 +23,12 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const [apps, admin, pricing, requests] = await Promise.all([
+  const [apps, admin, pricing, requests, discounts] = await Promise.all([
     getUserApps(user.uid),
     isAdmin(),
     getPricing(),
     getUserRequests(user.uid),
+    getUserActiveDiscounts(user.uid),
   ]);
 
   // Har ilova uchun eng so'nggi transfer / update / uzaytirish so'rovi
@@ -80,6 +83,7 @@ export default async function PanelPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-10">
+        <DiscountAlert discounts={discounts} />
         <PublishedReviewAlert apps={publishedUnreviewed} />
 
         <div className="flex items-center justify-between gap-4 mb-6">

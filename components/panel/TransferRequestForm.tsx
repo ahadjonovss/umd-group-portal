@@ -14,6 +14,7 @@ export function TransferRequestForm({
   usd,
   uzs,
   rate,
+  discountPercent = 0,
 }: {
   appId: string;
   serviceType: ServiceType;
@@ -21,6 +22,7 @@ export function TransferRequestForm({
   usd: number;
   uzs: number | null;
   rate: number | null;
+  discountPercent?: number;
 }) {
   const router = useRouter();
   const isGoogle = serviceType === "play-market";
@@ -63,6 +65,9 @@ export function TransferRequestForm({
           Narx: ${usd}
           {uzs ? <span className="font-normal text-slate-500"> (~{uzs.toLocaleString("en-US")} so&apos;m{rate ? `, 1$=${rate.toLocaleString("en-US")}` : ""})</span> : null}
         </p>
+        {discountPercent > 0 && (
+          <p className="text-xs font-semibold text-emerald-600 mt-1">🎉 Chegirma qo&apos;llandi: −{discountPercent}%</p>
+        )}
       </div>
 
       {isGoogle ? (

@@ -8,6 +8,8 @@ import { hasActiveRequest } from "@/lib/firestore/requests";
 import { getPricing } from "@/lib/firestore/settings";
 import { getUsdRate } from "@/lib/cbu";
 import { transferUsd, finalUsd } from "@/lib/payment";
+import { getActiveDiscount } from "@/lib/firestore/discounts";
+import { categoryForRequest, applyDiscount } from "@/lib/discount";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { TransferRequestForm } from "@/components/panel/TransferRequestForm";
 
@@ -34,7 +36,9 @@ export default async function TransferRequestPage({
   if (!paymentDone) redirect(`/panel/app/${appId}`);
   if (await hasActiveRequest(appId, "transfer")) redirect(`/panel/app/${appId}`);
 
-  const usd = Math.round(transferUsd(app.serviceType, pricing));
+  const disc = await getActiveDiscount(user.uid, categoryForRequest("transfer"), appId);
+  const discPct = disc?.percent ?? 0;
+  const usd = Math.round(applyDiscount(transferUsd(app.serviceType, pricing), discPct));
   const uzs = rate ? Math.round(usd * rate) : null;
   const appName = app.appName || SERVICE_LABELS[app.serviceType];
 
@@ -62,6 +66,7 @@ export default async function TransferRequestPage({
             usd={usd}
             uzs={uzs}
             rate={rate}
+            discountPercent={discPct}
           />
         </div>
       </main>

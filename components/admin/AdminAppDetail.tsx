@@ -122,7 +122,7 @@ export function AdminAppDetail({
         <div>
           {payments.length ? (
             <div className="flex flex-col gap-3">
-              {payments.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} />)}
+              {payments.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} relatedPayments={payments} />)}
             </div>
           ) : (
             <p className="text-sm text-slate-400 py-10 text-center">Bu ariza uchun to&apos;lov yo&apos;q.</p>

@@ -8,6 +8,8 @@ import { getUsdRate } from "@/lib/cbu";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
+import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
+import { categoryForRequest, applyDiscount } from "@/lib/discount";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -51,12 +53,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Bu ilova uchun faol update so'rovi allaqachon bor" }, { status: 409 });
   }
 
-  const usd = Math.round(updateUsd(serviceType, pricing));
+  const discount = await getActiveDiscount(user.uid, categoryForRequest("update"), appId);
+  const pct = discount?.percent ?? 0;
+  const usd = Math.round(applyDiscount(updateUsd(serviceType, pricing), pct));
   const uzs = rate ? Math.round(usd * rate) : null;
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
   const ownerName = app.contact?.fullName || user.name || user.email || "Mijoz";
   const ownerPhone = app.contact?.phone || "-";
   const platform = serviceType === "app-store" ? "ios" : "android";
+  if (discount) { try { await bindDiscount(discount.id, appId); } catch {} }
 
   let id: string;
   try {
@@ -72,6 +77,8 @@ export async function POST(req: NextRequest) {
       amountUsd: usd,
       rate,
       amountUzs: uzs,
+      discountId: discount?.id ?? null,
+      discountPercent: pct,
     });
   } catch (e) {
     console.error("[requests/update] create xato:", e);

@@ -305,7 +305,7 @@ export function AdminUserDetail({
 
       {tab === "payments" &&
         (payments.length ? (
-          <div className="flex flex-col gap-3">{payments.map((p) => <AdminPaymentRow key={p.id} payment={p} />)}</div>
+          <div className="flex flex-col gap-3">{payments.map((p) => <AdminPaymentRow key={p.id} payment={p} relatedPayments={payments} />)}</div>
         ) : (
           <Empty text="To'lov yo'q." />
         ))}

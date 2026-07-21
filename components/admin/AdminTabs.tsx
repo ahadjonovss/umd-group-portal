@@ -10,6 +10,8 @@ import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { AdminRequestRow } from "@/components/admin/AdminRequestRow";
 import { FinancePanel } from "@/components/admin/FinancePanel";
 import { SubscriptionsPanel } from "@/components/admin/SubscriptionsPanel";
+import { DiscountsPanel } from "@/components/admin/DiscountsPanel";
+import type { DiscountView } from "@/lib/firestore/discounts";
 import type { AppView } from "@/lib/firestore/apps";
 import type { AdminReview } from "@/lib/firestore/reviews";
 import type { AdminUser } from "@/lib/firestore/users";
@@ -21,9 +23,9 @@ import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
-type TabKey = "users" | "live" | "subscriptions" | "payments" | "finance" | "requests" | "reviews" | "settings";
+type TabKey = "users" | "live" | "subscriptions" | "payments" | "finance" | "requests" | "reviews" | "discounts" | "settings";
 
-const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "finance", "requests", "reviews", "settings"];
+const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "finance", "requests", "reviews", "discounts", "settings"];
 const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
@@ -47,6 +49,9 @@ const ICONS: Record<TabKey, ReactNode> = {
   ),
   reviews: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118L2.98 9.771c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+  ),
+  discounts: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
   ),
   settings: (
     <>
@@ -165,6 +170,7 @@ export function AdminTabs({
   requests,
   pricing,
   payment,
+  discounts,
 }: {
   apps: AppView[];
   users: AdminUser[];
@@ -173,6 +179,7 @@ export function AdminTabs({
   requests: RequestView[];
   pricing: Pricing;
   payment: PaymentInfo;
+  discounts: DiscountView[];
 }) {
   const [tab, setTab] = useState<TabKey>("requests");
 
@@ -267,6 +274,7 @@ export function AdminTabs({
     { key: "live", label: "Ilovalar", count: liveApps.length },
     { key: "subscriptions", label: "Obunalar", count: subApps.length },
     { key: "finance", label: "Moliya", count: 0 },
+    { key: "discounts", label: "Chegirmalar", count: discounts.filter((d) => d.status === "active").length },
     { key: "users", label: "Userlar", count: users.length },
     { key: "settings", label: "Sozlamalar", count: 0 },
   ];
@@ -350,7 +358,7 @@ export function AdminTabs({
             />
             {fPay.length ? (
               <div className="flex flex-col gap-3">
-                {fPay.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} />)}
+                {fPay.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} relatedPayments={payments} />)}
               </div>
             ) : (
               <Empty text="Topilmadi." />
@@ -359,6 +367,8 @@ export function AdminTabs({
         )}
 
         {tab === "finance" && <FinancePanel payments={payments} />}
+
+        {tab === "discounts" && <DiscountsPanel users={users} discounts={discounts} />}
 
         {tab === "requests" && (
           <>

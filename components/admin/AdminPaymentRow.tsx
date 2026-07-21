@@ -105,7 +105,7 @@ function ReceiptConfirmModal({
   );
 }
 
-export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
+export function AdminPaymentRow({ payment, relatedPayments }: { payment: PaymentView; relatedPayments?: PaymentView[] }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -116,8 +116,20 @@ export function AdminPaymentRow({ payment }: { payment: PaymentView }) {
 
   // Soliq cheki URL: yakuniy yoki to'liq (100%) to'lovlarda so'raladi (avansda emas)
   const needsReceipt = payment.kind !== "advance" || payment.advancePercent >= 100;
-  const totalUsd = payment.totalUsd || payment.amountUsd;
-  const totalUzs = payment.rate ? Math.round(totalUsd * payment.rate) : null;
+
+  // Chek summasi. Yakuniy to'lovda — avans+yakuniy so'mlarining ANIQ yig'indisi
+  // (har biri o'z kursida to'langan), aks holda shu to'lovning summasi.
+  let totalUsd = payment.totalUsd || payment.amountUsd;
+  let totalUzs = payment.rate ? Math.round(totalUsd * payment.rate) : payment.amountUzs;
+  if (payment.kind === "final" && relatedPayments) {
+    const parts = relatedPayments.filter(
+      (x) => x.appId === payment.appId && (x.kind === "advance" || x.kind === "final") && x.status !== "rejected"
+    );
+    if (parts.length) {
+      totalUsd = parts.reduce((s, x) => s + x.amountUsd, 0);
+      totalUzs = parts.reduce((s, x) => s + (x.amountUzs ?? 0), 0);
+    }
+  }
 
   function onConfirmClick() {
     if (needsReceipt) setConfirmOpen(true);

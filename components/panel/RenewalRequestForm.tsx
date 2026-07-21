@@ -12,6 +12,7 @@ export function RenewalRequestForm({
   uzs,
   rate,
   currentEnd,
+  discountPercent = 0,
 }: {
   appId: string;
   appName: string;
@@ -19,6 +20,7 @@ export function RenewalRequestForm({
   uzs: number | null;
   rate: number | null;
   currentEnd: string;
+  discountPercent?: number;
 }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -82,6 +84,9 @@ export function RenewalRequestForm({
             </span>
           ) : null}
         </p>
+        {discountPercent > 0 && (
+          <p className="text-xs font-semibold text-emerald-600 mt-1">🎉 Chegirma qo&apos;llandi: −{discountPercent}%</p>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600">❌ {error}</p>}

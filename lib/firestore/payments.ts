@@ -3,6 +3,7 @@ import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/li
 import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { setAppStatus, setFinalPaid } from "@/lib/firestore/apps";
 import { confirmRequestPayment } from "@/lib/firestore/requests";
+import { markDiscountUsed } from "@/lib/firestore/discounts";
 import type { ServiceType } from "@/types";
 
 const PAYMENTS = "payments";
@@ -24,6 +25,8 @@ export interface CreatePaymentInput {
   totalUsd: number; // xizmatning to'liq narxi ($)
   advancePercent: number; // avans foizi
   taxPhone?: string | null; // soliq cheki uchun telefon (yakuniy/to'liq to'lovda)
+  discountId?: string | null; // qo'llangan chegirma id
+  discountPercent?: number; // qo'llangan chegirma foizi
 }
 
 export async function createPayment(input: CreatePaymentInput): Promise<string> {
@@ -32,6 +35,8 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
     ...input,
     requestId: input.requestId ?? null,
     taxPhone: input.taxPhone ?? null,
+    discountId: input.discountId ?? null,
+    discountPercent: input.discountPercent ?? 0,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     confirmedAt: null,
@@ -158,6 +163,17 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string):
     confirmedAt: FieldValue.serverTimestamp(),
     ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
   });
+
+  // Chegirma yakuniy/to'liq to'lov tasdiqlanganda ishlatilgan deb belgilanadi
+  const discountId = p.discountId as string | null | undefined;
+  const completing = p.kind === "final" || (p.advancePercent ?? 0) >= 100;
+  if (discountId && completing) {
+    try {
+      await markDiscountUsed(discountId);
+    } catch (e) {
+      console.error("[confirmPayment] markDiscountUsed xato:", e);
+    }
+  }
 }
 
 // To'lovni rad etish: faqat to'lov yozuvi rad etiladi, ariza/so'rov statusi

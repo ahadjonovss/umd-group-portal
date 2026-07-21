@@ -14,6 +14,7 @@ export function UpdateRequestForm({
   usd,
   uzs,
   rate,
+  discountPercent = 0,
 }: {
   appId: string;
   serviceType: ServiceType;
@@ -21,6 +22,7 @@ export function UpdateRequestForm({
   usd: number;
   uzs: number | null;
   rate: number | null;
+  discountPercent?: number;
 }) {
   const router = useRouter();
   const isAndroid = serviceType !== "app-store";
@@ -96,6 +98,9 @@ export function UpdateRequestForm({
             </span>
           ) : null}
         </p>
+        {discountPercent > 0 && (
+          <p className="text-xs font-semibold text-emerald-600 mt-1">🎉 Chegirma qo&apos;llandi: −{discountPercent}%</p>
+        )}
       </div>
 
       <Textarea

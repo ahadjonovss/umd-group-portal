@@ -28,6 +28,7 @@ export function AdminAppRow({ app }: { app: AppView }) {
   const [copied, setCopied] = useState(false);
   const [reviewCopied, setReviewCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   async function copyReviewLink() {
     try {
@@ -108,10 +109,62 @@ export function AdminAppRow({ app }: { app: AppView }) {
                 <p className="text-xs text-teal-600 truncate mt-0.5">📇 Soliq cheki tel: {app.taxPhone}</p>
               )}
             </div>
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${status.badge}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-              {status.label}
-            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${status.badge}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                {status.label}
+              </span>
+
+              {/* 3 nuqta menyu — chiqarilgan ilova amallari */}
+              {app.status === "published" && (
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuOpen((o) => !o)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                    title="Amallar"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 5a2 2 0 110-4 2 2 0 010 4zm0 9a2 2 0 110-4 2 2 0 010 4zm0 9a2 2 0 110-4 2 2 0 010 4z" />
+                    </svg>
+                  </button>
+                  {menuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-20 w-60 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                        <button
+                          disabled={pending}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            if (confirm("Ilovani 'transfer qilingan' deb belgilaysizmi? Obuna to'xtaydi."))
+                              start(() => actMarkTransferred(app.id));
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                        >
+                          <svg className="w-4 h-4 text-violet-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          Transfer qilingan deb belgilash
+                        </button>
+                        <button
+                          disabled={pending}
+                          onClick={() => {
+                            setMenuOpen(false);
+                            if (confirm("Obunani to'xtatasizmi? Ilova store'dan olib tashlangan hisoblanadi."))
+                              start(() => actEndSubscription(app.id));
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 disabled:opacity-50"
+                        >
+                          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                          </svg>
+                          Obuna to&apos;xtatildi
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Keyingi status: chiqarish bosqichi bo'lsa — sana+url forma, aks holda tugma */}
@@ -196,37 +249,6 @@ export function AdminAppRow({ app }: { app: AppView }) {
             </div>
           )}
 
-          {/* Chiqarilgan ilova uchun terminal amallar */}
-          {app.status === "published" && (
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                disabled={pending}
-                onClick={() => {
-                  if (confirm("Ilovani 'transfer qilingan' deb belgilaysizmi? Obuna to'xtaydi."))
-                    start(() => actMarkTransferred(app.id));
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Transfer qilingan deb belgilash
-              </button>
-              <button
-                disabled={pending}
-                onClick={() => {
-                  if (confirm("Obunani to'xtatasizmi? Ilova store'dan olib tashlangan hisoblanadi."))
-                    start(() => actEndSubscription(app.id));
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-                Obuna to&apos;xtatildi
-              </button>
-            </div>
-          )}
 
           <div className="flex items-center justify-between gap-3 pt-1 border-t border-slate-100">
             <p className="text-[11px] text-slate-400">
