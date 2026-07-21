@@ -37,15 +37,14 @@ export function SubscriptionsPanel({ apps }: { apps: AppView[] }) {
 
   const groups = useMemo(() => {
     const nowMs = Date.now();
-    // Obunasi bor (chiqarilgan, endDate mavjud), transfer qilinmagan.
-    // FAQAT joriy oy va undan oldingilar (kelasi oyga uzaytirilgani chiqmaydi).
+    // Obunasi bor barcha ilovalar (kelajakdagilar ham). "Muddati tugagan"
+    // belgisi FAQAT haqiqiy tugash sanasi o'tganlarga qo'yiladi.
     const items = apps
       .filter((a) => a.status === "published" && a.subscription?.endDate)
       .map((a) => {
         const end = a.subscription!.endDate as string;
         return { app: a, end, monthKey: end.slice(0, 7), expired: new Date(end).getTime() < nowMs };
       })
-      .filter((i) => i.monthKey <= currentKey) // uzaytirilib kelasi oyga o'tganlar chiqmaydi
       .sort((a, b) => a.end.localeCompare(b.end));
 
     const filtered = month ? items.filter((i) => i.monthKey === month) : items;
