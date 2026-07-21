@@ -116,9 +116,9 @@ export async function actSavePayment(info: PaymentInfo) {
   revalidatePath("/admin");
 }
 
-export async function actConfirmPayment(paymentId: string) {
+export async function actConfirmPayment(paymentId: string, taxReceiptUrl?: string) {
   await requireAdmin();
-  await confirmPayment(paymentId);
+  await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined);
   revalidatePath("/admin");
 }
 

@@ -5,6 +5,8 @@ import type { AdminReview } from "@/lib/firestore/reviews";
 import { SERVICE_SHORT, formatDate } from "@/lib/labels";
 import { actSetReviewApproved, actDeleteReview } from "@/app/admin/actions";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="inline-flex items-center gap-0.5">
@@ -58,15 +60,17 @@ export function AdminReviewRow({ review }: { review: AdminReview }) {
         >
           {review.approved ? "Saytdan olib tashlash" : "Tasdiqlash (saytda ko'rsatish)"}
         </button>
-        <button
-          disabled={pending}
-          onClick={() => {
-            if (confirm("Sharhni butunlay o'chirasizmi?")) start(() => actDeleteReview(review.id));
-          }}
-          className="h-8 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 disabled:opacity-50"
-        >
-          O&apos;chirish
-        </button>
+        {IS_DEV && (
+          <button
+            disabled={pending}
+            onClick={() => {
+              if (confirm("Sharhni butunlay o'chirasizmi?")) start(() => actDeleteReview(review.id));
+            }}
+            className="h-8 px-3 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 disabled:opacity-50"
+          >
+            O&apos;chirish
+          </button>
+        )}
       </div>
     </div>
   );

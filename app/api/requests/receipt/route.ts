@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
         amountUzs: uzs,
         totalUsd: usd,
         advancePercent: 100,
+        taxPhone: taxPhone || null,
       });
     } catch (e) {
       console.error("[requests/receipt] createPayment xato:", e);

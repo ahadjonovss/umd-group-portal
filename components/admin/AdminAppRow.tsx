@@ -10,6 +10,7 @@ import { RENEWAL_FACTOR } from "@/lib/payment";
 import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actDeleteApp } from "@/app/admin/actions";
 
 const SITE_URL = "https://umdgroup.uz";
+const IS_DEV = process.env.NODE_ENV === "development";
 
 function storeName(serviceType: AppView["serviceType"]): string {
   return serviceType === "app-store" || serviceType === "apple-transfer" ? "App Store" : "Play Market";
@@ -142,10 +143,20 @@ export function AdminAppRow({ app }: { app: AppView }) {
             </div>
           )}
 
+          {/* To'lov kutilmoqda — keyingi bosqichga faqat to'lov tasdiqlangach o'tiladi */}
+          {app.status === "payment_pending" && (
+            <div className="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-2.5 text-xs text-amber-700">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Keyingi bosqichga o&apos;tish uchun <strong>To&apos;lovlar</strong> bo&apos;limidan to&apos;lovni tasdiqlang.
+            </div>
+          )}
+
           {/* Keyingi status tugmasi (oddiy) + terminal amallar */}
-          {((nextStatus && !nextIsPublish) || inProgress) && (
+          {((nextStatus && !nextIsPublish && app.status !== "payment_pending") || inProgress) && (
             <div className="flex flex-wrap items-center gap-2">
-              {nextStatus && nextMeta && !nextIsPublish && (
+              {nextStatus && nextMeta && !nextIsPublish && app.status !== "payment_pending" && (
                 <button
                   disabled={pending}
                   onClick={() => start(() => actSetStatus(app.id, nextStatus))}
@@ -244,16 +255,18 @@ export function AdminAppRow({ app }: { app: AppView }) {
               >
                 {linkCopied ? "✓ Nusxalandi" : "Review havolasi"}
               </button>
-            <button
-              disabled={pending}
-              onClick={() => {
-                if (confirm("Bu arizani va unga bog'liq to'lov/sharhlarni butunlay o'chirasizmi?"))
-                  start(async () => { await actDeleteApp(app.id); router.push("/admin"); });
-              }}
-              className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 flex-shrink-0"
-            >
-              O&apos;chirish
-            </button>
+            {IS_DEV && (
+              <button
+                disabled={pending}
+                onClick={() => {
+                  if (confirm("Bu arizani va unga bog'liq to'lov/sharhlarni butunlay o'chirasizmi?"))
+                    start(async () => { await actDeleteApp(app.id); router.push("/admin"); });
+                }}
+                className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline disabled:opacity-50 flex-shrink-0"
+              >
+                O&apos;chirish
+              </button>
+            )}
             </div>
           </div>
         </div>

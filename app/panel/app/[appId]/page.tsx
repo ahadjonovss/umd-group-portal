@@ -15,6 +15,7 @@ import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/l
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { ReviewButton } from "@/components/panel/ReviewButton";
+import { ReceiptButton } from "@/components/panel/ReceiptButton";
 import {
   StatusProgress,
   SubscriptionProgress,
@@ -53,6 +54,8 @@ const FIELD_LABELS: Record<string, string> = {
   googlePaymentsProfileId: "Payments Profile ID",
   appStoreConnectTeamId: "App Store Connect Team ID",
   appleDevAccountEmail: "Apple Dev akkaunt email",
+  releaseNotes: "Relizdagi o'zgarishlar",
+  months: "Muddat (oy)",
   // Akkaunt ochish
   platform: "Platforma",
   accountType: "Akkaunt turi",
@@ -359,25 +362,38 @@ export default async function AppDetailPage({
           )}
         </SectionCard>
 
-        {/* So'rovlar tarixi */}
+        {/* So'rovlar (transfer/update/uzaytirish) — ma'lumotlari + statusi bilan */}
         {requests.length > 0 && (
-          <SectionCard title="So'rovlar tarixi">
-            <div className="flex flex-col gap-2">
+          <SectionCard title="So'rovlar">
+            <div className="flex flex-col gap-3">
               {requests.map((r) => {
                 const m = REQUEST_STATUS_META[r.status];
+                const dataEntries = Object.entries(r.data).filter(([, v]) => v && String(v).trim() !== "");
                 return (
-                  <div key={r.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800">
-                        {REQUEST_TYPE_LABEL[r.type]}
-                        <span className="text-slate-400 font-normal"> · ${r.amountUsd}</span>
-                      </p>
-                      <p className="text-[11px] text-slate-400">{formatDate(r.createdAt)}</p>
+                  <div key={r.id} className="rounded-xl border border-slate-200 bg-white p-3.5 flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {REQUEST_TYPE_LABEL[r.type]}
+                          <span className="text-slate-400 font-normal"> · ${r.amountUsd}</span>
+                        </p>
+                        <p className="text-[11px] text-slate-400">{formatDate(r.createdAt)}</p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${m.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
+                        {requestStatusLabel(r.type, r.status)}
+                      </span>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${m.badge}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
-                      {requestStatusLabel(r.type, r.status)}
-                    </span>
+                    {dataEntries.length > 0 && (
+                      <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 rounded-lg p-3">
+                        {dataEntries.map(([k, v]) => (
+                          <div key={k} className="min-w-0">
+                            <p className="text-[10px] text-slate-400">{FIELD_LABELS[k] ?? k}</p>
+                            <p className="text-sm text-slate-800 break-words">{v}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -390,25 +406,34 @@ export default async function AppDetailPage({
           <SectionCard title="To'lovlar tarixi">
             <div className="flex flex-col gap-2">
               {payments.map((p) => (
-                <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800">
-                      {PAYMENT_KIND_LABEL[p.kind] ?? p.kind}
-                      <span className="text-slate-400 font-normal"> · ${p.amountUsd}</span>
-                      {p.amountUzs ? <span className="text-slate-400 font-normal"> (~{p.amountUzs.toLocaleString("en-US")} so&apos;m)</span> : null}
-                    </p>
-                    <p className="text-[11px] text-slate-400">{formatDate(p.createdAt)}</p>
+                <div key={p.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5 flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800">
+                        {PAYMENT_KIND_LABEL[p.kind] ?? p.kind}
+                        <span className="text-slate-400 font-normal"> · ${p.amountUsd}</span>
+                        {p.amountUzs ? <span className="text-slate-400 font-normal"> (~{p.amountUzs.toLocaleString("en-US")} so&apos;m)</span> : null}
+                      </p>
+                      <p className="text-[11px] text-slate-400">{formatDate(p.createdAt)}</p>
+                    </div>
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${
+                        p.status === "confirmed"
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                          : p.status === "rejected"
+                            ? "bg-red-50 text-red-700 ring-red-200"
+                            : "bg-amber-50 text-amber-700 ring-amber-200"
+                      }`}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${p.status === "confirmed" ? "bg-emerald-500" : p.status === "rejected" ? "bg-red-500" : "bg-amber-500"}`} />
+                      {p.status === "confirmed" ? "Tasdiqlangan" : p.status === "rejected" ? "Rad etilgan" : "Kutilmoqda"}
+                    </span>
                   </div>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${
-                      p.status === "confirmed"
-                        ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                        : "bg-amber-50 text-amber-700 ring-amber-200"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${p.status === "confirmed" ? "bg-emerald-500" : "bg-amber-500"}`} />
-                    {p.status === "confirmed" ? "Tasdiqlangan" : "Kutilmoqda"}
-                  </span>
+                  {p.taxReceiptUrl && (
+                    <div className="pt-2 border-t border-slate-200/70">
+                      <ReceiptButton url={p.taxReceiptUrl} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
       amountUzs: uzs,
       totalUsd: Math.round(serviceBaseUsd(pricedApp, pricing)),
       advancePercent: advancePercentForApp(pricedApp, pricing),
+      taxPhone: taxPhone || null,
     });
   } catch (e) {
     console.error("[payment/receipt] createPayment xato:", e);

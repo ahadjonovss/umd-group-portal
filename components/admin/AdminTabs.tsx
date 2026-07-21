@@ -199,18 +199,18 @@ export function AdminTabs({
   const telegramByUid: Record<string, string> = {};
   for (const u of users) if (u.telegram) telegramByUid[u.uid] = u.telegram;
 
-  // Qidiruv / filter holatlari (har bir tab uchun alohida)
+  // Qidiruv / filter holatlari — default: faol / harakat talab qiladigan holat
   const [userQ, setUserQ] = useState("");
   const [liveQ, setLiveQ] = useState("");
-  const [liveStatus, setLiveStatus] = useState("");
+  const [liveStatus, setLiveStatus] = useState("published"); // faol (chiqarilgan) ilovalar
   const [livePlatform, setLivePlatform] = useState("");
   const [payQ, setPayQ] = useState("");
-  const [payStatus, setPayStatus] = useState("");
+  const [payStatus, setPayStatus] = useState("pending"); // faol: kutilayotgan to'lovlar
   const [reqQ, setReqQ] = useState("");
-  const [feedState, setFeedState] = useState("");
+  const [feedState, setFeedState] = useState("active"); // faol so'rovlar/arizalar
   const [reqType, setReqType] = useState("");
   const [revQ, setRevQ] = useState("");
-  const [revStatus, setRevStatus] = useState("");
+  const [revStatus, setRevStatus] = useState("pending"); // tasdiqlanmagan (faol) reviewlar
 
   const appText = (a: AppView) =>
     `${a.appName ?? ""} ${a.contact?.fullName ?? ""} ${a.contact?.phone ?? ""} ${SERVICE_LABELS[a.serviceType]}`;

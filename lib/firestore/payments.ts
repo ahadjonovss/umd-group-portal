@@ -23,6 +23,7 @@ export interface CreatePaymentInput {
   amountUzs: number | null; // so'mdagi summa
   totalUsd: number; // xizmatning to'liq narxi ($)
   advancePercent: number; // avans foizi
+  taxPhone?: string | null; // soliq cheki uchun telefon (yakuniy/to'liq to'lovda)
 }
 
 export async function createPayment(input: CreatePaymentInput): Promise<string> {
@@ -30,6 +31,7 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
   await ref.set({
     ...input,
     requestId: input.requestId ?? null,
+    taxPhone: input.taxPhone ?? null,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     confirmedAt: null,
@@ -54,6 +56,8 @@ export interface PaymentView {
   advancePercent: number;
   status: "pending" | "confirmed" | "rejected";
   note: string;
+  taxPhone: string | null; // mijoz bergan soliq cheki telefoni
+  taxReceiptUrl: string | null; // soliqdan berilgan chek havolasi (tasdiqlashda)
   createdAt: string | null;
 }
 
@@ -80,6 +84,8 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     advancePercent: x.advancePercent ?? 0,
     status: x.status === "confirmed" ? "confirmed" : x.status === "rejected" ? "rejected" : "pending",
     note: x.note ?? "",
+    taxPhone: x.taxPhone ?? null,
+    taxReceiptUrl: x.taxReceiptUrl ?? null,
     createdAt: iso(x.createdAt),
   };
 }
@@ -117,7 +123,8 @@ export async function deletePayment(paymentId: string): Promise<void> {
 }
 
 // To'lovni tasdiqlash: ariza statusini keyingi bosqichga o'tkazadi.
-export async function confirmPayment(paymentId: string): Promise<void> {
+// taxReceiptUrl — soliqdan berilgan chek havolasi (yakuniy/to'liq to'lovda).
+export async function confirmPayment(paymentId: string, taxReceiptUrl?: string): Promise<void> {
   const ref = adminDb.collection(PAYMENTS).doc(paymentId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("To'lov topilmadi");
@@ -146,7 +153,11 @@ export async function confirmPayment(paymentId: string): Promise<void> {
     }
   }
 
-  await ref.update({ status: "confirmed", confirmedAt: FieldValue.serverTimestamp() });
+  await ref.update({
+    status: "confirmed",
+    confirmedAt: FieldValue.serverTimestamp(),
+    ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
+  });
 }
 
 // To'lovni rad etish: faqat to'lov yozuvi rad etiladi, ariza/so'rov statusi

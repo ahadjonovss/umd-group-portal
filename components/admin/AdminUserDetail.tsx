@@ -14,6 +14,8 @@ import type { AdminReview } from "@/lib/firestore/reviews";
 
 type TabKey = "info" | "apps" | "payments" | "reviews";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 function Empty({ text }: { text: string }) {
   return <p className="text-sm text-slate-400 py-8 text-center">{text}</p>;
 }
@@ -272,7 +274,8 @@ export function AdminUserDetail({
 
           <CredentialsEditor uid={user.uid} currentEmail={user.email || ""} />
 
-          {/* Xavfli zona */}
+          {/* Xavfli zona — faqat dev */}
+          {IS_DEV && (
           <div className="bg-white rounded-2xl border border-red-200 p-5">
             <h3 className="font-semibold text-red-700 text-sm mb-1">Xavfli zona</h3>
             <p className="text-xs text-slate-400 mb-3">
@@ -289,6 +292,7 @@ export function AdminUserDetail({
               Foydalanuvchini o&apos;chirish
             </button>
           </div>
+          )}
         </div>
       )}
 

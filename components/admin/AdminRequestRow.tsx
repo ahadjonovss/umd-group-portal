@@ -13,6 +13,8 @@ import {
 import { SERVICE_SHORT, formatDate } from "@/lib/labels";
 import { actSetRequestStatus, actSetRequestNote, actDeleteRequest } from "@/app/admin/actions";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 const DATA_LABELS: Record<string, string> = {
   developerAccountId: "Developer Account ID",
   googlePaymentsProfileId: "Payments Profile ID",
@@ -75,7 +77,6 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
   const [pending, start] = useTransition();
   const [note, setNote] = useState(request.note);
   const [noteOpen, setNoteOpen] = useState(false);
-  const [showData, setShowData] = useState(false);
 
   const meta = REQUEST_STATUS_META[request.status];
   const next = requestNextStatus(request.status);
@@ -108,7 +109,7 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
         </div>
       </div>
 
-      {/* Summa + ma'lumot ochish */}
+      {/* Summa */}
       <div className="flex items-center gap-2 text-xs">
         <span className="font-semibold text-slate-900">${request.amountUsd}</span>
         {request.amountUzs ? <span className="text-slate-400">~{request.amountUzs.toLocaleString("en-US")} so&apos;m</span> : null}
@@ -117,15 +118,10 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
             · Chek: {request.receiptSent ? "✓" : "kutilmoqda"}
           </span>
         )}
-        {entries.length > 0 && (
-          <button onClick={() => setShowData((s) => !s)} className="ml-auto text-blue-600 hover:underline">
-            {showData ? "Ma'lumotni yashirish" : `Ma'lumot (${entries.length})`}
-          </button>
-        )}
       </div>
 
-      {/* Ma'lumotlar (yig'iladigan) */}
-      {showData && entries.length > 0 && (
+      {/* Ma'lumotlar (doim ko'rinadi) */}
+      {entries.length > 0 && (
         <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 rounded-lg p-3">
           {entries.map(([k, v]) => (
             <div key={k} className="min-w-0">
@@ -179,13 +175,15 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
           {note ? "Izohni tahrirlash" : "Izoh qo'shish"}
         </button>
         <div className="flex-1" />
-        <button
-          disabled={pending}
-          onClick={() => { if (confirm("Bu so'rovni o'chirasizmi?")) start(() => actDeleteRequest(request.id)); }}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
-        >
-          O&apos;chirish
-        </button>
+        {IS_DEV && (
+          <button
+            disabled={pending}
+            onClick={() => { if (confirm("Bu so'rovni o'chirasizmi?")) start(() => actDeleteRequest(request.id)); }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
+          >
+            O&apos;chirish
+          </button>
+        )}
       </div>
 
       {noteOpen && (
