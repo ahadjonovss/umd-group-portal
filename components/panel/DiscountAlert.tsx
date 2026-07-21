@@ -17,9 +17,9 @@ export function DiscountAlert({ discounts }: { discounts: DiscountAlertItem[] })
       {discounts.map((d) => (
         <div
           key={d.id}
-          className="relative flex items-center gap-3 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 animate-slide-down"
+          className="relative flex items-center gap-3.5 rounded-2xl ring-1 ring-amber-200/70 bg-gradient-to-r from-amber-50 to-orange-50 shadow-sm shadow-amber-100/60 px-4 py-3.5 animate-slide-down"
         >
-          <div className="text-2xl flex-shrink-0">🎁</div>
+          <span className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl flex-shrink-0">🎁</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-800">
               Sizga <span className="font-bold">{DISCOUNT_SERVICE_LABEL[d.service]}</span> xizmatiga{" "}

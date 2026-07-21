@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Logo } from "@/components/Logo";
 import { AuthButtons } from "@/components/auth/AuthButtons";
-import { AppCard } from "@/components/panel/AppCard";
+import { PanelApps } from "@/components/panel/PanelApps";
+import { NewRequestButton } from "@/components/panel/NewRequestButton";
 import { DraftButton } from "@/components/panel/DraftButton";
+import type { RequestView } from "@/lib/firestore/requests";
 import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelReviewLauncher";
 import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { DiscountAlert } from "@/components/panel/DiscountAlert";
@@ -32,13 +34,13 @@ export default async function PanelPage() {
   ]);
 
   // Har ilova uchun eng so'nggi transfer / update / uzaytirish so'rovi
-  const transferByApp = new Map<string, (typeof requests)[number]>();
-  const updateByApp = new Map<string, (typeof requests)[number]>();
-  const renewalByApp = new Map<string, (typeof requests)[number]>();
+  const transferByApp: Record<string, RequestView> = {};
+  const updateByApp: Record<string, RequestView> = {};
+  const renewalByApp: Record<string, RequestView> = {};
   for (const r of requests) {
-    if (r.type === "transfer" && !transferByApp.has(r.appId)) transferByApp.set(r.appId, r);
-    if (r.type === "update" && !updateByApp.has(r.appId)) updateByApp.set(r.appId, r);
-    if (r.type === "subscription_renewal" && !renewalByApp.has(r.appId)) renewalByApp.set(r.appId, r);
+    if (r.type === "transfer" && !transferByApp[r.appId]) transferByApp[r.appId] = r;
+    if (r.type === "update" && !updateByApp[r.appId]) updateByApp[r.appId] = r;
+    if (r.type === "subscription_renewal" && !renewalByApp[r.appId]) renewalByApp[r.appId] = r;
   }
 
   const reviewItems: ReviewItem[] = apps.map((a) => ({
@@ -82,29 +84,37 @@ export default async function PanelPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-10">
-        <DiscountAlert discounts={discounts} />
-        <PublishedReviewAlert apps={publishedUnreviewed} />
-
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">
-              Salom, {user.name || user.email} 👋
-            </h1>
-            <p className="text-slate-500 mt-1 text-sm">
-              Ilovalaringiz, ularning holati va obuna muddati
-            </p>
-          </div>
-          <div className="flex-shrink-0 flex items-center gap-2">
-            {process.env.NODE_ENV === "development" && <DraftButton />}
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
-            >
-              + Yangi ariza
-            </Link>
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Hero — alertlardan tepada */}
+        <div className="mb-6">
+          <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 sm:p-6 shadow-lg shadow-slate-900/20">
+            {/* Dekор (kesilgan) */}
+            <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
+              <div className="absolute -right-8 -top-10 w-40 h-40 rounded-full bg-white/5" />
+              <div className="absolute right-16 bottom-0 w-24 h-24 rounded-full bg-white/5" />
+            </div>
+            <div className="relative flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-lg sm:text-xl font-bold text-white flex-shrink-0">
+                  {(user.name || user.email || "U").trim().charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-lg sm:text-2xl font-bold text-white truncate">
+                    Salom, {user.name || user.email} 👋
+                  </h1>
+                  <p className="text-slate-300 mt-0.5 text-xs sm:text-sm truncate">Ilovalaringiz, holati va obuna muddati</p>
+                </div>
+              </div>
+              <div className="flex-shrink-0 flex items-center gap-2">
+                {process.env.NODE_ENV === "development" && <DraftButton />}
+                <NewRequestButton />
+              </div>
+            </div>
           </div>
         </div>
+
+        <DiscountAlert discounts={discounts} />
+        <PublishedReviewAlert apps={publishedUnreviewed} />
 
         {apps.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
@@ -117,18 +127,13 @@ export default async function PanelPage() {
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {apps.map((app) => (
-              <AppCard
-                key={app.id}
-                app={app}
-                pricing={pricing}
-                transferRequest={transferByApp.get(app.id) ?? null}
-                updateRequest={updateByApp.get(app.id) ?? null}
-                renewalRequest={renewalByApp.get(app.id) ?? null}
-              />
-            ))}
-          </div>
+          <PanelApps
+            apps={apps}
+            pricing={pricing}
+            transfer={transferByApp}
+            update={updateByApp}
+            renewal={renewalByApp}
+          />
         )}
       </main>
     </div>

@@ -9,12 +9,15 @@ import { StatusProgress, SubscriptionProgress, ClockIcon } from "@/components/pa
 import { finalUsdApp } from "@/lib/payment";
 import type { Pricing } from "@/lib/firestore/settings";
 
-// Kartochkada ko'rsatiladigan "amal talab qilinadi" belgisi.
+// Kartochkada ko'rsatiladigan "amal talab qilinadi" belgisi (to'lovga chorlaydi).
 function ActionHint({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 self-start rounded-lg bg-amber-50 ring-1 ring-amber-200 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+    <span className="inline-flex items-center gap-2 self-start rounded-xl bg-amber-50 ring-1 ring-amber-200 pl-2.5 pr-3 py-1.5 text-xs font-semibold text-amber-700">
       <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
       {label}
+      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 5l7 7-7 7" />
+      </svg>
     </span>
   );
 }
@@ -53,7 +56,9 @@ export function AppCard({
   return (
     <Link
       href={`/panel/app/${app.id}`}
-      className="group relative block overflow-hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/40 transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 animate-slide-up"
+      className={`group relative block overflow-hidden bg-white rounded-2xl border shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-slate-200/60 hover:-translate-y-0.5 animate-slide-up ${
+        actionLabel ? "border-amber-300 ring-1 ring-amber-200 shadow-amber-100/50" : "border-slate-200/80 shadow-slate-200/40"
+      }`}
     >
       {/* Rangli chap aksent */}
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${theme.accent}`} />
