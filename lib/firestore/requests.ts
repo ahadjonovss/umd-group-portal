@@ -1,7 +1,7 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import { markAppTransferred, renewSubscription } from "@/lib/firestore/apps";
-import type { RequestStatus, RequestType } from "@/lib/request-status";
+import { REQUEST_FLOW, type RequestStatus, type RequestType } from "@/lib/request-status";
 import type { ServiceType } from "@/types";
 
 const REQUESTS = "requests";
@@ -156,7 +156,11 @@ export async function confirmRequestPayment(id: string): Promise<void> {
   const snap = await getById(id);
   if (!snap.exists) throw new Error("So'rov topilmadi");
   const status = snap.get("status") as RequestStatus;
-  if (status !== "payment_pending") return;
+  // To'lov-oldi har qanday bosqichdan (so'rov yuborildi / ko'rib chiqilmoqda /
+  // to'lov kutilmoqda) to'lov tasdiqlanса — jarayonga o'tkazamiz.
+  const i = REQUEST_FLOW.indexOf(status);
+  const payIdx = REQUEST_FLOW.indexOf("payment_pending");
+  if (i < 0 || i > payIdx) return; // terminal yoki allaqachon to'lovdan o'tgan
   await setRequestStatus(id, "in_progress");
 }
 

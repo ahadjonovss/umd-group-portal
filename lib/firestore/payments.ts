@@ -154,8 +154,11 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string):
       const st = appSnap.get("status") as AppStatus;
       const flow = getStatusFlow(serviceType);
       const idx = flow.indexOf(st);
-      if (st === "payment_pending" && idx >= 0 && idx < flow.length - 1) {
-        await setAppStatus(appId, flow[idx + 1]);
+      const payIdx = flow.indexOf("payment_pending");
+      // Avans to'lov-oldi har qanday bosqichda (submitted / review / payment_pending)
+      // tasdiqlanса — to'lovdan keyingi bosqichga (masalan "preparing") o'tkazamiz.
+      if (idx >= 0 && payIdx >= 0 && idx <= payIdx && payIdx < flow.length - 1) {
+        await setAppStatus(appId, flow[payIdx + 1]);
       }
     }
   }

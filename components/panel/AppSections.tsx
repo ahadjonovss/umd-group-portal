@@ -5,6 +5,7 @@ import { getStatusFlow, isTerminalError } from "@/lib/app-status";
 import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_FLOW } from "@/lib/request-status";
 import { STATUS_META, formatDate } from "@/lib/labels";
 import { PaymentView } from "@/components/panel/PaymentView";
+import { requestAwaitingPayment } from "@/lib/panel-status";
 
 export function ClockIcon() {
   return (
@@ -65,7 +66,7 @@ export function RenewalSection({
           ))}
         </div>
       )}
-      {req.status === "payment_pending" && (
+      {requestAwaitingPayment(req) && (
         <PaymentView
           endpoint="/api/requests/receipt"
           idPayload={{ requestId: req.id }}
@@ -232,7 +233,7 @@ export function TransferSection({
           ))}
         </div>
       )}
-      {req.status === "payment_pending" && (
+      {requestAwaitingPayment(req) && (
         <PaymentView
           endpoint="/api/requests/receipt"
           idPayload={{ requestId: req.id }}
@@ -299,7 +300,7 @@ export function UpdateSection({
           ))}
         </div>
       )}
-      {req.status === "payment_pending" && (
+      {requestAwaitingPayment(req) && (
         <PaymentView
           endpoint="/api/requests/receipt"
           idPayload={{ requestId: req.id }}

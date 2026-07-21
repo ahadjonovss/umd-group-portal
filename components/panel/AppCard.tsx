@@ -2,11 +2,10 @@ import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isTerminalError } from "@/lib/app-status";
-import { isRequestActive } from "@/lib/request-status";
 import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { StatusProgress, SubscriptionProgress, ClockIcon } from "@/components/panel/AppSections";
-import { finalUsdApp } from "@/lib/payment";
+import { appNeedsPayment } from "@/lib/panel-status";
 import type { Pricing } from "@/lib/firestore/settings";
 
 // Kartochkada ko'rsatiladigan "amal talab qilinadi" belgisi (to'lovga chorlaydi).
@@ -41,17 +40,10 @@ export function AppCard({
   const subStarted = Boolean(app.subscription?.startDate);
   const transferred = app.status === "transferred";
 
-  // Amal talab qiladigan holatlar (kartochkada ogohlantirish uchun)
-  // Akkaunt xizmatida "chiqarildi" o'rniga "yakunlandi" bosqichida qolgan to'lov.
-  const finalStage = app.serviceType === "account" ? "completed" : "published";
-  const finalAmount = pricing ? Math.round(finalUsdApp(app, pricing)) : 0;
-  const needsAdvance = app.status === "payment_pending" && !app.receiptSent;
-  const needsFinal = app.status === finalStage && !app.finalPaid && finalAmount > 0 && !app.finalReceiptSent;
-  const needsRequestPay =
-    (transferRequest?.status === "payment_pending" && !transferRequest.receiptSent) ||
-    (updateRequest?.status === "payment_pending" && !updateRequest.receiptSent) ||
-    (renewalRequest?.status === "payment_pending" && !renewalRequest.receiptSent);
-  const actionLabel = needsAdvance || needsFinal || needsRequestPay ? "To'lov kutilmoqda" : null;
+  // Amal talab qiladigan holat (kartochkada ogohlantirish uchun)
+  const actionLabel = appNeedsPayment(app, pricing, transferRequest, updateRequest, renewalRequest)
+    ? "To'lov kutilmoqda"
+    : null;
 
   return (
     <Link

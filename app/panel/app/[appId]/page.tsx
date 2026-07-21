@@ -11,7 +11,9 @@ import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
+import { getAppReview } from "@/lib/firestore/reviews";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
+import { appAdvanceStage } from "@/lib/panel-status";
 import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
@@ -96,6 +98,18 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <svg key={n} className={`w-4 h-4 ${n <= rating ? "text-amber-400" : "text-slate-200"}`} fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
 function InfoGroup({ label, rows }: { label: string; rows: [string, string][] }) {
   if (!rows.length) return null;
   return (
@@ -125,12 +139,13 @@ export default async function AppDetailPage({
   if (!detail || detail.app.ownerUid !== user.uid) notFound();
   const { app, submission } = detail;
 
-  const [pricing, paymentInfo, usdRate, requests, payments] = await Promise.all([
+  const [pricing, paymentInfo, usdRate, requests, payments, myReview] = await Promise.all([
     getPricing(),
     getPaymentInfo(),
     getUsdRate(),
     getAppRequests(appId),
     getAppPayments(appId),
+    getAppReview(appId, user.uid),
   ]);
 
   const theme = SERVICE_THEME[app.serviceType];
@@ -153,7 +168,7 @@ export default async function AppDetailPage({
 
   // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
   const finalStage = app.serviceType === "account" ? "completed" : "published";
-  const showAdvance = app.status === "payment_pending";
+  const showAdvance = appAdvanceStage(app, pricing);
   const showFinal = app.status === finalStage && !app.finalPaid && finalAmount > 0;
   const paymentDone = app.finalPaid || finalAmount === 0;
 
@@ -349,12 +364,33 @@ export default async function AppDetailPage({
         )}
 
         {/* Baholash */}
-        {canReview && (
-          <SectionCard title="Xizmatni baholang">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-slate-500">Xizmatimiz haqidagi fikringiz biz uchun muhim.</p>
-              <ReviewButton appId={app.id} reviewed={app.reviewed} />
-            </div>
+        {(canReview || myReview) && (
+          <SectionCard title="Xizmatni baholash">
+            {myReview ? (
+              <div className="flex flex-col gap-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Stars rating={myReview.rating} />
+                  <span className="text-xs text-slate-400">{formatDate(myReview.date)}</span>
+                  <span
+                    className={`ml-auto text-[11px] px-2 py-0.5 rounded-full font-medium ring-1 ${
+                      myReview.approved
+                        ? "bg-emerald-50 text-emerald-600 ring-emerald-200"
+                        : "bg-amber-50 text-amber-600 ring-amber-200"
+                    }`}
+                  >
+                    {myReview.approved ? "E'lon qilingan" : "Tekshiruvda"}
+                  </span>
+                </div>
+                {myReview.comment && (
+                  <p className="text-sm text-slate-700 whitespace-pre-line">{myReview.comment}</p>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm text-slate-500">Xizmatimiz haqidagi fikringiz biz uchun muhim.</p>
+                <ReviewButton appId={app.id} reviewed={app.reviewed} />
+              </div>
+            )}
           </SectionCard>
         )}
 

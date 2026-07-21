@@ -108,6 +108,18 @@ export async function getAllReviews(max = 100): Promise<AdminReview[]> {
   return items.slice(0, max);
 }
 
+// Muayyan ilova uchun foydalanuvchi qoldirgan sharh (bo'lsa).
+export async function getAppReview(appId: string, ownerUid: string): Promise<AdminReview | null> {
+  const snap = await adminDb
+    .collection(REVIEWS)
+    .where("appId", "==", appId)
+    .where("ownerUid", "==", ownerUid)
+    .get();
+  if (snap.empty) return null;
+  const items = snap.docs.map(mapAdminReview).sort((a, b) => b.date.localeCompare(a.date));
+  return items[0];
+}
+
 export async function getUserReviews(ownerUid: string): Promise<AdminReview[]> {
   const snap = await adminDb.collection(REVIEWS).where("ownerUid", "==", ownerUid).get();
   const items = snap.docs.map(mapAdminReview);
