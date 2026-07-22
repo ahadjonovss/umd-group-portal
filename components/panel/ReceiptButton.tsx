@@ -4,14 +4,26 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 
 // Soliq chekini modal (webview) ichida ochadigan tugma.
-export function ReceiptButton({ url, className = "" }: { url: string; className?: string }) {
+export function ReceiptButton({
+  url,
+  className = "",
+  variant = "solid",
+}: {
+  url: string;
+  className?: string;
+  variant?: "solid" | "subtle";
+}) {
   const [open, setOpen] = useState(false);
+  const style =
+    variant === "subtle"
+      ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+      : "bg-emerald-600 text-white hover:bg-emerald-700";
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 active:scale-95 transition-all ${className}`}
+        className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-xs font-semibold active:scale-95 transition-all ${style} ${className}`}
       >
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

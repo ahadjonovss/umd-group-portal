@@ -455,46 +455,44 @@ export default async function AppDetailPage({
               )}
                   </div>
                 </SectionCard>
-              ) : (
+              ) : payments.length === 0 ? (
                 <p className="text-sm text-slate-400 py-6 text-center">Hozircha to&apos;lov amali yo&apos;q.</p>
-              )}
+              ) : null}
 
               {/* To'lovlar tarixi */}
               {payments.length > 0 && (
                 <SectionCard title="To'lovlar tarixi">
-            <div className="flex flex-col gap-2">
-              {payments.map((p) => (
-                <div key={p.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5 flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-800">
-                        {PAYMENT_KIND_LABEL[p.kind] ?? p.kind}
-                        <span className="text-slate-400 font-normal"> · ${p.amountUsd}</span>
-                        {p.amountUzs ? <span className="text-slate-400 font-normal"> (~{p.amountUzs.toLocaleString("en-US")} so&apos;m)</span> : null}
-                      </p>
-                      <p className="text-[11px] text-slate-400">{formatDate(p.createdAt)}</p>
-                    </div>
-                    <span
-                      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${
-                        p.status === "confirmed"
-                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                          : p.status === "rejected"
-                            ? "bg-red-50 text-red-700 ring-red-200"
-                            : "bg-amber-50 text-amber-700 ring-amber-200"
-                      }`}
-                    >
-                      <span className={`w-1.5 h-1.5 rounded-full ${p.status === "confirmed" ? "bg-emerald-500" : p.status === "rejected" ? "bg-red-500" : "bg-amber-500"}`} />
-                      {p.status === "confirmed" ? "Tasdiqlangan" : p.status === "rejected" ? "Rad etilgan" : "Kutilmoqda"}
-                    </span>
+                  <div className="flex flex-col gap-2">
+                    {payments.map((p) => (
+                      <div key={p.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-100 px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">
+                            {PAYMENT_KIND_LABEL[p.kind] ?? p.kind}
+                            <span className="text-slate-400 font-normal"> · ${p.amountUsd}</span>
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {formatDate(p.createdAt)}
+                            {p.amountUzs ? ` · ~${p.amountUzs.toLocaleString("en-US")} so'm` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {p.taxReceiptUrl && <ReceiptButton url={p.taxReceiptUrl} variant="subtle" />}
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${
+                              p.status === "confirmed"
+                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                : p.status === "rejected"
+                                  ? "bg-red-50 text-red-700 ring-red-200"
+                                  : "bg-amber-50 text-amber-700 ring-amber-200"
+                            }`}
+                          >
+                            <span className={`w-1.5 h-1.5 rounded-full ${p.status === "confirmed" ? "bg-emerald-500" : p.status === "rejected" ? "bg-red-500" : "bg-amber-500"}`} />
+                            {p.status === "confirmed" ? "Tasdiqlangan" : p.status === "rejected" ? "Rad etilgan" : "Kutilmoqda"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {p.taxReceiptUrl && (
-                    <div className="pt-2 border-t border-slate-200/70">
-                      <ReceiptButton url={p.taxReceiptUrl} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
                 </SectionCard>
               )}
             </>
