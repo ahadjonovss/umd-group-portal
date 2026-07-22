@@ -332,10 +332,14 @@ export async function markPublished(
   await ref.update(update);
 }
 
-// Admin: obunani uzaytirish (to'lov tasdiqlangach). Yana 270 kun qo'shadi.
-// Muddat tugamagan bo'lsa — joriy tugash sanasidan davom etadi (stack).
-// Tugagan bo'lsa — uzaytirilgan kundan yangi muddat boshlanadi.
-export async function renewSubscription(appId: string, renewedAt: Date = new Date()): Promise<void> {
+// Admin/tizim: obunani 270 kunga uzaytirish.
+// from="end"  — joriy tugash sanasidan boshlab (davomiylik; standart).
+// from="today" — uzaytirilgan kundan (hozirdan) boshlab.
+export async function renewSubscription(
+  appId: string,
+  opts: { from?: "end" | "today"; renewedAt?: Date } = {}
+): Promise<void> {
+  const { from = "end", renewedAt = new Date() } = opts;
   const ref = adminDb.collection(APPS).doc(appId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("Ariza topilmadi");
@@ -344,8 +348,7 @@ export async function renewSubscription(appId: string, renewedAt: Date = new Dat
   if (!sub) throw new Error("Bu xizmatda obuna yo'q");
 
   const currentEnd = sub.endDate ? sub.endDate.toDate() : renewedAt;
-  // Tugamagan bo'lsa joriy tugashdan, tugagan bo'lsa hozirdan boshlab uzaytiramiz.
-  const base = currentEnd.getTime() > renewedAt.getTime() ? currentEnd : renewedAt;
+  const base = from === "today" ? renewedAt : currentEnd;
   const newEnd = new Date(base.getTime() + SUBSCRIPTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
   await ref.update({

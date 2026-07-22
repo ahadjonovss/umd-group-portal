@@ -38,10 +38,11 @@ export async function actEndSubscription(appId: string) {
   revalidatePath("/admin");
 }
 
-// Admin: obunani qo'lda 9 oyga uzaytirish (to'lovsiz)
-export async function actRenewSubscription(appId: string) {
+// Admin: obunani qo'lda 9 oyga uzaytirish (to'lovsiz).
+// from="end" — tugagan kundan, from="today" — bugundan.
+export async function actRenewSubscription(appId: string, from: "end" | "today" = "end") {
   await requireAdmin();
-  await renewSubscription(appId);
+  await renewSubscription(appId, { from });
   revalidatePath("/admin");
 }
 
