@@ -3,6 +3,7 @@ import { createTransferZip, buildTransferInfo } from "@/lib/zip";
 import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
 import { tgAdminLink } from "@/lib/site";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getUser } from "@/lib/firestore/users";
 import { createAppSubmission, markTelegramSent } from "@/lib/firestore/apps";
 
 export const runtime = "nodejs";
@@ -18,16 +19,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Forma ma'lumotlarini o'qishda xato" }, { status: 400 });
   }
 
+  // Mijoz ma'lumotlari — hisobdan (qayta so'ralmaydi)
+  const profile = await getUser(user.uid);
+  const contact = {
+    fullName: profile?.fullName || user.name || "Mijoz",
+    phone: profile?.phone || "",
+    email: user.email || profile?.email || "",
+  };
+
   const fields = {
-    fullName: String(formData.get("fullName") || ""),
-    phone: String(formData.get("phone") || ""),
-    email: String(formData.get("email") || ""),
+    ...contact,
     developerAccountId: String(formData.get("developerAccountId") || ""),
     transactionId: String(formData.get("transactionId") || ""),
   };
 
-  if (!fields.fullName || !fields.phone || !fields.email || !fields.developerAccountId) {
-    return NextResponse.json({ success: false, error: "Majburiy maydonlar to'ldirilmagan" }, { status: 400 });
+  if (!fields.developerAccountId) {
+    return NextResponse.json({ success: false, error: "Developer Account ID majburiy" }, { status: 400 });
   }
 
   const info = buildTransferInfo("google", fields);

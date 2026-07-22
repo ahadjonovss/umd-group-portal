@@ -18,7 +18,7 @@ export function AppleTransferForm() {
 
   const form = useForm<AppleTransferData>({
     resolver: zodResolver(appleTransferSchema),
-    defaultValues: { fullName: "", phone: "", email: "", appStoreConnectTeamId: "", appleDevAccountEmail: "" },
+    defaultValues: { appStoreConnectTeamId: "", appleDevAccountEmail: "" },
   });
 
   async function onSubmit(data: AppleTransferData) {
@@ -76,15 +76,6 @@ export function AppleTransferForm() {
           <h2 className="text-xl font-semibold text-gray-900">Apple App Store — App Transfer</h2>
           <p className="text-sm text-gray-500 mt-1">Ilovani bizning akkauntga o&apos;tkazish uchun ma&apos;lumotlar</p>
         </div>
-
-        <div className="h-px bg-gray-200" />
-
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Mijoz ma&apos;lumotlari</h3>
-        <Input label="To'liq ism" required placeholder="Sardor Abdullayev" {...form.register("fullName")} error={form.formState.errors.fullName?.message} />
-        <Input label="Telefon raqami" required placeholder="+998901234567" {...form.register("phone")} error={form.formState.errors.phone?.message} />
-        <Input label="Email" type="email" required placeholder="email@example.com" {...form.register("email")} error={form.formState.errors.email?.message} />
-
-        <div className="h-px bg-gray-200" />
 
         <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Apple akkaunt</h3>
 

@@ -18,7 +18,7 @@ export function GoogleTransferForm() {
 
   const form = useForm<GoogleTransferData>({
     resolver: zodResolver(googleTransferSchema),
-    defaultValues: { fullName: "", phone: "", email: "", developerAccountId: "", transactionId: "" },
+    defaultValues: { developerAccountId: "", transactionId: "" },
   });
 
   async function onSubmit(data: GoogleTransferData) {
@@ -75,15 +75,6 @@ export function GoogleTransferForm() {
         <h2 className="text-xl font-semibold text-gray-900">Google Play — App Transfer</h2>
         <p className="text-sm text-gray-500 mt-1">Ilovani bizning akkauntga o&apos;tkazish uchun ma&apos;lumotlar</p>
       </div>
-
-      <div className="h-px bg-gray-200" />
-
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Mijoz ma&apos;lumotlari</h3>
-      <Input label="To'liq ism" required placeholder="Sardor Abdullayev" {...form.register("fullName")} error={form.formState.errors.fullName?.message} />
-      <Input label="Telefon raqami" required placeholder="+998901234567" {...form.register("phone")} error={form.formState.errors.phone?.message} />
-      <Input label="Email" type="email" required placeholder="email@example.com" {...form.register("email")} error={form.formState.errors.email?.message} />
-
-      <div className="h-px bg-gray-200" />
 
       <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Developer akkaunt</h3>
 
