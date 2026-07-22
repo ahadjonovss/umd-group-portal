@@ -11,9 +11,15 @@ export function AppsShowcase({ apps }: { apps: ShowcaseApp[] }) {
 
   return (
     <div className="animate-slide-up delay-200">
-      <div className="mb-4">
-        <h2 className="font-semibold text-slate-900">Biz chiqargan ilovalar</h2>
-        <p className="text-xs text-slate-400 mt-0.5">Store&apos;larda faol ilovalarimiz</p>
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-xs font-medium px-3 py-1.5 rounded-full mb-3 ring-1 ring-emerald-200">
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3.18 23.76c.3.17.64.24.99.2l.1-.04 11.35-6.55-2.47-2.47-9.97 8.86zM.13 1.55C.05 1.8 0 2.06 0 2.35v19.3c0 .29.05.56.13.8l.07.07 10.82-10.82v-.26L.2 1.48l-.07.07zM19.82 9.65l-2.56-1.48-2.78 2.78 2.78 2.78 2.58-1.49c.74-.43.74-1.13-.02-1.59zm-16.64 14.1l.1-.06 12.06-6.96-2.47-2.47-9.69 9.49z" />
+          </svg>
+          Portfolio
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Biz chiqargan ilovalar</h2>
+        <p className="text-slate-500 text-sm mt-1.5">Google Play&apos;da faol {apps.length}+ ilovamiz</p>
       </div>
 
       <div

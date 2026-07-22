@@ -155,13 +155,13 @@ export default async function Home() {
 
         {/* Chiqarilgan ilovalar karuseli */}
         {showcaseApps.length > 0 && (
-          <div className="mt-10">
+          <div className="mt-20 pt-10 border-t border-slate-200/70">
             <AppsShowcase apps={showcaseApps} />
           </div>
         )}
 
         {/* Reviews */}
-        <div className="mt-10">
+        <div className="mt-20 pt-10 border-t border-slate-200/70">
           <Suspense fallback={null}>
             <ReviewsSection initialReviews={reviews} />
           </Suspense>
