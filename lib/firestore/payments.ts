@@ -4,11 +4,20 @@ import { getStatusFlow, type AppStatus } from "@/lib/app-status";
 import { setAppStatus, setFinalPaid } from "@/lib/firestore/apps";
 import { confirmRequestPayment } from "@/lib/firestore/requests";
 import { markDiscountUsed } from "@/lib/firestore/discounts";
+import { logActivity, type Actor } from "@/lib/firestore/activity";
 import type { ServiceType } from "@/types";
 
 const PAYMENTS = "payments";
 
 export type PaymentKind = "advance" | "final" | "transfer" | "update" | "renewal";
+
+const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
+  advance: "Avans",
+  final: "Yakuniy",
+  transfer: "Transfer",
+  update: "Update",
+  renewal: "Obuna uzaytirish",
+};
 
 export interface CreatePaymentInput {
   appId: string;
@@ -41,6 +50,12 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
     createdAt: FieldValue.serverTimestamp(),
     confirmedAt: null,
   });
+  await logActivity(
+    input.appId,
+    "payment_submitted",
+    `${PAYMENT_KIND_LABEL[input.kind]} to'lovi uchun kvitansiya yuborildi ($${Math.round(input.amountUsd)})`,
+    { type: "user", name: input.ownerName || "Foydalanuvchi", uid: input.ownerUid }
+  );
   return ref.id;
 }
 
@@ -131,7 +146,7 @@ export async function deletePayment(paymentId: string): Promise<void> {
 
 // To'lovni tasdiqlash: ariza statusini keyingi bosqichga o'tkazadi.
 // taxReceiptUrl — soliqdan berilgan chek havolasi (yakuniy/to'liq to'lovda).
-export async function confirmPayment(paymentId: string, taxReceiptUrl?: string): Promise<void> {
+export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(PAYMENTS).doc(paymentId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("To'lov topilmadi");
@@ -169,6 +184,16 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string):
     ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
   });
 
+  if (actor) {
+    const kind = (p.kind as PaymentKind) ?? "advance";
+    await logActivity(
+      p.appId as string,
+      "payment_confirmed",
+      `${PAYMENT_KIND_LABEL[kind]} to'lovi tasdiqlandi ($${Math.round((p.amountUsd as number) ?? 0)})`,
+      actor
+    );
+  }
+
   // Chegirma yakuniy/to'liq to'lov tasdiqlanganda ishlatilgan deb belgilanadi
   const discountId = p.discountId as string | null | undefined;
   const completing = p.kind === "final" || (p.advancePercent ?? 0) >= 100;
@@ -183,7 +208,7 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string):
 
 // To'lovni rad etish: faqat to'lov yozuvi rad etiladi, ariza/so'rov statusi
 // o'zgarmaydi. Chek belgisi tozalanadi — mijoz qayta yuborishi mumkin.
-export async function rejectPayment(paymentId: string): Promise<void> {
+export async function rejectPayment(paymentId: string, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(PAYMENTS).doc(paymentId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("To'lov topilmadi");
@@ -199,5 +224,10 @@ export async function rejectPayment(paymentId: string): Promise<void> {
     await adminDb.collection("apps").doc(p.appId as string).update({ finalReceiptSent: false });
   } else {
     await adminDb.collection("apps").doc(p.appId as string).update({ receiptSent: false });
+  }
+
+  if (actor) {
+    const kind = (p.kind as PaymentKind) ?? "advance";
+    await logActivity(p.appId as string, "payment_rejected", `${PAYMENT_KIND_LABEL[kind]} to'lovi rad etildi`, actor);
   }
 }

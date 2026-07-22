@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/dal";
+import type { Actor } from "@/lib/firestore/activity";
 import { setAppStatus, markPublished, markAppTransferred, endSubscription, renewSubscription, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser } from "@/lib/firestore/users";
@@ -13,36 +14,42 @@ import { createDiscount, deleteDiscount } from "@/lib/firestore/discounts";
 import type { DiscountService } from "@/lib/discount";
 import type { AppStatus } from "@/lib/app-status";
 
+// Joriy admin sessiyasidan "kim" (actor) ma'lumotini quradi.
+async function adminActor(): Promise<Actor> {
+  const u = await requireAdmin();
+  return { type: "admin", name: u.name || u.email || "Admin", uid: u.uid };
+}
+
 export async function actSetStatus(appId: string, status: AppStatus) {
-  await requireAdmin();
-  await setAppStatus(appId, status);
+  const actor = await adminActor();
+  await setAppStatus(appId, status, actor);
   revalidatePath("/admin");
 }
 
 export async function actPublish(appId: string, publishedAt: string, storeUrl: string) {
-  await requireAdmin();
+  const actor = await adminActor();
   const date = publishedAt ? new Date(publishedAt) : new Date();
-  await markPublished(appId, date, storeUrl.trim() || undefined);
+  await markPublished(appId, date, storeUrl.trim() || undefined, actor);
   revalidatePath("/admin");
 }
 
 export async function actMarkTransferred(appId: string) {
-  await requireAdmin();
-  await markAppTransferred(appId);
+  const actor = await adminActor();
+  await markAppTransferred(appId, actor);
   revalidatePath("/admin");
 }
 
 export async function actEndSubscription(appId: string) {
-  await requireAdmin();
-  await endSubscription(appId);
+  const actor = await adminActor();
+  await endSubscription(appId, actor);
   revalidatePath("/admin");
 }
 
 // Admin: obunani qo'lda 9 oyga uzaytirish (to'lovsiz).
 // from="end" — tugagan kundan, from="today" — bugundan.
 export async function actRenewSubscription(appId: string, from: "end" | "today" = "end") {
-  await requireAdmin();
-  await renewSubscription(appId, { from });
+  const actor = await adminActor();
+  await renewSubscription(appId, { from, actor });
   revalidatePath("/admin");
 }
 
@@ -154,8 +161,8 @@ export async function actSavePayment(info: PaymentInfo) {
 }
 
 export async function actConfirmPayment(paymentId: string, taxReceiptUrl?: string) {
-  await requireAdmin();
-  await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined);
+  const actor = await adminActor();
+  await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor);
   revalidatePath("/admin");
 }
 
@@ -178,8 +185,8 @@ export async function actDeleteUser(uid: string) {
 }
 
 export async function actSetRequestStatus(id: string, status: RequestStatus) {
-  await requireAdmin();
-  await setRequestStatus(id, status);
+  const actor = await adminActor();
+  await setRequestStatus(id, status, actor);
   revalidatePath("/admin");
 }
 

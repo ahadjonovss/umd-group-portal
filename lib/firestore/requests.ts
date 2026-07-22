@@ -1,7 +1,8 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import { markAppTransferred, renewSubscription } from "@/lib/firestore/apps";
-import { REQUEST_FLOW, type RequestStatus, type RequestType } from "@/lib/request-status";
+import { REQUEST_FLOW, REQUEST_TYPE_LABEL, requestStatusLabel, type RequestStatus, type RequestType } from "@/lib/request-status";
+import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity";
 import type { ServiceType } from "@/types";
 
 const REQUESTS = "requests";
@@ -83,6 +84,12 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
     createdAt: FieldValue.serverTimestamp(),
     statusUpdatedAt: FieldValue.serverTimestamp(),
   });
+  await logActivity(
+    input.appId,
+    "request_created",
+    `${REQUEST_TYPE_LABEL[input.type]} so'rovi yaratildi ($${Math.round(input.amountUsd)})`,
+    { type: "user", name: input.ownerName || "Foydalanuvchi", uid: input.ownerUid }
+  );
   return ref.id;
 }
 
@@ -126,17 +133,28 @@ export async function getAllRequests(): Promise<RequestView[]> {
 }
 
 // ── Admin ──────────────────────────────
-export async function setRequestStatus(id: string, status: RequestStatus): Promise<void> {
+export async function setRequestStatus(id: string, status: RequestStatus, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(REQUESTS).doc(id);
+  const before = await ref.get();
+  const type = before.get("type") as RequestType | undefined;
+  const appId = before.get("appId") as string | undefined;
+  const act = actor ?? SYSTEM_ACTOR;
+
   await ref.update({ status, statusUpdatedAt: FieldValue.serverTimestamp() });
 
   // Yakunlangach turga qarab ilova ustida amal bajaramiz
   if (status === "completed") {
-    const snap = await ref.get();
-    const type = snap.get("type") as RequestType | undefined;
-    const appId = snap.get("appId") as string | undefined;
-    if (appId && type === "transfer") await markAppTransferred(appId);
-    if (appId && type === "subscription_renewal") await renewSubscription(appId);
+    if (appId && type === "transfer") await markAppTransferred(appId, act);
+    if (appId && type === "subscription_renewal") await renewSubscription(appId, { actor: act });
+  }
+
+  if (actor && appId && type) {
+    await logActivity(
+      appId,
+      "request_status_changed",
+      `${REQUEST_TYPE_LABEL[type]} so'rovi holati "${requestStatusLabel(type, status)}" ga o'zgartirildi`,
+      actor
+    );
   }
 }
 

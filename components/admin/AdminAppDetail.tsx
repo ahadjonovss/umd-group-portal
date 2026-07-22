@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { AdminAppRow } from "@/components/admin/AdminAppRow";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
+import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import type { AppView } from "@/lib/firestore/apps";
 import type { PaymentView } from "@/lib/firestore/payments";
+import type { ActivityView } from "@/lib/firestore/activity";
 
 const FIELD_LABELS: Record<string, string> = {
   fullName: "To'liq ism",
@@ -56,12 +58,14 @@ export function AdminAppDetail({
   app,
   submission,
   payments,
+  activity,
 }: {
   app: AppView;
   submission: Record<string, string>;
   payments: PaymentView[];
+  activity: ActivityView[];
 }) {
-  const [tab, setTab] = useState<"info" | "payment">("info");
+  const [tab, setTab] = useState<"info" | "payment" | "activity">("info");
 
   const entries = Object.entries(submission).filter(([, v]) => v && String(v).trim() !== "");
   const pendingPay = payments.filter((p) => p.status === "pending").length;
@@ -73,6 +77,7 @@ export function AdminAppDetail({
         {([
           { key: "info" as const, label: "Ma'lumot" },
           { key: "payment" as const, label: "To'lov" },
+          { key: "activity" as const, label: "Amaliyotlar tarixi" },
         ]).map((t) => (
           <button
             key={t.key}
@@ -84,6 +89,9 @@ export function AdminAppDetail({
             {t.label}
             {t.key === "payment" && (
               <span className="text-xs text-slate-400">{payments.length}</span>
+            )}
+            {t.key === "activity" && (
+              <span className="text-xs text-slate-400">{activity.length}</span>
             )}
             {t.key === "payment" && pendingPay > 0 && (
               <span className="w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -127,6 +135,12 @@ export function AdminAppDetail({
           ) : (
             <p className="text-sm text-slate-400 py-10 text-center">Bu ariza uchun to&apos;lov yo&apos;q.</p>
           )}
+        </div>
+      )}
+
+      {tab === "activity" && (
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+          <ActivityTimeline items={activity} />
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { AdminAppDetail } from "@/components/admin/AdminAppDetail";
 import { requireAdmin } from "@/lib/auth/dal";
 import { getAppDetail } from "@/lib/firestore/apps";
 import { getAppPayments } from "@/lib/firestore/payments";
+import { getAppActivity } from "@/lib/firestore/activity";
 import { SERVICE_LABELS } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Ariza — Admin — UMD GROUP" };
@@ -23,7 +24,7 @@ export default async function AdminAppPage({
   const detail = await getAppDetail(appId);
   if (!detail) notFound();
 
-  const payments = await getAppPayments(appId);
+  const [payments, activity] = await Promise.all([getAppPayments(appId), getAppActivity(appId)]);
   const title = detail.app.appName || SERVICE_LABELS[detail.app.serviceType];
 
   return (
@@ -50,7 +51,7 @@ export default async function AdminAppPage({
 
         <h1 className="text-xl font-bold text-slate-900 mb-5">{title}</h1>
 
-        <AdminAppDetail app={detail.app} submission={detail.submission} payments={payments} />
+        <AdminAppDetail app={detail.app} submission={detail.submission} payments={payments} activity={activity} />
       </main>
     </div>
   );

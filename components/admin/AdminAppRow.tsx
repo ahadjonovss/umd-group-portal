@@ -29,6 +29,12 @@ export function AdminAppRow({ app }: { app: AppView }) {
   const [reviewCopied, setReviewCopied] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [renewOpen, setRenewOpen] = useState(false);
+
+  function closeMenu() {
+    setMenuOpen(false);
+    setRenewOpen(false);
+  }
 
   async function copyReviewLink() {
     try {
@@ -129,42 +135,52 @@ export function AdminAppRow({ app }: { app: AppView }) {
                   </button>
                   {menuOpen && (
                     <>
-                      <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                      <div className="absolute right-0 top-full mt-1 z-20 w-60 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
-                        <div className="px-3 pt-1.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Obunani uzaytirish (+9 oy)</div>
+                      <div className="fixed inset-0 z-10" onClick={closeMenu} />
+                      <div className="absolute right-0 top-full mt-1 z-20 w-64 rounded-xl border border-slate-200 bg-white shadow-lg py-1">
+                        {/* Obunani uzaytirish — bosilгач variantlar ochiladi */}
                         <button
-                          disabled={pending}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            if (confirm("Obuna TUGAGAN kundan boshlab 9 oy (270 kun) qo'shilsinmi?"))
-                              start(() => actRenewSubscription(app.id, "end"));
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                          onClick={() => setRenewOpen((o) => !o)}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
                         >
                           <svg className="w-4 h-4 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
-                          Tugagan kundan
-                        </button>
-                        <button
-                          disabled={pending}
-                          onClick={() => {
-                            setMenuOpen(false);
-                            if (confirm("BUGUNDAN boshlab 9 oy (270 kun) qo'shilsinmi?"))
-                              start(() => actRenewSubscription(app.id, "today"));
-                          }}
-                          className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-                        >
-                          <svg className="w-4 h-4 text-teal-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          Obunani uzaytirish (+9 oy)
+                          <svg className={`w-3.5 h-3.5 ml-auto text-slate-400 transition-transform ${renewOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
-                          Bugundan
                         </button>
+                        {renewOpen && (
+                          <div className="bg-slate-50/70">
+                            <button
+                              disabled={pending}
+                              onClick={() => {
+                                closeMenu();
+                                if (confirm("Obuna TUGAGAN kundan boshlab 9 oy (270 kun) qo'shilsinmi?"))
+                                  start(() => actRenewSubscription(app.id, "end"));
+                              }}
+                              className="w-full flex items-center gap-2 pl-9 pr-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                            >
+                              Tugagan kundan
+                            </button>
+                            <button
+                              disabled={pending}
+                              onClick={() => {
+                                closeMenu();
+                                if (confirm("BUGUNDAN boshlab 9 oy (270 kun) qo'shilsinmi?"))
+                                  start(() => actRenewSubscription(app.id, "today"));
+                              }}
+                              className="w-full flex items-center gap-2 pl-9 pr-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                            >
+                              Bugundan
+                            </button>
+                          </div>
+                        )}
                         <div className="my-1 border-t border-slate-100" />
                         <button
                           disabled={pending}
                           onClick={() => {
-                            setMenuOpen(false);
+                            closeMenu();
                             if (confirm("Ilovani 'transfer qilingan' deb belgilaysizmi? Obuna to'xtaydi."))
                               start(() => actMarkTransferred(app.id));
                           }}
@@ -178,7 +194,7 @@ export function AdminAppRow({ app }: { app: AppView }) {
                         <button
                           disabled={pending}
                           onClick={() => {
-                            setMenuOpen(false);
+                            closeMenu();
                             if (confirm("Obunani to'xtatasizmi? Ilova store'dan olib tashlangan hisoblanadi."))
                               start(() => actEndSubscription(app.id));
                           }}

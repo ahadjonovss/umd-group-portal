@@ -12,6 +12,8 @@ import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { getAppReview } from "@/lib/firestore/reviews";
+import { getAppActivity } from "@/lib/firestore/activity";
+import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { appAdvanceStage } from "@/lib/panel-status";
 import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
@@ -139,13 +141,14 @@ export default async function AppDetailPage({
   if (!detail || detail.app.ownerUid !== user.uid) notFound();
   const { app, submission } = detail;
 
-  const [pricing, paymentInfo, usdRate, requests, payments, myReview] = await Promise.all([
+  const [pricing, paymentInfo, usdRate, requests, payments, myReview, activity] = await Promise.all([
     getPricing(),
     getPaymentInfo(),
     getUsdRate(),
     getAppRequests(appId),
     getAppPayments(appId),
     getAppReview(appId, user.uid),
+    getAppActivity(appId),
   ]);
 
   const theme = SERVICE_THEME[app.serviceType];
@@ -484,6 +487,11 @@ export default async function AppDetailPage({
             </div>
           </SectionCard>
         )}
+
+        {/* Amaliyotlar tarixi */}
+        <SectionCard title="Amaliyotlar tarixi">
+          <ActivityTimeline items={activity} forUser />
+        </SectionCard>
       </main>
     </div>
   );

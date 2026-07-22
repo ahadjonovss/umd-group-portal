@@ -5,6 +5,8 @@ import type { AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
 import { getPricing } from "@/lib/firestore/settings";
 import { fullUsd } from "@/lib/payment";
+import { logActivity, type Actor } from "@/lib/firestore/activity";
+import { STATUS_META } from "@/lib/labels";
 
 export type { AppStatus };
 
@@ -94,6 +96,11 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     finalPaid: false,
     createdAt: FieldValue.serverTimestamp(),
   });
+  await logActivity(ref.id, "created", "Ariza yaratildi", {
+    type: "user",
+    name: input.contact?.fullName || input.ownerEmail || "Foydalanuvchi",
+    uid: input.ownerUid,
+  });
   return ref.id;
 }
 
@@ -147,30 +154,33 @@ export async function deleteApp(appId: string): Promise<void> {
 }
 
 // Admin: ilova holatini o'zgartiradi (oqim bo'ylab yoki rad etish/bekor qilish).
-export async function setAppStatus(appId: string, status: AppStatus): Promise<void> {
+export async function setAppStatus(appId: string, status: AppStatus, actor?: Actor): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({
     status,
     statusUpdatedAt: FieldValue.serverTimestamp(),
   });
+  if (actor) await logActivity(appId, "status_changed", `Holat "${STATUS_META[status]?.label ?? status}" ga o'zgartirildi`, actor);
 }
 
 // Obuna to'xtatildi — ilova store'dan olib tashlandi (terminal). Obuna faolsizlanadi.
-export async function endSubscription(appId: string): Promise<void> {
+export async function endSubscription(appId: string, actor?: Actor): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({
     status: "subscription_ended" satisfies AppStatus,
     statusUpdatedAt: FieldValue.serverTimestamp(),
     "subscription.active": false,
   });
+  if (actor) await logActivity(appId, "subscription_ended", "Obuna to'xtatildi (ilova store'dan olib tashlandi)", actor);
 }
 
 // Transfer yakunlangach ilova "transfer qilingan" holatiga o'tadi (obuna endi amal qilmaydi).
-export async function markAppTransferred(appId: string): Promise<void> {
+export async function markAppTransferred(appId: string, actor?: Actor): Promise<void> {
   await adminDb.collection(APPS).doc(appId).update({
     status: "transferred" satisfies AppStatus,
     transferredAt: FieldValue.serverTimestamp(),
     statusUpdatedAt: FieldValue.serverTimestamp(),
     "subscription.active": false,
   });
+  if (actor) await logActivity(appId, "transferred", "Ilova transfer qilingan deb belgilandi", actor);
 }
 
 // Panel uchun seriyalashtirилgan ko'rinish (Timestamp -> ISO string).
@@ -288,7 +298,8 @@ export async function getAppDetail(
 export async function markPublished(
   appId: string,
   publishedAt: Date,
-  storeUrl?: string
+  storeUrl?: string,
+  actor?: Actor
 ): Promise<void> {
   const ref = adminDb.collection(APPS).doc(appId);
   const snap = await ref.get();
@@ -330,6 +341,10 @@ export async function markPublished(
   }
 
   await ref.update(update);
+  if (actor) {
+    const extra = hasSubscription(serviceType) ? " (obuna 9 oy boshlandi)" : "";
+    await logActivity(appId, "published", `Ilova store'ga chiqarildi${extra}`, actor);
+  }
 }
 
 // Admin/tizim: obunani 270 kunga uzaytirish.
@@ -337,9 +352,9 @@ export async function markPublished(
 // from="today" — uzaytirilgan kundan (hozirdan) boshlab.
 export async function renewSubscription(
   appId: string,
-  opts: { from?: "end" | "today"; renewedAt?: Date } = {}
+  opts: { from?: "end" | "today"; renewedAt?: Date; actor?: Actor } = {}
 ): Promise<void> {
-  const { from = "end", renewedAt = new Date() } = opts;
+  const { from = "end", renewedAt = new Date(), actor } = opts;
   const ref = adminDb.collection(APPS).doc(appId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("Ariza topilmadi");
@@ -357,4 +372,13 @@ export async function renewSubscription(
     "subscription.renewedCount": (sub.renewedCount ?? 0) + 1,
     "subscription.lastRenewedAt": Timestamp.fromDate(renewedAt),
   });
+  if (actor) {
+    const fromLabel = from === "today" ? "bugundan" : "tugagan kundan";
+    await logActivity(
+      appId,
+      "subscription_renewed",
+      `Obuna 9 oyga uzaytirildi (${fromLabel}) — yangi tugash: ${newEnd.toISOString().slice(0, 10)}`,
+      actor
+    );
+  }
 }

@@ -50,14 +50,15 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const tgActor = { type: "admin" as const, name: "Admin (Telegram)", uid: null };
     if (action === "pc") {
-      await confirmPayment(paymentId);
+      await confirmPayment(paymentId, undefined, tgActor);
       await answerCallbackQuery(callbackId, "✅ To'lov tasdiqlandi");
       await editMessageReplyMarkup(chatId, messageId, {
         inline_keyboard: [[{ text: "✅ Tasdiqlandi", callback_data: "noop" }]],
       });
     } else if (action === "pr") {
-      await rejectPayment(paymentId);
+      await rejectPayment(paymentId, tgActor);
       await answerCallbackQuery(callbackId, "❌ To'lov rad etildi — mijoz qayta yuborishi mumkin");
       await editMessageReplyMarkup(chatId, messageId, {
         inline_keyboard: [[{ text: "❌ Rad etildi", callback_data: "noop" }]],
