@@ -32,6 +32,7 @@ const FIELD_LABELS: Record<string, string> = {
   note: "Izoh",
   developerAccountId: "Developer Account ID",
   googlePaymentsProfileId: "Payments Profile ID",
+  transactionId: "Transaction ID",
   appStoreConnectTeamId: "App Store Connect Team ID",
   appleDevAccountEmail: "Apple Dev akkaunt email",
   platform: "Platforma",

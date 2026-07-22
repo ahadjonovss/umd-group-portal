@@ -19,6 +19,7 @@ const IS_DEV = process.env.NODE_ENV === "development";
 const DATA_LABELS: Record<string, string> = {
   developerAccountId: "Developer Account ID",
   googlePaymentsProfileId: "Payments Profile ID",
+  transactionId: "Transaction ID",
   appStoreConnectTeamId: "App Store Connect Team ID",
   appleDevAccountEmail: "Apple Dev email",
   releaseNotes: "Relizdagi o'zgarishlar",

@@ -7,9 +7,9 @@ export const googleTransferSchema = z.object({
   developerAccountId: z
     .string()
     .min(1, "Developer Account ID majburiy"),
-  googlePaymentsProfileId: z
+  transactionId: z
     .string()
-    .min(1, "Google Payments Profile ID majburiy"),
+    .min(1, "Transaction ID majburiy"),
 });
 
 export type GoogleTransferData = z.infer<typeof googleTransferSchema>;

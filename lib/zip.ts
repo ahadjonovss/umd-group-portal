@@ -144,8 +144,8 @@ export function buildTransferInfo(
 
   const specificFields = isGoogle
     ? `--- DEVELOPER AKKAUNT ---
-Developer Account ID:       ${fields.developerAccountId}
-Google Payments Profile ID: ${fields.googlePaymentsProfileId}`
+Developer Account ID: ${fields.developerAccountId}
+Transaction ID:       ${fields.transactionId}`
     : `--- DEVELOPER AKKAUNT ---
 App Store Connect Team ID:     ${fields.appStoreConnectTeamId}
 Apple Developer Account Email: ${fields.appleDevAccountEmail}`;

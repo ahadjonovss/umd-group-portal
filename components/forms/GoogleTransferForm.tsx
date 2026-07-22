@@ -18,7 +18,7 @@ export function GoogleTransferForm() {
 
   const form = useForm<GoogleTransferData>({
     resolver: zodResolver(googleTransferSchema),
-    defaultValues: { fullName: "", phone: "", email: "", developerAccountId: "", googlePaymentsProfileId: "" },
+    defaultValues: { fullName: "", phone: "", email: "", developerAccountId: "", transactionId: "" },
   });
 
   async function onSubmit(data: GoogleTransferData) {
@@ -101,18 +101,25 @@ export function GoogleTransferForm() {
         hint="Play Console → Settings → Developer account → Account details"
       />
 
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
-        ℹ️ Google Payments Profile ID ni qayerdan topish: <br />
-        <span className="font-medium">Play Console → Settings → Payments profile</span>
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 leading-relaxed">
+        ℹ️ <span className="font-semibold">Transaction ID</span> ni qanday olish mumkin:
+        <br />
+        1. Akkauntga <span className="font-semibold">$25</span> to&apos;lov qiling (Google Play developer to&apos;lovi).
+        <br />
+        2. Transaction ID ni quyidagilardan toping:
+        <br />
+        &nbsp;&nbsp;• To&apos;lovdan keyin Google yuborgan <span className="font-medium">email xabaridan</span>, yoki
+        <br />
+        &nbsp;&nbsp;• <span className="font-medium">Google Payments profili → Payment history (to&apos;lovlar tarixi)</span> dan.
       </div>
 
       <Input
-        label="Google Payments Profile ID"
+        label="Transaction ID"
         required
-        placeholder="PDS.1234-5678-9012-3456"
-        {...form.register("googlePaymentsProfileId")}
-        error={form.formState.errors.googlePaymentsProfileId?.message}
-        hint="Play Console → Settings → Payments profile"
+        placeholder="0.G.1234-5678-9012-3456"
+        {...form.register("transactionId")}
+        error={form.formState.errors.transactionId?.message}
+        hint="$25 to'lovdan keyin email xabari yoki Google profil → Payment history"
       />
 
 

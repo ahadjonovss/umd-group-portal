@@ -35,8 +35,12 @@ export function TransferRequestForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const required = isGoogle ? fields.developerAccountId : fields.appStoreConnectTeamId;
-    if (!required?.trim()) return setError("Majburiy maydonni to'ldiring");
+    if (isGoogle) {
+      if (!fields.developerAccountId?.trim() || !fields.transactionId?.trim())
+        return setError("Developer Account ID va Transaction ID majburiy");
+    } else if (!fields.appStoreConnectTeamId?.trim()) {
+      return setError("Majburiy maydonni to'ldiring");
+    }
     setLoading(true);
     try {
       const res = await fetch("/api/requests/transfer", {
@@ -72,8 +76,11 @@ export function TransferRequestForm({
 
       {isGoogle ? (
         <>
-          <Input label="Developer Account ID" required placeholder="1234567890123456789" value={fields.developerAccountId || ""} onChange={(e) => set("developerAccountId", e.target.value)} hint="Google Play Console Developer Account ID" />
-          <Input label="Google Payments Profile ID" placeholder="1234-5678-9012-3456" value={fields.googlePaymentsProfileId || ""} onChange={(e) => set("googlePaymentsProfileId", e.target.value)} />
+          <Input label="Developer Account ID" required placeholder="1234567890123456789" value={fields.developerAccountId || ""} onChange={(e) => set("developerAccountId", e.target.value)} hint="Play Console → Settings → Developer account → Account details" />
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 leading-relaxed">
+            ℹ️ <span className="font-semibold">Transaction ID</span>: akkauntga <span className="font-semibold">$25</span> to&apos;lov qilingandan so&apos;ng Google yuborgan <span className="font-medium">email xabaridan</span> yoki <span className="font-medium">Google profil → Payment history</span> dan topasiz.
+          </div>
+          <Input label="Transaction ID" required placeholder="0.G.1234-5678-9012-3456" value={fields.transactionId || ""} onChange={(e) => set("transactionId", e.target.value)} hint="$25 to'lovdan keyingi email yoki Payment history" />
         </>
       ) : (
         <>

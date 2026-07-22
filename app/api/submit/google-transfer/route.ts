@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     phone: String(formData.get("phone") || ""),
     email: String(formData.get("email") || ""),
     developerAccountId: String(formData.get("developerAccountId") || ""),
-    googlePaymentsProfileId: String(formData.get("googlePaymentsProfileId") || ""),
+    transactionId: String(formData.get("transactionId") || ""),
   };
 
   if (!fields.fullName || !fields.phone || !fields.email || !fields.developerAccountId) {

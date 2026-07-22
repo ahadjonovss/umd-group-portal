@@ -59,6 +59,7 @@ const FIELD_LABELS: Record<string, string> = {
   note: "Izoh",
   developerAccountId: "Developer Account ID",
   googlePaymentsProfileId: "Payments Profile ID",
+  transactionId: "Transaction ID",
   appStoreConnectTeamId: "App Store Connect Team ID",
   appleDevAccountEmail: "Apple Dev akkaunt email",
   releaseNotes: "Relizdagi o'zgarishlar",
@@ -219,8 +220,6 @@ export default async function AppDetailPage({
   const cardNumber = paymentInfo?.cardNumber ?? "";
   const cardHolder = paymentInfo?.cardHolder ?? "";
 
-  const hasActions = !transferred && (showAdvance || showFinal || app.status === "published");
-
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
@@ -287,6 +286,25 @@ export default async function AppDetailPage({
           activityCount={activity.length}
           info={
             <>
+              {/* Amallar — update / obuna uzaytirish / transfer */}
+              {app.status === "published" && (
+                <SectionCard title="Amallar">
+                  <div className="flex flex-col gap-4">
+                    <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
+                    <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
+                    <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
+                  </div>
+                </SectionCard>
+              )}
+
+              {/* Obuna eslatmasi (chiqarishdan oldin) */}
+              {!subStarted && app.subscription && !isTerminalError(app.status) && (
+                <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 ring-1 ring-slate-200 px-2.5 py-1.5 text-xs text-slate-500 self-start">
+                  <ClockIcon />
+                  Obuna ilova chiqarilgach boshlanadi (9 oy)
+                </div>
+              )}
+
               {/* Ilova ma'lumotlari */}
               <SectionCard title="Ilova ma'lumotlari">
                 {hasAnyInfo ? (
@@ -392,8 +410,8 @@ export default async function AppDetailPage({
           }
           payment={
             <>
-              {hasActions ? (
-                <SectionCard title="Amallar">
+              {showAdvance || showFinal ? (
+                <SectionCard title="To'lov">
                   <div className="flex flex-col gap-4">
                     {showAdvance && (
                 <PaymentView
@@ -433,26 +451,6 @@ export default async function AppDetailPage({
                 </div>
               )}
 
-              {app.status === "published" && (
-                <>
-                  <UpdateSection
-                    app={app}
-                    req={updateReq}
-                    cardNumber={cardNumber}
-                    cardHolder={cardHolder}
-                    paymentDone={paymentDone}
-                  />
-                  <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
-                  <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
-                </>
-              )}
-
-              {!subStarted && app.subscription && !isTerminalError(app.status) && app.status !== "payment_pending" && (
-                <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 ring-1 ring-slate-200 px-2.5 py-1.5 text-xs text-slate-500 self-start">
-                  <ClockIcon />
-                  Obuna ilova chiqarilgach boshlanadi (9 oy)
-                </div>
-              )}
                   </div>
                 </SectionCard>
               ) : payments.length === 0 ? (
