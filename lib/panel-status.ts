@@ -1,8 +1,8 @@
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import type { Pricing } from "@/lib/firestore/settings";
-import { getStatusFlow, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { REQUEST_FLOW } from "@/lib/request-status";
+import { isPreWork, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
+import { isRequestPreWork } from "@/lib/request-status";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 
 export type AppCategory = "active" | "progress" | "closed";
@@ -22,18 +22,13 @@ export function appCategory(app: AppView): AppCategory {
 export function appAdvanceStage(app: AppView, pricing?: Pricing): boolean {
   if (!pricing) return false;
   if (Math.round(advanceUsdApp(app, pricing)) <= 0) return false;
-  const flow = getStatusFlow(app.serviceType);
-  const cur = flow.indexOf(app.status);
-  const pay = flow.indexOf("payment_pending");
-  return cur >= 0 && pay >= 0 && cur <= pay;
+  return isPreWork(app.serviceType, app.status);
 }
 
 // So'rov (transfer / update / uzaytirish) to'lov-oldi bosqichdami.
 export function requestAwaitingPayment(req?: RequestView | null): boolean {
   if (!req) return false;
-  const i = REQUEST_FLOW.indexOf(req.status);
-  const pay = REQUEST_FLOW.indexOf("payment_pending");
-  return i >= 0 && pay >= 0 && i <= pay;
+  return isRequestPreWork(req.status);
 }
 
 // Ilova to'lov (avans / yakuniy / so'rov) kutyaptimi (amal kerak belgisi uchun).

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AppView } from "@/lib/firestore/apps";
-import { getStatusFlow, type AppStatus } from "@/lib/app-status";
+import { getStatusFlow, isPreWork, type AppStatus } from "@/lib/app-status";
 import { STATUS_META, SERVICE_LABELS, accountLabel, formatDate } from "@/lib/labels";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { RENEWAL_FACTOR } from "@/lib/payment";
@@ -90,6 +90,12 @@ export function AdminAppRow({ app }: { app: AppView }) {
   const nextMeta = nextStatus ? STATUS_META[nextStatus] : null;
   const inProgress = !["published", "completed", "rejected", "cancelled", "transferred", "subscription_ended"].includes(app.status);
   const nextIsPublish = nextStatus === "published";
+
+  // Avans chek yuborilgan va hali ish bosqichiga o'tmagan bo'lsa — to'lov tasdiqlanishini
+  // kutmoqda. Bu holatda "keyingi status" tugmasi emas, "tasdiqlang" ogohlantirishi chiqadi.
+  const preWork = isPreWork(app.serviceType, app.status);
+  const awaitingPaymentConfirm = app.receiptSent && preWork;
+  const showPaymentNote = awaitingPaymentConfirm;
 
   return (
     <div className="group relative overflow-hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm shadow-slate-200/40">
@@ -243,19 +249,21 @@ export function AdminAppRow({ app }: { app: AppView }) {
           )}
 
           {/* To'lov kutilmoqda — keyingi bosqichga faqat to'lov tasdiqlangach o'tiladi */}
-          {app.status === "payment_pending" && (
+          {showPaymentNote && (
             <div className="flex items-center gap-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 p-2.5 text-xs text-amber-700">
               <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Keyingi bosqichga o&apos;tish uchun <strong>To&apos;lovlar</strong> bo&apos;limidan to&apos;lovni tasdiqlang.
+              {awaitingPaymentConfirm
+                ? "To'lov yuborilgan — Keyingi bosqichga o'tish uchun To'lovlar bo'limidan tasdiqlang."
+                : "To'lov kutilmoqda. To'lov tasdiqlangach keyingi bosqichga o'tiladi."}
             </div>
           )}
 
           {/* Keyingi status tugmasi (oddiy) + terminal amallar */}
-          {((nextStatus && !nextIsPublish && app.status !== "payment_pending") || inProgress) && (
+          {((nextStatus && !nextIsPublish && !showPaymentNote) || inProgress) && (
             <div className="flex flex-wrap items-center gap-2">
-              {nextStatus && nextMeta && !nextIsPublish && app.status !== "payment_pending" && (
+              {nextStatus && nextMeta && !nextIsPublish && !showPaymentNote && (
                 <button
                   disabled={pending}
                   onClick={() => start(() => actSetStatus(app.id, nextStatus))}
@@ -301,7 +309,7 @@ export function AdminAppRow({ app }: { app: AppView }) {
               Yuborilgan: {formatDate(app.createdAt)} · {app.telegramSent ? "Telegram ✓" : "Telegram ✗"}
             </p>
             <div className="flex items-center gap-3 flex-shrink-0">
-              {app.status === "payment_pending" && (
+              {preWork && !app.receiptSent && (
                 <button
                   onClick={copyPaymentMessage}
                   className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline"

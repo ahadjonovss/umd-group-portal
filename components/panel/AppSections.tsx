@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import { getStatusFlow, isTerminalError } from "@/lib/app-status";
-import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_FLOW } from "@/lib/request-status";
+import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_TYPE_LABEL, REQUEST_FLOW } from "@/lib/request-status";
 import { STATUS_META, formatDate } from "@/lib/labels";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { requestAwaitingPayment } from "@/lib/panel-status";
@@ -75,6 +75,7 @@ export function RenewalSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
         />
@@ -242,6 +243,7 @@ export function TransferSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
         />
@@ -309,6 +311,7 @@ export function UpdateSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
         />

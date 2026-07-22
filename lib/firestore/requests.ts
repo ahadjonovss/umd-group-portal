@@ -1,7 +1,7 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import { markAppTransferred, renewSubscription } from "@/lib/firestore/apps";
-import { REQUEST_FLOW, REQUEST_TYPE_LABEL, requestStatusLabel, type RequestStatus, type RequestType } from "@/lib/request-status";
+import { REQUEST_TYPE_LABEL, requestStatusLabel, isRequestPreWork, type RequestStatus, type RequestType } from "@/lib/request-status";
 import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity";
 import type { ServiceType } from "@/types";
 
@@ -169,16 +169,12 @@ export async function markRequestReceiptSent(id: string): Promise<void> {
   });
 }
 
-// To'lov tasdiqlangach: payment_pending -> in_progress
+// To'lov tasdiqlangach: to'lov-oldi bosqich -> in_progress
 export async function confirmRequestPayment(id: string): Promise<void> {
   const snap = await getById(id);
   if (!snap.exists) throw new Error("So'rov topilmadi");
   const status = snap.get("status") as RequestStatus;
-  // To'lov-oldi har qanday bosqichdan (so'rov yuborildi / ko'rib chiqilmoqda /
-  // to'lov kutilmoqda) to'lov tasdiqlanса — jarayonga o'tkazamiz.
-  const i = REQUEST_FLOW.indexOf(status);
-  const payIdx = REQUEST_FLOW.indexOf("payment_pending");
-  if (i < 0 || i > payIdx) return; // terminal yoki allaqachon to'lovdan o'tgan
+  if (!isRequestPreWork(status)) return; // terminal yoki allaqachon jarayonda/yakunlangan
   await setRequestStatus(id, "in_progress");
 }
 

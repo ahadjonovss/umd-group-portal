@@ -9,9 +9,10 @@ import {
   requestStatusLabel,
   requestNextStatus,
   isRequestActive,
+  isRequestPreWork,
 } from "@/lib/request-status";
 import { SERVICE_SHORT, formatDate } from "@/lib/labels";
-import { actSetRequestStatus, actSetRequestNote, actDeleteRequest } from "@/app/admin/actions";
+import { actSetRequestStatus, actSetRequestNote, actDeleteRequest, actConfirmRequestPayment } from "@/app/admin/actions";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -73,10 +74,63 @@ function NoteDialog({
   );
 }
 
+function ReceiptUrlDialog({
+  usd,
+  uzs,
+  saving,
+  onConfirm,
+  onClose,
+}: {
+  usd: number;
+  uzs: number | null;
+  saving: boolean;
+  onConfirm: (url: string) => void;
+  onClose: () => void;
+}) {
+  const [url, setUrl] = useState("");
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-bold text-slate-900 mb-1">To&apos;lovni tasdiqlash</h3>
+        <p className="text-xs text-slate-500 mb-3">
+          Mijozga <span className="font-semibold text-slate-800">${usd}</span>
+          {uzs ? <span className="text-slate-500"> (~{uzs.toLocaleString("en-US")} so&apos;m)</span> : null} summaga soliq cheki beriladi.
+        </p>
+        <label className="block text-xs font-medium text-slate-600 mb-1">Soliq cheki havolasi (URL)</label>
+        <input
+          autoFocus
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://..."
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={onClose} className="h-9 px-4 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200">
+            Bekor
+          </button>
+          <button
+            disabled={saving}
+            onClick={() => onConfirm(url)}
+            className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {saving ? "Tasdiqlanmoqda…" : "Tasdiqlash"}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export function AdminRequestRow({ request }: { request: RequestView }) {
   const [pending, start] = useTransition();
   const [note, setNote] = useState(request.note);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+
+  // To'lov-oldi bosqich + chek yuborilgan bo'lsa: keyingi bosqich = to'lovni tasdiqlash (soliq URL bilan)
+  const isPaymentConfirm = isRequestPreWork(request.status) && request.receiptSent;
 
   const meta = REQUEST_STATUS_META[request.status];
   const next = requestNextStatus(request.status);
@@ -113,7 +167,7 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
       <div className="flex items-center gap-2 text-xs">
         <span className="font-semibold text-slate-900">${request.amountUsd}</span>
         {request.amountUzs ? <span className="text-slate-400">~{request.amountUzs.toLocaleString("en-US")} so&apos;m</span> : null}
-        {request.status === "payment_pending" && (
+        {isRequestPreWork(request.status) && (
           <span className={request.receiptSent ? "text-emerald-600" : "text-amber-600"}>
             · Chek: {request.receiptSent ? "✓" : "kutilmoqda"}
           </span>
@@ -141,7 +195,16 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
 
       {/* Amallar */}
       <div className="flex items-center gap-2 flex-wrap">
-        {next && (
+        {next && isPaymentConfirm && (
+          <button
+            disabled={pending}
+            onClick={() => setPayOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+          >
+            To&apos;lovni tasdiqlash → soliq cheki
+          </button>
+        )}
+        {next && !isPaymentConfirm && (
           <button
             disabled={pending}
             onClick={() => start(() => actSetRequestStatus(request.id, next))}
@@ -185,6 +248,21 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
           </button>
         )}
       </div>
+
+      {payOpen && (
+        <ReceiptUrlDialog
+          usd={request.amountUsd}
+          uzs={request.amountUzs}
+          saving={pending}
+          onClose={() => setPayOpen(false)}
+          onConfirm={(url) =>
+            start(async () => {
+              await actConfirmRequestPayment(request.id, url);
+              setPayOpen(false);
+            })
+          }
+        />
+      )}
 
       {noteOpen && (
         <NoteDialog

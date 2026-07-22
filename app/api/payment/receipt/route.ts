@@ -10,6 +10,7 @@ import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp } from
 import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { getUsdRate } from "@/lib/cbu";
+import { isPreWork } from "@/lib/app-status";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import type { ServiceType } from "@/types";
@@ -54,8 +55,9 @@ export async function POST(req: NextRequest) {
   // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
   const finalStage = serviceType === "account" ? "completed" : "published";
 
-  // Bosqichga mos tekshiruv
-  if (kind === "advance" && app.status !== "payment_pending") {
+  // Bosqichga mos tekshiruv. Avans ariza yaratilgach — to'lov kutilmoqda oralig'idagi
+  // har qanday bosqichda to'lanishi mumkin (admin "to'lov kutilmoqda"ga o'tkazishi shart emas).
+  if (kind === "advance" && !isPreWork(serviceType, app.status)) {
     return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
   }
   if (kind === "final" && (app.status !== finalStage || app.finalPaid)) {

@@ -1,6 +1,6 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/lib/firebase/admin";
-import { getStatusFlow, type AppStatus } from "@/lib/app-status";
+import { getStatusFlow, workStartStatus, type AppStatus } from "@/lib/app-status";
 import { setAppStatus, setFinalPaid } from "@/lib/firestore/apps";
 import { confirmRequestPayment } from "@/lib/firestore/requests";
 import { markDiscountUsed } from "@/lib/firestore/discounts";
@@ -169,11 +169,11 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
       const st = appSnap.get("status") as AppStatus;
       const flow = getStatusFlow(serviceType);
       const idx = flow.indexOf(st);
-      const payIdx = flow.indexOf("payment_pending");
-      // Avans to'lov-oldi har qanday bosqichda (submitted / review / payment_pending)
-      // tasdiqlanса — to'lovdan keyingi bosqichga (masalan "preparing") o'tkazamiz.
-      if (idx >= 0 && payIdx >= 0 && idx <= payIdx && payIdx < flow.length - 1) {
-        await setAppStatus(appId, flow[payIdx + 1]);
+      const work = workStartStatus(serviceType);
+      const workIdx = flow.indexOf(work);
+      // Avans to'lov-oldi bosqichda (submitted / review) tasdiqlanса — ish bosqichiga o'tkazamiz.
+      if (idx >= 0 && workIdx >= 0 && idx < workIdx) {
+        await setAppStatus(appId, work);
       }
     }
   }
@@ -204,6 +204,17 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
       console.error("[confirmPayment] markDiscountUsed xato:", e);
     }
   }
+}
+
+// So'rov uchun kutilayotgan (pending) to'lov yozuvi id'si (bo'lsa).
+export async function getPendingPaymentIdByRequest(requestId: string): Promise<string | null> {
+  const snap = await adminDb
+    .collection(PAYMENTS)
+    .where("requestId", "==", requestId)
+    .where("status", "==", "pending")
+    .get();
+  if (snap.empty) return null;
+  return snap.docs[0].id;
 }
 
 // To'lovni rad etish: faqat to'lov yozuvi rad etiladi, ariza/so'rov statusi

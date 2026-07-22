@@ -6,7 +6,7 @@ import type { Actor } from "@/lib/firestore/activity";
 import { setAppStatus, markPublished, markAppTransferred, endSubscription, renewSubscription, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser } from "@/lib/firestore/users";
-import { confirmPayment, setPaymentNote, deletePayment } from "@/lib/firestore/payments";
+import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest } from "@/lib/firestore/payments";
 import { setRequestStatus, setRequestNote, deleteRequest } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
@@ -187,6 +187,19 @@ export async function actDeleteUser(uid: string) {
 export async function actSetRequestStatus(id: string, status: RequestStatus) {
   const actor = await adminActor();
   await setRequestStatus(id, status, actor);
+  revalidatePath("/admin");
+}
+
+// So'rovning kutilayotgan to'lovini tasdiqlaydi (soliq cheki URL bilan) va
+// so'rovni keyingi bosqichga o'tkazadi. To'lov yozuvi topilmasa — oddiy o'tkazish.
+export async function actConfirmRequestPayment(requestId: string, taxReceiptUrl?: string) {
+  const actor = await adminActor();
+  const paymentId = await getPendingPaymentIdByRequest(requestId);
+  if (paymentId) {
+    await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor);
+  } else {
+    await setRequestStatus(requestId, "in_progress", actor);
+  }
   revalidatePath("/admin");
 }
 

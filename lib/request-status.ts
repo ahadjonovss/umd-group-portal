@@ -10,13 +10,21 @@ export type RequestStatus =
   | "rejected"
   | "cancelled";
 
+// To'lov birinchi bosqichlarda (requested / review) amalga oshadi, tasdiqlangach
+// "in_progress"ga o'tiladi — alohida "to'lov kutilmoqda" bosqichi yo'q.
 export const REQUEST_FLOW: RequestStatus[] = [
   "requested",
   "review",
-  "payment_pending",
   "in_progress",
   "completed",
 ];
+
+// So'rov hali to'lov-oldi (ish boshlanmagan) bosqichdami.
+export function isRequestPreWork(status: RequestStatus): boolean {
+  const cur = REQUEST_FLOW.indexOf(status);
+  const work = REQUEST_FLOW.indexOf("in_progress");
+  return cur >= 0 && work >= 0 && cur < work;
+}
 
 export const REQUEST_TERMINAL_ERROR: RequestStatus[] = ["rejected", "cancelled"];
 
