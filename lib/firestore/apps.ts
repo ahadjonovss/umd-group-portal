@@ -273,6 +273,31 @@ export async function getUserApps(uid: string): Promise<AppView[]> {
   return apps;
 }
 
+// Landing karuseli — "showcase" kolleksiyasidan (Play developer akkauntidan olingan).
+export interface ShowcaseApp {
+  id: string;
+  appName: string;
+  iconUrl: string;
+  storeUrl: string | null;
+}
+
+export async function getShowcaseApps(): Promise<ShowcaseApp[]> {
+  const snap = await adminDb.collection("showcase").get();
+  const out: ShowcaseApp[] = [];
+  for (const d of snap.docs) {
+    const x = d.data();
+    if (!x.iconUrl) continue;
+    out.push({
+      id: d.id,
+      appName: (x.name as string) || "",
+      iconUrl: x.iconUrl as string,
+      storeUrl: (x.storeUrl as string) ?? null,
+    });
+  }
+  out.sort((a, b) => a.appName.localeCompare(b.appName));
+  return out;
+}
+
 // Admin: barcha foydalanuvchilarning arizalari (yangi -> eski).
 export async function getAllApps(): Promise<AppView[]> {
   const snap = await adminDb.collection(APPS).get();

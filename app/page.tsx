@@ -3,8 +3,10 @@ import { Suspense } from "react";
 import { ServiceCard } from "@/components/ServiceCard";
 import { Logo } from "@/components/Logo";
 import { ReviewsSection } from "@/components/ReviewsSection";
+import { AppsShowcase } from "@/components/AppsShowcase";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { getApprovedReviews } from "@/lib/firestore/reviews";
+import { getShowcaseApps } from "@/lib/firestore/apps";
 
 // Reviewlar Firestore'dan (admin tasdiqlagani) request vaqtida o'qiladi.
 export const dynamic = "force-dynamic";
@@ -17,8 +19,16 @@ async function getReviews() {
   }
 }
 
+async function getShowcase() {
+  try {
+    return await getShowcaseApps();
+  } catch {
+    return [];
+  }
+}
+
 export default async function Home() {
-  const reviews = await getReviews();
+  const [reviews, showcaseApps] = await Promise.all([getReviews(), getShowcase()]);
   return (
     <div className="min-h-screen bg-gradient-subtle overflow-x-hidden">
       {/* Header */}
@@ -143,10 +153,19 @@ export default async function Home() {
           />
         </div>
 
+        {/* Chiqarilgan ilovalar karuseli */}
+        {showcaseApps.length > 0 && (
+          <div className="mt-10">
+            <AppsShowcase apps={showcaseApps} />
+          </div>
+        )}
+
         {/* Reviews */}
-        <Suspense fallback={null}>
-          <ReviewsSection initialReviews={reviews} />
-        </Suspense>
+        <div className="mt-10">
+          <Suspense fallback={null}>
+            <ReviewsSection initialReviews={reviews} />
+          </Suspense>
+        </div>
       </main>
 
       <footer className="text-center py-6 text-xs text-slate-400 border-t border-slate-200/60 mt-4">
