@@ -1,6 +1,6 @@
 import type { Pricing } from "@/lib/firestore/settings";
 
-export type TermsService = "publish" | "transfer" | "update" | "renewal" | "account";
+export type TermsService = "publish" | "transfer" | "update" | "renewal" | "account" | "push_certificate";
 
 export function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
   return (
@@ -141,6 +141,30 @@ export function TermsContent({ service, pricing: p }: { service: TermsService; p
         </Section>
         <Section num="4" title="Muhim">
           <Bullet color="red">Muddat o&apos;z vaqtida uzaytirilmasa — ilova store&apos;dan <strong>olib tashlanishi</strong> mumkin.</Bullet>
+        </Section>
+      </>
+    );
+  }
+
+  if (service === "push_certificate") {
+    return (
+      <>
+        <Section num="1" title="Xizmat mohiyati">
+          <p>Apple ilovalari uchun <strong>push notification (APNs) sertifikati</strong>ni tayyorlab berish.</p>
+        </Section>
+        <Section num="2" title="Shartlar">
+          <Bullet>Faqat <strong>Apple (App Store)</strong> ilovalari uchun.</Bullet>
+          <Bullet>Ilova store&apos;da <strong>chiqarilgan</strong> va asosiy to&apos;lovi <strong>yakunlangan</strong> bo&apos;lishi kerak.</Bullet>
+        </Section>
+        <Section num="3" title="Narx va to'lov">
+          <p>Narx — <strong>${p.pushCertificate}</strong>. To&apos;lov <strong>100% oldindan</strong>.</p>
+        </Section>
+        <Section num="4" title="Jarayon">
+          <Bullet>So&apos;rov yaratasiz va to&apos;lovni amalga oshirasiz.</Bullet>
+          <Bullet>To&apos;lov tasdiqlangач sertifikat <strong>Telegram orqali</strong> yuboriladi.</Bullet>
+        </Section>
+        <Section num="5" title="Muhim">
+          <Bullet>Bu <strong>bir martalik</strong> xizmat. APNs sertifikati Apple tomonidan vaqti-vaqti bilan yangilanishi mumkin — kerak bo&apos;lganда qayta so&apos;rov yaratasiz.</Bullet>
         </Section>
       </>
     );

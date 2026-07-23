@@ -13,6 +13,7 @@ export function TermsTabs({ pricing }: { pricing: Pricing }) {
     { key: "update", label: "Update" },
     { key: "renewal", label: "Obunani uzaytirish" },
     { key: "account", label: "Akkaunt ochish" },
+    { key: "push_certificate", label: "Push sertifikat" },
   ];
 
   return (
