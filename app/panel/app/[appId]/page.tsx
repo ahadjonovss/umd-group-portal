@@ -178,6 +178,8 @@ export default async function AppDetailPage({
   const showAdvance = appAdvanceStage(app, pricing);
   const showFinal = app.status === finalStage && !app.finalPaid && finalAmount > 0;
   const paymentDone = app.finalPaid || finalAmount === 0;
+  // To'lov amali kutilmoqda (chek hali yuborilmagan) — shu holda To'lov tabı avtomatik ochiladi
+  const paymentNeeded = (showAdvance && !app.receiptSent) || (showFinal && !app.finalReceiptSent);
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;
@@ -287,6 +289,7 @@ export default async function AppDetailPage({
         <AppDetailTabs
           paymentCount={payments.length}
           activityCount={activity.length}
+          defaultPayment={paymentNeeded}
           info={
             <>
               {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat */}

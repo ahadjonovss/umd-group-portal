@@ -10,14 +10,16 @@ export function AppDetailTabs({
   activity,
   paymentCount,
   activityCount,
+  defaultPayment = false,
 }: {
   info: ReactNode;
   payment: ReactNode;
   activity: ReactNode;
   paymentCount: number;
   activityCount: number;
+  defaultPayment?: boolean;
 }) {
-  const [tab, setTab] = useState<TabKey>("info");
+  const [tab, setTab] = useState<TabKey>(defaultPayment ? "payment" : "info");
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
     { key: "info", label: "Ma'lumot" },
