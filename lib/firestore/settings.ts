@@ -9,6 +9,7 @@ export interface Pricing {
   appleTransfer: number; // App Store transfer
   updateAndroid: number; // Android update (har biri)
   updateIos: number; // iOS update (har biri)
+  pushCertificate: number; // Apple push notification sertifikati
   accountGooglePersonal: number; // Google Play — shaxsiy akkaunt ochish
   accountGoogleCorporate: number; // Google Play — korporativ akkaunt ochish
   accountApplePersonal: number; // App Store — shaxsiy akkaunt ochish
@@ -28,6 +29,7 @@ export const DEFAULT_PRICING: Pricing = {
   appleTransfer: 5,
   updateAndroid: 3,
   updateIos: 5,
+  pushCertificate: 5,
   accountGooglePersonal: 50,
   accountGoogleCorporate: 90,
   accountApplePersonal: 150,
@@ -55,6 +57,7 @@ function normalize(x: Partial<Pricing>): Pricing {
     appleTransfer: num(x.appleTransfer, DEFAULT_PRICING.appleTransfer),
     updateAndroid: num(x.updateAndroid, DEFAULT_PRICING.updateAndroid),
     updateIos: num(x.updateIos, DEFAULT_PRICING.updateIos),
+    pushCertificate: num(x.pushCertificate, DEFAULT_PRICING.pushCertificate),
     accountGooglePersonal: num(x.accountGooglePersonal, DEFAULT_PRICING.accountGooglePersonal),
     accountGoogleCorporate: num(x.accountGoogleCorporate, DEFAULT_PRICING.accountGoogleCorporate),
     accountApplePersonal: num(x.accountApplePersonal, DEFAULT_PRICING.accountApplePersonal),

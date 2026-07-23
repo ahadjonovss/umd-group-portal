@@ -2,7 +2,7 @@ import type { ServiceType } from "@/types";
 import type { RequestType } from "@/lib/request-status";
 
 // Chegirma qamrab oladigan servis kategoriyalari
-export type DiscountService = "publish" | "account" | "transfer" | "update" | "renewal";
+export type DiscountService = "publish" | "account" | "transfer" | "update" | "renewal" | "push_certificate";
 
 export const DISCOUNT_SERVICE_LABEL: Record<DiscountService, string> = {
   publish: "Store'ga chiqarish",
@@ -10,6 +10,7 @@ export const DISCOUNT_SERVICE_LABEL: Record<DiscountService, string> = {
   transfer: "Transfer",
   update: "Update",
   renewal: "Obuna uzaytirish",
+  push_certificate: "Push sertifikat",
 };
 
 // Ilova (ariza) serviceType -> chegirma kategoriyasi (publish yoki account)
@@ -22,7 +23,7 @@ export function categoryForServiceType(s: ServiceType): DiscountService | null {
 // So'rov turi -> chegirma kategoriyasi
 export function categoryForRequest(t: RequestType): DiscountService {
   if (t === "subscription_renewal") return "renewal";
-  return t; // "transfer" | "update"
+  return t; // "transfer" | "update" | "push_certificate"
 }
 
 // Foizli chegirmani qo'llaydi (summani kamaytiradi)

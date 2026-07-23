@@ -1,5 +1,5 @@
 // App atrofidagi so'rovlar (transfer, update, obuna uzaytirish...) uchun umumiy oqim.
-export type RequestType = "transfer" | "update" | "subscription_renewal";
+export type RequestType = "transfer" | "update" | "subscription_renewal" | "push_certificate";
 
 export type RequestStatus =
   | "requested" // So'rov yuborildi
@@ -45,6 +45,7 @@ export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
   transfer: "Transfer",
   update: "Update",
   subscription_renewal: "Obuna uzaytirish",
+  push_certificate: "Push sertifikat",
 };
 
 // in_progress bosqichi turga qarab boshqacha nomlanadi
@@ -52,6 +53,7 @@ const IN_PROGRESS_LABEL: Record<RequestType, string> = {
   transfer: "O'tkazilmoqda",
   update: "Tayyorlanmoqda",
   subscription_renewal: "Uzaytirilmoqda",
+  push_certificate: "Tayyorlanmoqda",
 };
 
 const BASE_LABEL: Record<RequestStatus, string> = {

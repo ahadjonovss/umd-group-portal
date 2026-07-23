@@ -12,6 +12,7 @@ const KIND_LABEL: Record<PaymentView["kind"], string> = {
   transfer: "Transfer",
   update: "Update",
   renewal: "Obuna uzaytirish",
+  push_certificate: "Push sertifikat",
 };
 
 const KIND_COLOR: Record<PaymentView["kind"], string> = {
@@ -20,6 +21,7 @@ const KIND_COLOR: Record<PaymentView["kind"], string> = {
   transfer: "bg-violet-500",
   update: "bg-blue-500",
   renewal: "bg-teal-500",
+  push_certificate: "bg-sky-500",
 };
 
 const SERVICE_COLOR: Record<ServiceType, string> = {

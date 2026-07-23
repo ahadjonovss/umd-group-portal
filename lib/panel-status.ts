@@ -2,7 +2,7 @@ import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import type { Pricing } from "@/lib/firestore/settings";
 import { isPreWork, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { isRequestPreWork } from "@/lib/request-status";
+import { isRequestPreWork, isRequestTerminalError } from "@/lib/request-status";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 
 export type AppCategory = "active" | "progress" | "closed";
@@ -16,19 +16,24 @@ export function appCategory(app: AppView): AppCategory {
   return "progress";
 }
 
-// Ilova avans to'lov bosqichida (yaratilgan → to'lov kutilmoqda oralig'ida)
-// va avansi > 0 bo'lsa — admin "to'lov kutilmoqda"ga o'tkazishini kutmasdan
-// to'lov ko'rsatiladi. receiptSent holatini PaymentView o'zi boshqaradi.
+// Avans to'lovi ko'rsatiladimi. Avans > 0 va ilova hali yakunlanmagan/rad etilmagan
+// bo'lsa: to'lov TO'LANMAGUNCHA (chek yuborilmaguncha) har qanday bosqichda ko'rsatiladi —
+// admin holatni "tayyorlanmoqda"ga o'tkazsa ham yo'qolmaydi. Chek yuborilgach faqat
+// ish-oldi bosqichda (tasdiq kutilmoqda holati) ko'rsatiladi. PaymentView holatni o'zi boshqaradi.
 export function appAdvanceStage(app: AppView, pricing?: Pricing): boolean {
   if (!pricing) return false;
   if (Math.round(advanceUsdApp(app, pricing)) <= 0) return false;
-  return isPreWork(app.serviceType, app.status);
+  if (isTerminalError(app.status) || isTerminalSuccess(app.status)) return false;
+  return !app.receiptSent || isPreWork(app.serviceType, app.status);
 }
 
-// So'rov (transfer / update / uzaytirish) to'lov-oldi bosqichdami.
+// So'rov to'lovi ko'rsatiladimi. Faol so'rovda: to'lanmaguncha (chek yuborilmaguncha)
+// har qanday bosqichda; chek yuborilgach faqat ish-oldi bosqichda (tasdiq kutilmoqda).
 export function requestAwaitingPayment(req?: RequestView | null): boolean {
   if (!req) return false;
-  return isRequestPreWork(req.status);
+  const active = !isRequestTerminalError(req.status) && req.status !== "completed";
+  if (!active) return false;
+  return !req.receiptSent || isRequestPreWork(req.status);
 }
 
 // Ilova to'lov (avans / yakuniy / so'rov) kutyaptimi (amal kerak belgisi uchun).

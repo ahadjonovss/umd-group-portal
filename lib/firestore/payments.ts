@@ -9,7 +9,7 @@ import type { ServiceType } from "@/types";
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final" | "transfer" | "update" | "renewal";
+export type PaymentKind = "advance" | "final" | "transfer" | "update" | "renewal" | "push_certificate";
 
 const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   advance: "Avans",
@@ -17,6 +17,7 @@ const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   transfer: "Transfer",
   update: "Update",
   renewal: "Obuna uzaytirish",
+  push_certificate: "Push sertifikat",
 };
 
 export interface CreatePaymentInput {

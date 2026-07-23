@@ -1,9 +1,9 @@
 import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
-import { getStatusFlow, isTerminalError } from "@/lib/app-status";
+import { getStatusFlow, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_TYPE_LABEL, REQUEST_FLOW } from "@/lib/request-status";
-import { STATUS_META, formatDate } from "@/lib/labels";
+import { STATUS_META, formatDate, platformOf } from "@/lib/labels";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { requestAwaitingPayment } from "@/lib/panel-status";
 
@@ -80,9 +80,82 @@ export function RenewalSection({
           askTaxPhone
         />
       )}
-      {req.status === "in_progress" && (
+      {req.status === "in_progress" && req.receiptSent && (
         <p className="text-xs text-slate-500 leading-snug">
           To&apos;lov tasdiqlandi. Obuna muddati tez orada uzaytiriladi.
+        </p>
+      )}
+    </div>
+  );
+}
+
+// Apple push notification sertifikati — faqat Apple (iOS) ilovalarda.
+export function PushCertSection({
+  app,
+  req,
+  cardNumber,
+  cardHolder,
+  paymentDone,
+}: {
+  app: AppView;
+  req: RequestView | null;
+  cardNumber: string;
+  cardHolder: string;
+  paymentDone: boolean;
+}) {
+  if (platformOf(app.serviceType) !== "ios" || !isTerminalSuccess(app.status) || !paymentDone) return null;
+
+  const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
+
+  if (!req || !active) {
+    return (
+      <Link
+        href={`/panel/request/push-certificate/${app.id}`}
+        className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-sky-600 text-white text-sm font-semibold hover:bg-sky-700 active:scale-[0.99] transition-all"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        Push sertifikat olish
+      </Link>
+    );
+  }
+
+  const meta = REQUEST_STATUS_META[req.status];
+  const idx = REQUEST_FLOW.indexOf(req.status);
+  return (
+    <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-slate-700">Push sertifikat</span>
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+          {requestStatusLabel(req.type, req.status)}
+        </span>
+      </div>
+      {idx >= 0 && (
+        <div className="flex gap-1">
+          {REQUEST_FLOW.map((s, i) => (
+            <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= idx ? meta.dot : "bg-slate-200"}`} />
+          ))}
+        </div>
+      )}
+      {requestAwaitingPayment(req) && (
+        <PaymentView
+          endpoint="/api/requests/receipt"
+          idPayload={{ requestId: req.id }}
+          usd={req.amountUsd}
+          rate={req.rate}
+          uzs={req.amountUzs}
+          cardNumber={cardNumber}
+          cardHolder={cardHolder}
+          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
+          receiptSent={req.receiptSent}
+          askTaxPhone
+        />
+      )}
+      {req.status === "in_progress" && req.receiptSent && (
+        <p className="text-xs text-slate-500 leading-snug">
+          To&apos;lov tasdiqlandi. Sertifikat tayyorlanib, Telegram orqali yuboriladi.
         </p>
       )}
     </div>
@@ -316,7 +389,7 @@ export function UpdateSection({
           askTaxPhone
         />
       )}
-      {req.status === "in_progress" && (
+      {req.status === "in_progress" && req.receiptSent && (
         <div className="rounded-lg bg-white ring-1 ring-slate-100 p-3 text-xs text-slate-600 leading-snug">
           {app.serviceType === "app-store" ? (
             <>Yangi kodni <strong>GitHub</strong> repozitoriyangizga <strong>push</strong> qiling — jamoamiz App Store&apos;ga yuklaydi.</>

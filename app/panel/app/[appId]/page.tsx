@@ -29,6 +29,7 @@ import {
   TransferSection,
   UpdateSection,
   RenewalSection,
+  PushCertSection,
   ClockIcon,
 } from "@/components/panel/AppSections";
 
@@ -91,6 +92,7 @@ const PAYMENT_KIND_LABEL: Record<string, string> = {
   transfer: "Transfer to'lovi",
   update: "Update to'lovi",
   renewal: "Obuna uzaytirish",
+  push_certificate: "Push sertifikat",
 };
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -180,6 +182,7 @@ export default async function AppDetailPage({
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;
   const renewalReq = requests.find((r) => r.type === "subscription_renewal") ?? null;
+  const pushReq = requests.find((r) => r.type === "push_certificate") ?? null;
 
   // Umumiy metama'lumot
   const generalRows: [string, string][] = [];
@@ -286,13 +289,14 @@ export default async function AppDetailPage({
           activityCount={activity.length}
           info={
             <>
-              {/* Amallar — update / obuna uzaytirish / transfer */}
-              {app.status === "published" && (
+              {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat */}
+              {isTerminalSuccess(app.status) && (
                 <SectionCard title="Amallar">
                   <div className="flex flex-col gap-4">
                     <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
                     <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
                     <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
+                    <PushCertSection app={app} req={pushReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
                   </div>
                 </SectionCard>
               )}

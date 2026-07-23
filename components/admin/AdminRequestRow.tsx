@@ -31,6 +31,7 @@ const TYPE_COLOR: Record<string, string> = {
   transfer: "bg-violet-100 text-violet-700",
   update: "bg-blue-100 text-blue-700",
   subscription_renewal: "bg-teal-100 text-teal-700",
+  push_certificate: "bg-sky-100 text-sky-700",
 };
 
 function NoteDialog({

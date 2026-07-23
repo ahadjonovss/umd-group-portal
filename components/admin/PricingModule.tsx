@@ -101,6 +101,7 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
           <>
             <NumField unit="$" label="Android update (har biri)" value={p.updateAndroid} onChange={(v) => set("updateAndroid", v)} />
             <NumField unit="$" label="iOS update (har biri)" value={p.updateIos} onChange={(v) => set("updateIos", v)} />
+            <NumField unit="$" label="Push sertifikat (Apple)" value={p.pushCertificate} onChange={(v) => set("pushCertificate", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.updateAdvance} onChange={(v) => set("updateAdvance", v)} />
           </>
         )}
