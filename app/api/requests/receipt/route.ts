@@ -59,7 +59,13 @@ export async function POST(req: NextRequest) {
   const reqType = (r.type as RequestType) ?? "transfer";
   const typeLabel = REQUEST_TYPE_LABEL[reqType];
   const paymentKind: PaymentKind =
-    reqType === "update" ? "update" : reqType === "subscription_renewal" ? "renewal" : "transfer";
+    reqType === "update"
+      ? "update"
+      : reqType === "subscription_renewal"
+        ? "renewal"
+        : reqType === "push_certificate"
+          ? "push_certificate"
+          : "transfer";
   const appName = (r.appName as string | null) || SERVICE_LABELS[serviceType];
   const usd = r.amountUsd ?? 0;
   // To'lov PAYTIDAGI kurs (so'rov yaratilgan paytdagi emas) — chek uchun aniq summa
