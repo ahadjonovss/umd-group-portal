@@ -8,6 +8,7 @@ export interface AdminUser {
   phone: string;
   telegram: string;
   role: string | null;
+  passwordPlain: string | null; // admin ko'rishi uchun (faqat panel orqali o'rnatilganlar)
   createdAt: string | null;
   appCount?: number;
 }
@@ -21,6 +22,7 @@ function mapUser(d: DocumentSnapshot): AdminUser {
     phone: x.phone ?? "",
     telegram: x.telegram ?? "",
     role: x.role ?? null,
+    passwordPlain: x.passwordPlain ?? null,
     createdAt: x.createdAt instanceof Timestamp ? x.createdAt.toDate().toISOString() : null,
   };
 }
@@ -40,6 +42,8 @@ export async function getUser(uid: string): Promise<AdminUser | null> {
 
 export async function setUserPassword(uid: string, password: string): Promise<void> {
   await adminAuth.updateUser(uid, { password });
+  // Admin ko'rishi uchun ochiq nusxa (Firebase hash'ni qaytarmaydi)
+  await adminDb.collection("users").doc(uid).set({ passwordPlain: password }, { merge: true });
 }
 
 // Login emailini yangilaydi: Auth + users hujjati + ilovalardagi ownerEmail/contact.email.

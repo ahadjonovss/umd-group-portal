@@ -31,7 +31,7 @@ export function authErrorMessage(code: string): string {
 }
 
 // Server'da session cookie o'rnatadi.
-async function syncSession(idToken: string, profile?: { fullName: string; telegram: string }) {
+async function syncSession(idToken: string, profile?: { fullName: string; telegram: string; password?: string }) {
   const res = await fetch("/api/auth/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -52,7 +52,7 @@ export async function registerWithEmail(params: {
   const cred = await createUserWithEmailAndPassword(auth, params.email, params.password);
   await updateProfile(cred.user, { displayName: params.fullName });
   const idToken = await cred.user.getIdToken();
-  await syncSession(idToken, { fullName: params.fullName, telegram: params.telegram });
+  await syncSession(idToken, { fullName: params.fullName, telegram: params.telegram, password: params.password });
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<void> {

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 interface SessionBody {
   idToken?: string;
-  profile?: { fullName?: string; telegram?: string };
+  profile?: { fullName?: string; telegram?: string; password?: string };
 }
 
 // Login/Register: client idToken yuboradi → session cookie o'rnatiladi.
@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
           ...base,
           fullName: profile.fullName ?? "",
           telegram: profile.telegram ?? "",
+          ...(profile.password ? { passwordPlain: profile.password } : {}),
           createdAt: FieldValue.serverTimestamp(),
         },
         { merge: true }

@@ -118,17 +118,38 @@ function ProfileEditor({ user }: { user: AdminUser }) {
   );
 }
 
-function CredentialsEditor({ uid, currentEmail }: { uid: string; currentEmail: string }) {
+function CredentialsEditor({ uid, currentEmail, currentPassword }: { uid: string; currentEmail: string; currentPassword: string }) {
   const router = useRouter();
   const [email, setEmail] = useState(currentEmail);
   const [pw, setPw] = useState("");
   const [pending, start] = useTransition();
   const [emailMsg, setEmailMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
       <h3 className="font-semibold text-slate-900 text-sm mb-3">Login ma&apos;lumotlari</h3>
+
+      {/* Joriy parol */}
+      <label className="text-xs text-slate-500">Joriy parol</label>
+      <div className="flex items-center gap-2 mt-1 mb-3">
+        {currentPassword ? (
+          <>
+            <code className="flex-1 min-w-0 h-10 flex items-center rounded-lg bg-slate-50 border border-slate-200 px-3 text-sm font-mono text-slate-800 truncate">
+              {currentPassword}
+            </code>
+            <button
+              onClick={() => { navigator.clipboard.writeText(currentPassword).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); }}
+              className="h-10 px-3 rounded-lg bg-slate-100 text-slate-700 text-sm font-medium hover:bg-slate-200 flex-shrink-0"
+            >
+              {copied ? "✓" : "Nusxa"}
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-slate-400">Noma&apos;lum (eski akkaunt — parol shifrlangan). Yangi parol o&apos;rnatsangiz ko&apos;rinadi.</p>
+        )}
+      </div>
 
       {/* Email */}
       <label className="text-xs text-slate-500">Email (login)</label>
@@ -171,7 +192,7 @@ function CredentialsEditor({ uid, currentEmail }: { uid: string; currentEmail: s
             start(async () => {
               const r = await actSetUserPassword(uid, pw);
               setPwMsg(r.ok ? { ok: true, text: "Parol yangilandi" } : { ok: false, text: r.error || "Xatolik" });
-              if (r.ok) setPw("");
+              if (r.ok) { setPw(""); router.refresh(); }
             })
           }
           className="h-10 px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50"
@@ -272,7 +293,7 @@ export function AdminUserDetail({
             </button>
           </div>
 
-          <CredentialsEditor uid={user.uid} currentEmail={user.email || ""} />
+          <CredentialsEditor uid={user.uid} currentEmail={user.email || ""} currentPassword={user.passwordPlain || ""} />
 
           {/* Xavfli zona — faqat dev */}
           {IS_DEV && (
