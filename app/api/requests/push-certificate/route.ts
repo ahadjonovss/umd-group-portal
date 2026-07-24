@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { adminDb } from "@/lib/firebase/admin";
 import { createRequest, hasActiveRequest } from "@/lib/firestore/requests";
 import { getPricing } from "@/lib/firestore/settings";
-import { pushCertUsd } from "@/lib/payment";
+import { pushCertUsd, finalUsdApp } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { SERVICE_LABELS, platformOf } from "@/lib/labels";
@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
   }
 
   const [pricing, rate] = await Promise.all([getPricing(), getUsdRate()]);
+  // Asosiy (yakuniy) to'lov yakunlanmaguncha push sertifikat so'ralmaydi
+  const paymentDone = Boolean(app.finalPaid) || Math.round(finalUsdApp({ serviceType, servicePrice: app.servicePrice }, pricing)) === 0;
+  if (!paymentDone) {
+    return NextResponse.json({ success: false, error: "Avval asosiy to'lovni yakunlang" }, { status: 400 });
+  }
   const discount = await getActiveDiscount(user.uid, categoryForRequest("push_certificate"), appId);
   const pct = discount?.percent ?? 0;
   const usd = Math.round(applyDiscount(pushCertUsd(pricing), pct));

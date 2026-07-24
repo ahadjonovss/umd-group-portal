@@ -17,7 +17,7 @@ import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { appAdvanceStage } from "@/lib/panel-status";
-import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
+import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate, platformOf } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { PaymentView } from "@/components/panel/PaymentView";
@@ -292,8 +292,9 @@ export default async function AppDetailPage({
           defaultPayment={paymentNeeded}
           info={
             <>
-              {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat */}
-              {isTerminalSuccess(app.status) && (
+              {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat.
+                  Faqat to'lovi yakunlangan chiqarilgan ilovada (yoki iOS yakunlangan — push uchun). */}
+              {paymentDone && (app.status === "published" || (isTerminalSuccess(app.status) && platformOf(app.serviceType) === "ios")) && (
                 <SectionCard title="Amallar">
                   <div className="flex flex-col gap-4">
                     <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
