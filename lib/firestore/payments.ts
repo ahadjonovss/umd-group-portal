@@ -5,7 +5,28 @@ import { setAppStatus, setFinalPaid } from "@/lib/firestore/apps";
 import { confirmRequestPayment } from "@/lib/firestore/requests";
 import { markDiscountUsed } from "@/lib/firestore/discounts";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
+import { kindToInstallment } from "@/lib/payment-state";
 import type { ServiceType } from "@/types";
+
+// Servisning (app/request) payment obyektidagi installment holatini yangilaydi.
+async function setInstallment(
+  appId: string,
+  requestId: string | null | undefined,
+  kind: string,
+  fields: Record<string, unknown>
+): Promise<void> {
+  try {
+    const key = kindToInstallment(kind);
+    const col = requestId ? "requests" : "apps";
+    const id = requestId ?? appId;
+    if (!id) return;
+    const update: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(fields)) update[`payment.installments.${key}.${k}`] = v;
+    await adminDb.collection(col).doc(id).update(update);
+  } catch (e) {
+    console.error("[setInstallment] xato:", e);
+  }
+}
 
 const PAYMENTS = "payments";
 
@@ -50,6 +71,12 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     confirmedAt: null,
+  });
+  // payment obyekti: qism "submitted" holatiga o'tadi
+  await setInstallment(input.appId, input.requestId, input.kind, {
+    state: "submitted",
+    paymentId: ref.id,
+    taxPhone: input.taxPhone ?? null,
   });
   await logActivity(
     input.appId,
@@ -185,6 +212,12 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
   });
 
+  // payment obyekti: qism "confirmed"
+  await setInstallment(p.appId as string, p.requestId as string | null, p.kind as string, {
+    state: "confirmed",
+    ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
+  });
+
   if (actor) {
     const kind = (p.kind as PaymentKind) ?? "advance";
     await logActivity(
@@ -237,6 +270,9 @@ export async function rejectPayment(paymentId: string, actor?: Actor): Promise<v
   } else {
     await adminDb.collection("apps").doc(p.appId as string).update({ receiptSent: false });
   }
+
+  // payment obyekti: qism "rejected" (mijoz qayta yubora oladi)
+  await setInstallment(p.appId as string, requestId, p.kind as string, { state: "rejected" });
 
   if (actor) {
     const kind = (p.kind as PaymentKind) ?? "advance";

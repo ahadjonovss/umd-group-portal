@@ -10,6 +10,7 @@ import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { REQUEST_TYPE_LABEL, isRequestTerminalError, type RequestStatus, type RequestType } from "@/lib/request-status";
+import { isPayable } from "@/lib/payment-state";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -38,9 +39,13 @@ export async function POST(req: NextRequest) {
   if (!snap.exists) return NextResponse.json({ success: false, error: "So'rov topilmadi" }, { status: 404 });
   const r = snap.data()!;
   if (r.ownerUid !== user.uid) return NextResponse.json({ success: false, error: "Ruxsat yo'q" }, { status: 403 });
-  // Faol so'rovda (yakunlanmagan/rad etilmagan) to'lov qabul qilinadi — admin holatni
-  // ilgarilatgan bo'lsa ham.
-  {
+  // To'lov qabul qilinishi payment obyektidagi qism holatiga qarab (statusdan mustaqil).
+  const fullInst = r.payment?.installments?.full;
+  if (fullInst) {
+    if (!isPayable(fullInst)) {
+      return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
+    }
+  } else {
     const st = r.status as RequestStatus;
     if (isRequestTerminalError(st) || st === "completed") {
       return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });

@@ -16,7 +16,8 @@ import { getAppActivity } from "@/lib/firestore/activity";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
-import { appAdvanceStage } from "@/lib/panel-status";
+import { appAdvanceStage, showFinalPayment, appPaymentDone } from "@/lib/panel-status";
+import { getInstallment, isPayable } from "@/lib/payment-state";
 import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate, platformOf } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
@@ -173,13 +174,15 @@ export default async function AppDetailPage({
   const finalAmount = Math.round(applyDiscount(finalUsdApp(app, pricing), discPct));
   const finalUzs = rate ? Math.round(finalAmount * rate) : null;
 
-  // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
-  const finalStage = app.serviceType === "account" ? "completed" : "published";
   const showAdvance = appAdvanceStage(app, pricing);
-  const showFinal = app.status === finalStage && !app.finalPaid && finalAmount > 0;
-  const paymentDone = app.finalPaid || finalAmount === 0;
-  // To'lov amali kutilmoqda (chek hali yuborilmagan) — shu holda To'lov tabı avtomatik ochiladi
-  const paymentNeeded = (showAdvance && !app.receiptSent) || (showFinal && !app.finalReceiptSent);
+  const showFinal = showFinalPayment(app, pricing);
+  const paymentDone = appPaymentDone(app, pricing);
+  // To'lov amali kerak (to'lash mumkin bo'lgan qism) — shu holda To'lov tabı avtomatik ochiladi
+  const advInst = getInstallment(app.payment, "advance");
+  const finInst = getInstallment(app.payment, "final");
+  const paymentNeeded =
+    (showAdvance && (advInst ? isPayable(advInst) : !app.receiptSent)) ||
+    (showFinal && (finInst ? isPayable(finInst) : !app.finalReceiptSent));
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;

@@ -11,6 +11,7 @@ import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
+import { isPayable } from "@/lib/payment-state";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import type { ServiceType } from "@/types";
@@ -55,13 +56,29 @@ export async function POST(req: NextRequest) {
   // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
   const finalStage = serviceType === "account" ? "completed" : "published";
 
-  // Avans yakunlanmagan (chiqarilmagan/yakunlanmagan) va rad etilmagan har qanday
-  // bosqichda to'lanishi mumkin — admin holatni ilgarilatgan bo'lsa ham.
-  if (kind === "advance" && (isTerminalError(app.status) || isTerminalSuccess(app.status))) {
-    return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
-  }
-  if (kind === "final" && (app.status !== finalStage || app.finalPaid)) {
-    return NextResponse.json({ success: false, error: "Yakuniy to'lov talab qilinmayapti" }, { status: 400 });
+  // To'lov qabul qilinishi payment obyektidagi qism holatiga qarab (statusdan mustaqil).
+  const instKey = kind === "final" ? "final" : "advance";
+  const installment = app.payment?.installments?.[instKey];
+  if (installment) {
+    if (!isPayable(installment)) {
+      const msg = kind === "final" ? "Yakuniy to'lov talab qilinmayapti" : "To'lov kutilmayapti";
+      return NextResponse.json({ success: false, error: msg }, { status: 400 });
+    }
+    // Yakuniy to'lov faqat avans tasdiqlangach
+    if (kind === "final") {
+      const adv = app.payment?.installments?.advance;
+      if (adv && adv.state !== "confirmed") {
+        return NextResponse.json({ success: false, error: "Avval avans to'lovini yakunlang" }, { status: 400 });
+      }
+    }
+  } else {
+    // fallback (migratsiya qilinmagan eski hujjat)
+    if (kind === "advance" && (isTerminalError(app.status) || isTerminalSuccess(app.status))) {
+      return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
+    }
+    if (kind === "final" && (app.status !== finalStage || app.finalPaid)) {
+      return NextResponse.json({ success: false, error: "Yakuniy to'lov talab qilinmayapti" }, { status: 400 });
+    }
   }
 
   const receipt = await readFormFile(formData, "receipt");

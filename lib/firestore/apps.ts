@@ -1,12 +1,13 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
-import type { AppStatus } from "@/lib/app-status";
+import { isTerminalSuccess, type AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
 import { getPricing } from "@/lib/firestore/settings";
 import { fullUsd } from "@/lib/payment";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
 import { STATUS_META } from "@/lib/labels";
+import { newAppPayment, appInstallmentKeys, type PaymentState } from "@/lib/payment-state";
 
 export type { AppStatus };
 
@@ -94,6 +95,7 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     telegramSent: false,
     finalReceiptSent: false,
     finalPaid: false,
+    payment: newAppPayment(input.serviceType),
     createdAt: FieldValue.serverTimestamp(),
   });
   await logActivity(ref.id, "created", "Ariza yaratildi", {
@@ -155,10 +157,18 @@ export async function deleteApp(appId: string): Promise<void> {
 
 // Admin: ilova holatini o'zgartiradi (oqim bo'ylab yoki rad etish/bekor qilish).
 export async function setAppStatus(appId: string, status: AppStatus, actor?: Actor): Promise<void> {
-  await adminDb.collection(APPS).doc(appId).update({
-    status,
-    statusUpdatedAt: FieldValue.serverTimestamp(),
-  });
+  const ref = adminDb.collection(APPS).doc(appId);
+  const update: Record<string, unknown> = { status, statusUpdatedAt: FieldValue.serverTimestamp() };
+  // Yakuniy bosqichga (published/completed) yetganda — yakuniy to'lov qismini "ochamiz".
+  if (isTerminalSuccess(status)) {
+    const snap = await ref.get();
+    const st = snap.get("serviceType") as ServiceType;
+    if (appInstallmentKeys(st).includes("final")) {
+      const finalState = snap.get("payment")?.installments?.final?.state;
+      if (finalState === "locked" || finalState === undefined) update["payment.installments.final.state"] = "due";
+    }
+  }
+  await ref.update(update);
   if (actor) await logActivity(appId, "status_changed", `Holat "${STATUS_META[status]?.label ?? status}" ga o'zgartirildi`, actor);
 }
 
@@ -213,6 +223,7 @@ export interface AppView {
     active: boolean;
     renewedCount: number;
   };
+  payment: PaymentState | null;
 }
 
 function tsToIso(v: unknown): string | null {
@@ -258,6 +269,7 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
           renewedCount: sub.renewedCount ?? 0,
         }
       : null,
+    payment: (x.payment as PaymentState) ?? null,
   };
 }
 
@@ -363,6 +375,14 @@ export async function markPublished(
       renewedCount: 0,
       lastRenewedAt: null,
     } satisfies Subscription;
+  }
+
+  // Yakuniy to'lov qismini "ochamiz" (locked -> due), agar hali qulflangan bo'lsa.
+  if (appInstallmentKeys(serviceType).includes("final")) {
+    const finalState = snap.get("payment")?.installments?.final?.state;
+    if (finalState === "locked" || finalState === undefined) {
+      update["payment.installments.final.state"] = "due";
+    }
   }
 
   await ref.update(update);

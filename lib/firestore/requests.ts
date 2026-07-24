@@ -3,6 +3,7 @@ import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/fir
 import { markAppTransferred, renewSubscription } from "@/lib/firestore/apps";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, isRequestPreWork, type RequestStatus, type RequestType } from "@/lib/request-status";
 import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity";
+import { newRequestPayment, type PaymentState } from "@/lib/payment-state";
 import type { ServiceType } from "@/types";
 
 const REQUESTS = "requests";
@@ -41,6 +42,7 @@ export interface RequestView {
   note: string;
   discountId: string | null;
   discountPercent: number;
+  payment: PaymentState | null;
   createdAt: string | null;
 }
 
@@ -68,6 +70,7 @@ function mapRequest(d: DocumentSnapshot): RequestView {
     note: x.note ?? "",
     discountId: x.discountId ?? null,
     discountPercent: x.discountPercent ?? 0,
+    payment: (x.payment as PaymentState) ?? null,
     createdAt: iso(x.createdAt),
   };
 }
@@ -81,6 +84,7 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
     status: "requested" as RequestStatus,
     receiptSent: false,
     note: "",
+    payment: newRequestPayment(),
     createdAt: FieldValue.serverTimestamp(),
     statusUpdatedAt: FieldValue.serverTimestamp(),
   });
