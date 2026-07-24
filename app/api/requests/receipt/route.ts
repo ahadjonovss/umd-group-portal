@@ -9,7 +9,7 @@ import { getUsdRate } from "@/lib/cbu";
 import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
-import { REQUEST_TYPE_LABEL, isRequestPreWork, type RequestStatus, type RequestType } from "@/lib/request-status";
+import { REQUEST_TYPE_LABEL, isRequestTerminalError, type RequestStatus, type RequestType } from "@/lib/request-status";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -38,9 +38,13 @@ export async function POST(req: NextRequest) {
   if (!snap.exists) return NextResponse.json({ success: false, error: "So'rov topilmadi" }, { status: 404 });
   const r = snap.data()!;
   if (r.ownerUid !== user.uid) return NextResponse.json({ success: false, error: "Ruxsat yo'q" }, { status: 403 });
-  // So'rov yaratilgach — ish boshlanmagan (to'lov-oldi) bosqichda to'lanishi mumkin.
-  if (!isRequestPreWork(r.status as RequestStatus)) {
-    return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
+  // Faol so'rovda (yakunlanmagan/rad etilmagan) to'lov qabul qilinadi — admin holatni
+  // ilgarilatgan bo'lsa ham.
+  {
+    const st = r.status as RequestStatus;
+    if (isRequestTerminalError(st) || st === "completed") {
+      return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
+    }
   }
 
   const receipt = await readFormFile(formData, "receipt");
