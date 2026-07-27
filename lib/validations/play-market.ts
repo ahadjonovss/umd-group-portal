@@ -15,7 +15,7 @@ export const playMarketStep2Schema = z.object({
     .string()
     .min(1, "Package name majburiy")
     .regex(
-      /^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/,
+      /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)+$/,
       "Format: com.company.appname"
     ),
   shortDescription: z
