@@ -41,6 +41,8 @@ function formatUzPhone(p: string): string {
 function ReceiptConfirmModal({
   totalUsd,
   totalUzs,
+  netDueUzs,
+  needsReceipt,
   taxPhone,
   saving,
   onConfirm,
@@ -48,54 +50,86 @@ function ReceiptConfirmModal({
 }: {
   totalUsd: number;
   totalUzs: number | null;
+  netDueUzs: number | null;
+  needsReceipt: boolean;
   taxPhone: string | null;
   saving: boolean;
-  onConfirm: (url: string) => void;
+  onConfirm: (url: string, actualPaidUzs: number) => void;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState("");
-  const valid = url.trim().length > 5;
+  const [paid, setPaid] = useState(netDueUzs ? String(netDueUzs) : "");
+  const paidNum = Math.round(Number(paid) || 0);
+  const overpay = netDueUzs != null ? paidNum - netDueUzs : 0;
+  const validUrl = !needsReceipt || url.trim().length > 5;
+  const validPaid = paidNum > 0;
+
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-bold text-slate-900 mb-3">To&apos;lovni tasdiqlash</h3>
 
-        {/* Chek summasi */}
-        <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 mb-4">
-          <p className="text-xs text-emerald-700">Ushbu soliq cheki quyidagi umumiy summaga beriladi:</p>
-          <p className="text-2xl font-bold text-emerald-700 mt-0.5">${totalUsd}</p>
-          {totalUzs ? <p className="text-xs text-emerald-600">~{totalUzs.toLocaleString("en-US")} so&apos;m</p> : null}
-        </div>
-
-        {/* Soliq cheki uchun mijoz telefoni */}
-        {taxPhone && (
-          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-4 flex items-center gap-2">
-            <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-            </svg>
-            <div>
-              <p className="text-[11px] text-slate-400">Soliq cheki uchun telefon (SMS)</p>
-              <p className="text-sm font-semibold text-slate-900 tracking-wide">{formatUzPhone(taxPhone)}</p>
-            </div>
+        {/* To'lanishi kerak bo'lgan summa */}
+        {netDueUzs != null && (
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3">
+            <p className="text-xs text-slate-500">Mijoz o&apos;tkazishi kerak edi:</p>
+            <p className="text-lg font-bold text-slate-900">{netDueUzs.toLocaleString("en-US")} so&apos;m</p>
           </div>
         )}
 
-        <label className="text-xs text-slate-500">Soliq cheki havolasi (URL)</label>
+        {/* Mijoz aslida qancha to'ladi */}
+        <label className="text-xs text-slate-500">Mijoz aslida qancha to&apos;ladi? (so&apos;m)</label>
         <input
           autoFocus
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://soliq.uz/..."
-          className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+          type="number"
+          inputMode="numeric"
+          value={paid}
+          onChange={(e) => setPaid(e.target.value)}
+          placeholder="masalan 13000"
+          className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
         />
+        {overpay > 0 && (
+          <p className="text-xs font-semibold text-emerald-600 mt-1.5">🪙 Ortiqcha +{overpay.toLocaleString("en-US")} so&apos;m mijoz hamyoniga tushadi</p>
+        )}
+        {overpay < 0 && (
+          <p className="text-xs font-semibold text-amber-600 mt-1.5">⚠️ Kam to&apos;lanган ({overpay.toLocaleString("en-US")} so&apos;m) — tekshiring</p>
+        )}
+
+        {/* Soliq cheki (kerak bo'lsa) */}
+        {needsReceipt && (
+          <>
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 my-3">
+              <p className="text-xs text-emerald-700">Soliq cheki quyidagi xizmat summasiga beriladi:</p>
+              <p className="text-xl font-bold text-emerald-700 mt-0.5">${totalUsd}{totalUzs ? <span className="text-sm font-normal"> · ~{totalUzs.toLocaleString("en-US")} so&apos;m</span> : null}</p>
+            </div>
+            {taxPhone && (
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                <div>
+                  <p className="text-[11px] text-slate-400">Soliq cheki uchun telefon (SMS)</p>
+                  <p className="text-sm font-semibold text-slate-900 tracking-wide">{formatUzPhone(taxPhone)}</p>
+                </div>
+              </div>
+            )}
+            <label className="text-xs text-slate-500">Soliq cheki havolasi (URL)</label>
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://soliq.uz/..."
+              className="w-full h-10 rounded-lg border border-slate-200 px-3 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+            />
+          </>
+        )}
 
         <div className="flex justify-end gap-2 mt-4">
           <button onClick={onClose} className="h-9 px-4 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200">
             Bekor
           </button>
           <button
-            disabled={!valid || saving}
-            onClick={() => onConfirm(url.trim())}
+            disabled={!validUrl || !validPaid || saving}
+            onClick={() => onConfirm(url.trim(), paidNum)}
             className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
           >
             {saving ? "Tasdiqlanmoqda…" : "Tasdiqlash"}
@@ -134,8 +168,7 @@ export function AdminPaymentRow({ payment, relatedPayments }: { payment: Payment
   }
 
   function onConfirmClick() {
-    if (needsReceipt) setConfirmOpen(true);
-    else start(() => actConfirmPayment(payment.id));
+    setConfirmOpen(true); // har doim: mijoz qancha to'laganini so'raymiz (hamyon uchun)
   }
 
   return (
@@ -228,12 +261,14 @@ export function AdminPaymentRow({ payment, relatedPayments }: { payment: Payment
         <ReceiptConfirmModal
           totalUsd={totalUsd}
           totalUzs={totalUzs}
+          netDueUzs={payment.netDueUzs}
+          needsReceipt={needsReceipt}
           taxPhone={payment.taxPhone}
           saving={pending}
           onClose={() => setConfirmOpen(false)}
-          onConfirm={(url) =>
+          onConfirm={(url, actualPaidUzs) =>
             start(async () => {
-              await actConfirmPayment(payment.id, url);
+              await actConfirmPayment(payment.id, url || undefined, actualPaidUzs);
               setConfirmOpen(false);
             })
           }

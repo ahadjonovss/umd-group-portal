@@ -6,6 +6,7 @@ import { confirmRequestPayment } from "@/lib/firestore/requests";
 import { markDiscountUsed } from "@/lib/firestore/discounts";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
 import { kindToInstallment } from "@/lib/payment-state";
+import { getUserWalletUzs, adjustWallet } from "@/lib/firestore/users";
 import type { ServiceType } from "@/types";
 
 // Servisning (app/request) payment obyektidagi installment holatini yangilaydi.
@@ -62,12 +63,27 @@ export interface CreatePaymentInput {
 
 export async function createPayment(input: CreatePaymentInput): Promise<string> {
   const ref = adminDb.collection(PAYMENTS).doc();
+
+  // Hamyon: mavjud balansdan band qilamiz (mijoz kamroq o'tkazadi).
+  const requiredUzs = input.amountUzs ?? 0;
+  let walletAppliedUzs = 0;
+  if (requiredUzs > 0) {
+    const bal = await getUserWalletUzs(input.ownerUid);
+    walletAppliedUzs = Math.min(bal, requiredUzs);
+    if (walletAppliedUzs > 0) await adjustWallet(input.ownerUid, -walletAppliedUzs);
+  }
+  const netDueUzs = requiredUzs - walletAppliedUzs;
+
   await ref.set({
     ...input,
     requestId: input.requestId ?? null,
     taxPhone: input.taxPhone ?? null,
     discountId: input.discountId ?? null,
     discountPercent: input.discountPercent ?? 0,
+    requiredUzs,
+    walletAppliedUzs,
+    netDueUzs,
+    actualPaidUzs: null,
     status: "pending",
     createdAt: FieldValue.serverTimestamp(),
     confirmedAt: null,
@@ -107,6 +123,10 @@ export interface PaymentView {
   taxPhone: string | null; // mijoz bergan soliq cheki telefoni
   taxReceiptUrl: string | null; // soliqdan berilgan chek havolasi (tasdiqlashda)
   discountPercent: number; // qo'llangan chegirma foizi (0 = yo'q)
+  requiredUzs: number | null; // kerakli summa (so'm)
+  walletAppliedUzs: number; // shu to'lovda hamyondan ishlatilgan (so'm)
+  netDueUzs: number | null; // mijoz o'tkazishi kerak bo'lgan (so'm)
+  actualPaidUzs: number | null; // admin kiritgan — mijoz aslida to'lagan (so'm)
   createdAt: string | null;
 }
 
@@ -136,6 +156,10 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     taxPhone: x.taxPhone ?? null,
     taxReceiptUrl: x.taxReceiptUrl ?? null,
     discountPercent: typeof x.discountPercent === "number" ? x.discountPercent : 0,
+    requiredUzs: typeof x.requiredUzs === "number" ? x.requiredUzs : (typeof x.amountUzs === "number" ? x.amountUzs : null),
+    walletAppliedUzs: typeof x.walletAppliedUzs === "number" ? x.walletAppliedUzs : 0,
+    netDueUzs: typeof x.netDueUzs === "number" ? x.netDueUzs : (typeof x.amountUzs === "number" ? x.amountUzs : null),
+    actualPaidUzs: typeof x.actualPaidUzs === "number" ? x.actualPaidUzs : null,
     createdAt: iso(x.createdAt),
   };
 }
@@ -169,12 +193,22 @@ export async function setPaymentNote(paymentId: string, note: string): Promise<v
 }
 
 export async function deletePayment(paymentId: string): Promise<void> {
-  await adminDb.collection(PAYMENTS).doc(paymentId).delete();
+  const ref = adminDb.collection(PAYMENTS).doc(paymentId);
+  const snap = await ref.get();
+  if (snap.exists) {
+    const p = snap.data()!;
+    // Tasdiqlanmagan to'lov o'chirilsa — band qilingan hamyon pulini qaytaramiz
+    if (p.status !== "confirmed") {
+      const applied = typeof p.walletAppliedUzs === "number" ? p.walletAppliedUzs : 0;
+      if (applied > 0) await adjustWallet(p.ownerUid as string, applied);
+    }
+  }
+  await ref.delete();
 }
 
 // To'lovni tasdiqlash: ariza statusini keyingi bosqichga o'tkazadi.
 // taxReceiptUrl — soliqdan berilgan chek havolasi (yakuniy/to'liq to'lovda).
-export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, actor?: Actor): Promise<void> {
+export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, actor?: Actor, actualPaidUzs?: number): Promise<void> {
   const ref = adminDb.collection(PAYMENTS).doc(paymentId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("To'lov topilmadi");
@@ -206,10 +240,19 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     }
   }
 
+  // Hamyon: admin kiritgan haqiqiy summadan ortiqcha qismi hamyonga tushadi.
+  let overpay = 0;
+  if (typeof actualPaidUzs === "number" && actualPaidUzs > 0) {
+    const netDue = typeof p.netDueUzs === "number" ? p.netDueUzs : (typeof p.amountUzs === "number" ? p.amountUzs : 0);
+    overpay = Math.round(actualPaidUzs - netDue);
+    if (overpay > 0) await adjustWallet(p.ownerUid as string, overpay);
+  }
+
   await ref.update({
     status: "confirmed",
     confirmedAt: FieldValue.serverTimestamp(),
     ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
+    ...(typeof actualPaidUzs === "number" ? { actualPaidUzs: Math.round(actualPaidUzs) } : {}),
   });
 
   // payment obyekti: qism "confirmed"
@@ -270,6 +313,10 @@ export async function rejectPayment(paymentId: string, actor?: Actor): Promise<v
   } else {
     await adminDb.collection("apps").doc(p.appId as string).update({ receiptSent: false });
   }
+
+  // Hamyon: band qilingan summani qaytaramiz (mijoz qayta yuborishi mumkin)
+  const applied = typeof p.walletAppliedUzs === "number" ? p.walletAppliedUzs : 0;
+  if (applied > 0) await adjustWallet(p.ownerUid as string, applied);
 
   // payment obyekti: qism "rejected" (mijoz qayta yubora oladi)
   await setInstallment(p.appId as string, requestId, p.kind as string, { state: "rejected" });

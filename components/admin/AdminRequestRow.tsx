@@ -86,21 +86,36 @@ function ReceiptUrlDialog({
   usd: number;
   uzs: number | null;
   saving: boolean;
-  onConfirm: (url: string) => void;
+  onConfirm: (url: string, actualPaidUzs: number) => void;
   onClose: () => void;
 }) {
   const [url, setUrl] = useState("");
+  const [paid, setPaid] = useState(uzs ? String(uzs) : "");
+  const paidNum = Math.round(Number(paid) || 0);
+  const overpay = uzs != null ? paidNum - uzs : 0;
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-bold text-slate-900 mb-1">To&apos;lovni tasdiqlash</h3>
         <p className="text-xs text-slate-500 mb-3">
-          Mijozga <span className="font-semibold text-slate-800">${usd}</span>
-          {uzs ? <span className="text-slate-500"> (~{uzs.toLocaleString("en-US")} so&apos;m)</span> : null} summaga soliq cheki beriladi.
+          So&apos;rov summasi: <span className="font-semibold text-slate-800">${usd}</span>
+          {uzs ? <span className="text-slate-500"> (~{uzs.toLocaleString("en-US")} so&apos;m)</span> : null}
         </p>
-        <label className="block text-xs font-medium text-slate-600 mb-1">Soliq cheki havolasi (URL)</label>
+
+        <label className="block text-xs font-medium text-slate-600 mb-1">Mijoz aslida qancha to&apos;ladi? (so&apos;m)</label>
         <input
           autoFocus
+          type="number"
+          inputMode="numeric"
+          value={paid}
+          onChange={(e) => setPaid(e.target.value)}
+          placeholder="masalan 13000"
+          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500"
+        />
+        {overpay > 0 && <p className="text-xs font-semibold text-emerald-600 mt-1.5">🪙 Ortiqcha +{overpay.toLocaleString("en-US")} so&apos;m hamyonga tushadi</p>}
+
+        <label className="block text-xs font-medium text-slate-600 mb-1 mt-3">Soliq cheki havolasi (URL)</label>
+        <input
           type="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
@@ -112,8 +127,8 @@ function ReceiptUrlDialog({
             Bekor
           </button>
           <button
-            disabled={saving}
-            onClick={() => onConfirm(url)}
+            disabled={saving || paidNum <= 0}
+            onClick={() => onConfirm(url, paidNum)}
             className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50"
           >
             {saving ? "Tasdiqlanmoqda…" : "Tasdiqlash"}
@@ -257,9 +272,9 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
           uzs={request.amountUzs}
           saving={pending}
           onClose={() => setPayOpen(false)}
-          onConfirm={(url) =>
+          onConfirm={(url, actualPaidUzs) =>
             start(async () => {
-              await actConfirmRequestPayment(request.id, url);
+              await actConfirmRequestPayment(request.id, url || undefined, actualPaidUzs);
               setPayOpen(false);
             })
           }

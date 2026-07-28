@@ -274,6 +274,7 @@ export function AdminUserDetail({
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
             <InfoRow label="Email (login)" value={user.email || ""} />
             <InfoRow label="Rol" value={isAdmin ? "Admin" : "Mijoz"} />
+            <InfoRow label="Hamyon balansi" value={`${(user.walletUzs || 0).toLocaleString("en-US")} so'm`} />
             <InfoRow label="Ro'yxatdan o'tgan" value={formatDate(user.createdAt)} />
           </div>
 

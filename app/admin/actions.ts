@@ -160,9 +160,9 @@ export async function actSavePayment(info: PaymentInfo) {
   revalidatePath("/admin");
 }
 
-export async function actConfirmPayment(paymentId: string, taxReceiptUrl?: string) {
+export async function actConfirmPayment(paymentId: string, taxReceiptUrl?: string, actualPaidUzs?: number) {
   const actor = await adminActor();
-  await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor);
+  await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor, actualPaidUzs);
   revalidatePath("/admin");
 }
 
@@ -192,11 +192,11 @@ export async function actSetRequestStatus(id: string, status: RequestStatus) {
 
 // So'rovning kutilayotgan to'lovini tasdiqlaydi (soliq cheki URL bilan) va
 // so'rovni keyingi bosqichga o'tkazadi. To'lov yozuvi topilmasa — oddiy o'tkazish.
-export async function actConfirmRequestPayment(requestId: string, taxReceiptUrl?: string) {
+export async function actConfirmRequestPayment(requestId: string, taxReceiptUrl?: string, actualPaidUzs?: number) {
   const actor = await adminActor();
   const paymentId = await getPendingPaymentIdByRequest(requestId);
   if (paymentId) {
-    await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor);
+    await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor, actualPaidUzs);
   } else {
     await setRequestStatus(requestId, "in_progress", actor);
   }

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { DiscountView } from "@/lib/firestore/discounts";
+import type { AdminUser } from "@/lib/firestore/users";
 import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
 import type { ServiceType } from "@/types";
 
@@ -202,8 +203,24 @@ function topBy(rows: PaymentView[], keyOf: (p: PaymentView) => string, labelOf: 
   return Array.from(map.values()).sort((a, b) => b.usd - a.usd).slice(0, 5);
 }
 
-export function FinancePanel({ payments, discounts = [] }: { payments: PaymentView[]; discounts?: DiscountView[] }) {
+export function FinancePanel({ payments, discounts = [], users = [] }: { payments: PaymentView[]; discounts?: DiscountView[]; users?: AdminUser[] }) {
   const [period, setPeriod] = useState<Period>("month");
+
+  // Hamyon statistikasi (davrdan mustaqil — joriy holat)
+  const wallet = useMemo(() => {
+    const totalBalance = users.reduce((s, u) => s + (u.walletUzs || 0), 0);
+    const withBalance = users.filter((u) => (u.walletUzs || 0) > 0).length;
+    let applied = 0;
+    let credited = 0;
+    for (const p of payments) {
+      if (p.status !== "confirmed") continue;
+      applied += p.walletAppliedUzs || 0;
+      if (typeof p.actualPaidUzs === "number" && p.netDueUzs != null) {
+        credited += Math.max(0, p.actualPaidUzs - p.netDueUzs);
+      }
+    }
+    return { totalBalance, withBalance, applied, credited };
+  }, [users, payments]);
 
   const data = useMemo(() => {
     const now = new Date();
@@ -421,6 +438,33 @@ export function FinancePanel({ payments, discounts = [] }: { payments: PaymentVi
               <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[11px] font-semibold">Ishlatilgan: {data.disc.used}</span>
               <span className="px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-[11px] font-semibold">Muddati o&apos;tgan: {data.disc.expired}</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hamyon (foydalanuvchilar balansi) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+        <h3 className="font-semibold text-slate-900 text-sm mb-4">Foydalanuvchilar hamyoni</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3.5">
+            <p className="text-xs text-emerald-600">Umumiy balans</p>
+            <p className="text-xl font-bold mt-1 text-emerald-700">{wallet.totalBalance.toLocaleString("en-US")} <span className="text-sm font-normal">so&apos;m</span></p>
+            <p className="text-xs text-slate-400 mt-0.5">bizda turgan mijoz puli</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+            <p className="text-xs text-slate-400">Jami kreditlangan</p>
+            <p className="text-xl font-bold mt-1 text-slate-900">{wallet.credited.toLocaleString("en-US")} <span className="text-sm font-normal">so&apos;m</span></p>
+            <p className="text-xs text-slate-400 mt-0.5">ortiqcha tushgan</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+            <p className="text-xs text-slate-400">Jami ishlatilgan</p>
+            <p className="text-xl font-bold mt-1 text-slate-900">{wallet.applied.toLocaleString("en-US")} <span className="text-sm font-normal">so&apos;m</span></p>
+            <p className="text-xs text-slate-400 mt-0.5">to&apos;lovlarga sarflangan</p>
+          </div>
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-3.5">
+            <p className="text-xs text-slate-400">Hamyoni bor</p>
+            <p className="text-2xl font-bold mt-1 text-slate-900">{wallet.withBalance} <span className="text-sm font-normal">ta</span></p>
+            <p className="text-xs text-slate-400 mt-0.5">mijoz</p>
           </div>
         </div>
       </div>

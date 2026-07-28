@@ -15,6 +15,7 @@ export interface PaymentViewProps {
   amountLabel?: string;
   askTaxPhone?: boolean; // yakuniy/to'liq to'lovda soliq cheki uchun telefon so'ralsin
   discountPercent?: number; // qo'llangan chegirma (%) — belgisi ko'rsatiladi
+  walletUzs?: number; // foydalanuvchi hamyon balansi (so'm)
 }
 
 const UZ_PHONE_RE = /^\+998\d{9}$/;
@@ -31,8 +32,11 @@ export function PaymentView({
   amountLabel = "Avans (oldindan)",
   askTaxPhone = false,
   discountPercent = 0,
+  walletUzs = 0,
 }: PaymentViewProps) {
   const router = useRouter();
+  const walletApplied = walletUzs > 0 && uzs ? Math.min(walletUzs, uzs) : 0;
+  const netUzs = uzs !== null ? uzs - walletApplied : null;
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -114,6 +118,20 @@ export function PaymentView({
           </p>
         </div>
       </div>
+
+      {/* Hamyondan ayirish */}
+      {walletApplied > 0 && (
+        <div className="bg-white rounded-lg px-3 py-2 ring-1 ring-emerald-200 flex flex-col gap-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-slate-500">🪙 Hamyoningizdan</span>
+            <span className="font-semibold text-emerald-600">−{walletApplied.toLocaleString("en-US")} so&apos;m</span>
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-100 pt-1.5">
+            <span className="text-sm font-medium text-slate-700">To&apos;lash kerak</span>
+            <span className="text-base font-bold text-slate-900">{(netUzs ?? 0).toLocaleString("en-US")} so&apos;m</span>
+          </div>
+        </div>
+      )}
 
       {/* Karta raqami */}
       {cardNumber ? (

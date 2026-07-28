@@ -9,6 +9,7 @@ export interface AdminUser {
   telegram: string;
   role: string | null;
   passwordPlain: string | null; // admin ko'rishi uchun (faqat panel orqali o'rnatilganlar)
+  walletUzs: number; // hamyon balansi (so'm) — ortiqcha to'lovlardan
   createdAt: string | null;
   appCount?: number;
 }
@@ -23,8 +24,22 @@ function mapUser(d: DocumentSnapshot): AdminUser {
     telegram: x.telegram ?? "",
     role: x.role ?? null,
     passwordPlain: x.passwordPlain ?? null,
+    walletUzs: typeof x.walletUzs === "number" ? x.walletUzs : 0,
     createdAt: x.createdAt instanceof Timestamp ? x.createdAt.toDate().toISOString() : null,
   };
+}
+
+// Hamyon balansini o'qish (so'm).
+export async function getUserWalletUzs(uid: string): Promise<number> {
+  const d = await adminDb.collection("users").doc(uid).get();
+  const v = d.get("walletUzs");
+  return typeof v === "number" ? v : 0;
+}
+
+// Hamyon balansini delta ga o'zgartiradi (musbat — qo'shish, manfiy — ayirish).
+export async function adjustWallet(uid: string, deltaUzs: number): Promise<void> {
+  if (!uid || !deltaUzs) return;
+  await adminDb.collection("users").doc(uid).set({ walletUzs: FieldValue.increment(Math.round(deltaUzs)) }, { merge: true });
 }
 
 export async function getAllUsers(): Promise<AdminUser[]> {

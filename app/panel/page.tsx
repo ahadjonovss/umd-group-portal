@@ -11,6 +11,8 @@ import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelRe
 import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { DiscountAlert } from "@/components/panel/DiscountAlert";
 import { getUserActiveDiscounts } from "@/lib/firestore/discounts";
+import { getUserWalletUzs } from "@/lib/firestore/users";
+import { WalletCard } from "@/components/panel/WalletCard";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess } from "@/lib/app-status";
@@ -25,12 +27,13 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const [apps, admin, pricing, requests, discounts] = await Promise.all([
+  const [apps, admin, pricing, requests, discounts, walletUzs] = await Promise.all([
     getUserApps(user.uid),
     isAdmin(),
     getPricing(),
     getUserRequests(user.uid),
     getUserActiveDiscounts(user.uid),
+    getUserWalletUzs(user.uid),
   ]);
 
   // Har ilova uchun eng so'nggi transfer / update / uzaytirish so'rovi
@@ -112,6 +115,8 @@ export default async function PanelPage() {
             </div>
           </div>
         </div>
+
+        <WalletCard balanceUzs={walletUzs} />
 
         <DiscountAlert discounts={discounts} />
         <PublishedReviewAlert apps={publishedUnreviewed} />

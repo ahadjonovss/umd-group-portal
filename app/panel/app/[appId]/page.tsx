@@ -13,6 +13,7 @@ import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { getAppReview } from "@/lib/firestore/reviews";
 import { getAppActivity } from "@/lib/firestore/activity";
+import { getUserWalletUzs } from "@/lib/firestore/users";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
@@ -146,7 +147,7 @@ export default async function AppDetailPage({
   if (!detail || detail.app.ownerUid !== user.uid) notFound();
   const { app, submission } = detail;
 
-  const [pricing, paymentInfo, usdRate, requests, payments, myReview, activity] = await Promise.all([
+  const [pricing, paymentInfo, usdRate, requests, payments, myReview, activity, walletUzs] = await Promise.all([
     getPricing(),
     getPaymentInfo(),
     getUsdRate(),
@@ -154,6 +155,7 @@ export default async function AppDetailPage({
     getAppPayments(appId),
     getAppReview(appId, user.uid),
     getAppActivity(appId),
+    getUserWalletUzs(user.uid),
   ]);
 
   const theme = SERVICE_THEME[app.serviceType];
@@ -300,10 +302,10 @@ export default async function AppDetailPage({
               {paymentDone && (app.status === "published" || (isTerminalSuccess(app.status) && platformOf(app.serviceType) === "ios")) && (
                 <SectionCard title="Amallar">
                   <div className="flex flex-col gap-4">
-                    <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
-                    <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
-                    <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
-                    <PushCertSection app={app} req={pushReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} />
+                    <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
+                    <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
+                    <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
+                    <PushCertSection app={app} req={pushReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
                   </div>
                 </SectionCard>
               )}
@@ -435,6 +437,7 @@ export default async function AppDetailPage({
                   receiptSent={app.receiptSent}
                   askTaxPhone={finalAmount === 0}
                   discountPercent={discPct}
+                  walletUzs={walletUzs}
                 />
               )}
 
@@ -458,6 +461,7 @@ export default async function AppDetailPage({
                     receiptSent={app.finalReceiptSent}
                     askTaxPhone
                     discountPercent={discPct}
+                    walletUzs={walletUzs}
                   />
                 </div>
               )}

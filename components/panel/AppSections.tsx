@@ -21,12 +21,14 @@ export function RenewalSection({
   cardNumber,
   cardHolder,
   paymentDone,
+  walletUzs = 0,
 }: {
   app: AppView;
   req: RequestView | null;
   cardNumber: string;
   cardHolder: string;
   paymentDone: boolean;
+  walletUzs?: number;
 }) {
   // Faqat chiqarilgan + obunasi boshlangan + qolgan to'lovi yakunlangan ilovada
   if (app.status !== "published" || !app.subscription?.startDate || !paymentDone) return null;
@@ -75,6 +77,7 @@ export function RenewalSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          walletUzs={walletUzs}
           amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
@@ -96,12 +99,14 @@ export function PushCertSection({
   cardNumber,
   cardHolder,
   paymentDone,
+  walletUzs = 0,
 }: {
   app: AppView;
   req: RequestView | null;
   cardNumber: string;
   cardHolder: string;
   paymentDone: boolean;
+  walletUzs?: number;
 }) {
   if (platformOf(app.serviceType) !== "ios" || !isTerminalSuccess(app.status) || !paymentDone) return null;
 
@@ -148,6 +153,7 @@ export function PushCertSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          walletUzs={walletUzs}
           amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
@@ -250,12 +256,14 @@ export function TransferSection({
   cardNumber,
   cardHolder,
   paymentDone,
+  walletUzs = 0,
 }: {
   app: AppView;
   req: RequestView | null;
   cardNumber: string;
   cardHolder: string;
   paymentDone: boolean;
+  walletUzs?: number;
 }) {
   if (app.status !== "published") return null;
   // Qolgan to'lov yakunlanmaguncha transfer so'rovi ochilmaydi
@@ -316,6 +324,7 @@ export function TransferSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          walletUzs={walletUzs}
           amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
@@ -331,12 +340,14 @@ export function UpdateSection({
   cardNumber,
   cardHolder,
   paymentDone,
+  walletUzs = 0,
 }: {
   app: AppView;
   req: RequestView | null;
   cardNumber: string;
   cardHolder: string;
   paymentDone: boolean;
+  walletUzs?: number;
 }) {
   if (app.status !== "published" || !paymentDone) return null;
 
@@ -384,6 +395,7 @@ export function UpdateSection({
           uzs={req.amountUzs}
           cardNumber={cardNumber}
           cardHolder={cardHolder}
+          walletUzs={walletUzs}
           amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
           receiptSent={req.receiptSent}
           askTaxPhone
