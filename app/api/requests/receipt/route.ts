@@ -39,6 +39,10 @@ export async function POST(req: NextRequest) {
   if (!snap.exists) return NextResponse.json({ success: false, error: "So'rov topilmadi" }, { status: 404 });
   const r = snap.data()!;
   if (r.ownerUid !== user.uid) return NextResponse.json({ success: false, error: "Ruxsat yo'q" }, { status: 403 });
+  // Rad etilgan / bekor qilingan so'rovga to'lov qabul qilinmaydi.
+  if (isRequestTerminalError(r.status as RequestStatus)) {
+    return NextResponse.json({ success: false, error: "So'rov rad etilgan yoki bekor qilingan" }, { status: 400 });
+  }
   // To'lov qabul qilinishi payment obyektidagi qism holatiga qarab (statusdan mustaqil).
   const fullInst = r.payment?.installments?.full;
   if (fullInst) {

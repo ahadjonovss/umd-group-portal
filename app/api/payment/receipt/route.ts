@@ -54,6 +54,10 @@ export async function POST(req: NextRequest) {
   }
 
   const serviceType = app.serviceType as ServiceType;
+  // Rad etilgan / bekor qilingan arizaga to'lov qabul qilinmaydi.
+  if (isTerminalError(app.status)) {
+    return NextResponse.json({ success: false, error: "Ariza rad etilgan yoki bekor qilingan" }, { status: 400 });
+  }
   // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
   const finalStage = serviceType === "account" ? "completed" : "published";
 

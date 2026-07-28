@@ -209,7 +209,8 @@ export default async function AppDetailPage({
       state: (finInst?.state as PayState) ?? (app.finalPaid ? "confirmed" : app.finalReceiptSent ? "submitted" : "due"),
     });
   }
-  const hasOpenInvoice = invoiceList.some((i) => i.state !== "confirmed");
+  // Rad etilgan / bekor qilingan arizada to'lov ko'rsatilmaydi
+  const hasOpenInvoice = !isTerminalError(app.status) && invoiceList.some((i) => i.state !== "confirmed");
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;

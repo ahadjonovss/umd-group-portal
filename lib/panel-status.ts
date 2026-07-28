@@ -26,6 +26,7 @@ function isShown(i: Installment | null): boolean {
 // (statusdan mustaqil). Bo'lmasa (eski, migratsiya qilinmagan) — eski mantiqqa qaytadi.
 export function appAdvanceStage(app: AppView, pricing?: Pricing): boolean {
   if (!pricing) return false;
+  if (isTerminalError(app.status)) return false; // rad etilgan / bekor qilingan
   if (Math.round(advanceUsdApp(app, pricing)) <= 0) return false;
   const adv = getInstallment(app.payment, "advance");
   if (adv) return isShown(adv);
@@ -37,6 +38,7 @@ export function appAdvanceStage(app: AppView, pricing?: Pricing): boolean {
 // YAKUNIY to'lov ko'rsatiladimi (mustaqil — avansdan qat'i nazar, invoice modeli).
 export function showFinalPayment(app: AppView, pricing?: Pricing): boolean {
   if (!pricing) return false;
+  if (isTerminalError(app.status)) return false; // rad etilgan / bekor qilingan
   if (Math.round(finalUsdApp(app, pricing)) <= 0) return false;
   const fin = getInstallment(app.payment, "final");
   if (fin) return isShown(fin);
@@ -48,11 +50,10 @@ export function showFinalPayment(app: AppView, pricing?: Pricing): boolean {
 // So'rov to'lovi ko'rsatiladimi.
 export function requestAwaitingPayment(req?: RequestView | null): boolean {
   if (!req) return false;
+  if (isRequestTerminalError(req.status) || req.status === "completed") return false;
   const full = getInstallment(req.payment, "full");
   if (full) return isShown(full);
-  // fallback
-  const active = !isRequestTerminalError(req.status) && req.status !== "completed";
-  if (!active) return false;
+  // fallback (migratsiya qilinmagan) — terminal/completed yuqorida chiqarib yuborilgan
   return !req.receiptSent || isRequestPreWork(req.status);
 }
 
