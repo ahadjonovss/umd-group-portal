@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
   }
 
   const appId = String(formData.get("appId") || "");
-  const kind: PaymentKind = formData.get("kind") === "final" ? "final" : "advance";
+  const kindParam = String(formData.get("kind") || "");
+  const kind: PaymentKind = kindParam === "final" ? "final" : kindParam === "full" ? "full" : "advance";
   const taxPhone = String(formData.get("taxPhone") || "").trim();
   if (!appId) {
     return NextResponse.json({ success: false, error: "appId yo'q" }, { status: 400 });
@@ -57,27 +58,33 @@ export async function POST(req: NextRequest) {
   const finalStage = serviceType === "account" ? "completed" : "published";
 
   // To'lov qabul qilinishi payment obyektidagi qism holatiga qarab (statusdan mustaqil).
-  const instKey = kind === "final" ? "final" : "advance";
-  const installment = app.payment?.installments?.[instKey];
-  if (installment) {
-    if (!isPayable(installment)) {
-      const msg = kind === "final" ? "Yakuniy to'lov talab qilinmayapti" : "To'lov kutilmayapti";
-      return NextResponse.json({ success: false, error: msg }, { status: 400 });
-    }
-    // Yakuniy to'lov faqat avans tasdiqlangach
-    if (kind === "final") {
-      const adv = app.payment?.installments?.advance;
-      if (adv && adv.state !== "confirmed") {
-        return NextResponse.json({ success: false, error: "Avval avans to'lovini yakunlang" }, { status: 400 });
+  const insts = app.payment?.installments;
+  if (kind === "full") {
+    // To'liq to'lov: avans va yakuniy qismlarning ikkalasi ham to'lanmagan bo'lishi kerak
+    const adv = insts?.advance;
+    const fin = insts?.final;
+    if (adv || fin) {
+      if (!isPayable(adv) || !isPayable(fin)) {
+        return NextResponse.json({ success: false, error: "To'liq to'lov mumkin emas (qism allaqachon to'langan)" }, { status: 400 });
       }
-    }
-  } else {
-    // fallback (migratsiya qilinmagan eski hujjat)
-    if (kind === "advance" && (isTerminalError(app.status) || isTerminalSuccess(app.status))) {
+    } else if (isTerminalError(app.status) || isTerminalSuccess(app.status)) {
       return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
     }
-    if (kind === "final" && (app.status !== finalStage || app.finalPaid)) {
-      return NextResponse.json({ success: false, error: "Yakuniy to'lov talab qilinmayapti" }, { status: 400 });
+  } else {
+    const installment = insts?.[kind === "final" ? "final" : "advance"];
+    if (installment) {
+      if (!isPayable(installment)) {
+        const msg = kind === "final" ? "Yakuniy to'lov talab qilinmayapti" : "To'lov kutilmayapti";
+        return NextResponse.json({ success: false, error: msg }, { status: 400 });
+      }
+    } else {
+      // fallback (migratsiya qilinmagan eski hujjat)
+      if (kind === "advance" && (isTerminalError(app.status) || isTerminalSuccess(app.status))) {
+        return NextResponse.json({ success: false, error: "To'lov kutilmayapti" }, { status: 400 });
+      }
+      if (kind === "final" && (app.status !== finalStage || app.finalPaid)) {
+        return NextResponse.json({ success: false, error: "Yakuniy to'lov talab qilinmayapti" }, { status: 400 });
+      }
     }
   }
 
@@ -94,14 +101,17 @@ export async function POST(req: NextRequest) {
   const discount = category ? await getActiveDiscount(user.uid, category, appId) : null;
   const pct = discount?.percent ?? 0;
 
-  const baseAmount = kind === "final" ? finalUsdApp(pricedApp, pricing) : advanceUsdApp(pricedApp, pricing);
+  const baseAmount =
+    kind === "final" ? finalUsdApp(pricedApp, pricing)
+    : kind === "full" ? serviceBaseUsd(pricedApp, pricing)
+    : advanceUsdApp(pricedApp, pricing);
   const usd = Math.round(applyDiscount(baseAmount, pct));
   const uzs = rate ? Math.round(usd * rate) : null;
   const totalUsd = Math.round(applyDiscount(serviceBaseUsd(pricedApp, pricing), pct));
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
   const ownerName = app.contact?.fullName || user.name || user.email || "Mijoz";
   const ownerPhone = app.contact?.phone || "-";
-  const kindLabel = kind === "final" ? "Yakuniy to'lov" : "Avans";
+  const kindLabel = kind === "final" ? "Yakuniy to'lov" : kind === "full" ? "To'liq to'lov" : "Avans";
 
   // Chegirmani shu ilovaga biriktiramiz (bir martalik bo'lishi uchun)
   if (discount) {
@@ -123,7 +133,7 @@ export async function POST(req: NextRequest) {
       rate,
       amountUzs: uzs,
       totalUsd,
-      advancePercent: advancePercentForApp(pricedApp, pricing),
+      advancePercent: kind === "full" ? 100 : advancePercentForApp(pricedApp, pricing),
       taxPhone: taxPhone || null,
       discountId: discount?.id ?? null,
       discountPercent: pct,
@@ -158,6 +168,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (kind === "final") await markFinalReceiptSent(appId);
+    else if (kind === "full") { await markReceiptSent(appId); await markFinalReceiptSent(appId); }
     else await markReceiptSent(appId);
     if (taxPhone) await setAppTaxPhone(appId, taxPhone);
   } catch (e) {

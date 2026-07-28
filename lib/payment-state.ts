@@ -28,11 +28,12 @@ export function appInstallmentKeys(serviceType: ServiceType): InstallmentKey[] {
   return ["advance"]; // google-transfer / apple-transfer — 100% avans (yakuniy yo'q)
 }
 
-// Yangi ilova uchun boshlang'ich payment obyekti (avans "due", yakuniy "locked").
+// Yangi ilova uchun boshlang'ich payment obyekti — barcha qismlar "due"
+// (mijoz avansni ham, yakuniyni ham istalgan payt to'lay oladi).
 export function newAppPayment(serviceType: ServiceType): PaymentState {
   const keys = appInstallmentKeys(serviceType);
   const installments: Partial<Record<InstallmentKey, Installment>> = {};
-  for (const k of keys) installments[k] = inst(k === "advance" ? "due" : "locked");
+  for (const k of keys) installments[k] = inst("due");
   return { installments };
 }
 

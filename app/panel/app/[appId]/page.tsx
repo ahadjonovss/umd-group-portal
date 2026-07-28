@@ -18,7 +18,8 @@ import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { appAdvanceStage, showFinalPayment, appPaymentDone } from "@/lib/panel-status";
-import { getInstallment, isPayable } from "@/lib/payment-state";
+import { getInstallment, isPayable, appInstallmentKeys, type PayState } from "@/lib/payment-state";
+import { InvoicePayment } from "@/components/panel/InvoicePayment";
 import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate, platformOf } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
@@ -91,6 +92,7 @@ const FIELD_LABELS: Record<string, string> = {
 const PAYMENT_KIND_LABEL: Record<string, string> = {
   advance: "Avans (oldindan)",
   final: "Qolgan to'lov",
+  full: "To'liq to'lov",
   transfer: "Transfer to'lovi",
   update: "Update to'lovi",
   renewal: "Obuna uzaytirish",
@@ -185,6 +187,29 @@ export default async function AppDetailPage({
   const paymentNeeded =
     (showAdvance && (advInst ? isPayable(advInst) : !app.receiptSent)) ||
     (showFinal && (finInst ? isPayable(finInst) : !app.finalReceiptSent));
+
+  // Hisob-fakturalar (invoice) ro'yxati
+  const hasFinal = appInstallmentKeys(app.serviceType).includes("final");
+  const invoiceList: { key: "advance" | "final"; label: string; usd: number; uzs: number | null; state: PayState }[] = [];
+  if (advanceAmount > 0) {
+    invoiceList.push({
+      key: "advance",
+      label: hasFinal ? "Avans" : "To'lov",
+      usd: advanceAmount,
+      uzs: advanceUzs,
+      state: (advInst?.state as PayState) ?? (app.receiptSent ? "submitted" : "due"),
+    });
+  }
+  if (hasFinal && finalAmount > 0) {
+    invoiceList.push({
+      key: "final",
+      label: "Yakuniy",
+      usd: finalAmount,
+      uzs: finalUzs,
+      state: (finInst?.state as PayState) ?? (app.finalPaid ? "confirmed" : app.finalReceiptSent ? "submitted" : "due"),
+    });
+  }
+  const hasOpenInvoice = invoiceList.some((i) => i.state !== "confirmed");
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;
@@ -423,50 +448,17 @@ export default async function AppDetailPage({
           }
           payment={
             <>
-              {showAdvance || showFinal ? (
-                <SectionCard title="To'lov">
-                  <div className="flex flex-col gap-4">
-                    {showAdvance && (
-                <PaymentView
-                  idPayload={{ appId: app.id }}
-                  usd={advanceAmount}
-                  rate={rate}
-                  uzs={advanceUzs}
-                  cardNumber={cardNumber}
-                  cardHolder={cardHolder}
-                  receiptSent={app.receiptSent}
-                  askTaxPhone={finalAmount === 0}
-                  discountPercent={discPct}
-                  walletUzs={walletUzs}
-                />
-              )}
-
-              {showFinal && (
-                <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 p-3.5 flex flex-col gap-2">
-                  <p className="text-sm font-semibold text-amber-800">Qolgan to&apos;lovni amalga oshiring</p>
-                  <p className="text-xs text-amber-700 leading-snug">
-                    {app.serviceType === "account"
-                      ? "Akkaunt tayyor. Xizmatni yakunlash uchun qolgan to'lovni amalga oshiring."
-                      : "⚠️ To'lovning qolgan qismini o'z vaqtida to'lang. Aks holda ilova store'dan olib tashlanishi mumkin."}
-                  </p>
-                  <PaymentView
-                    endpoint="/api/payment/receipt"
-                    idPayload={{ appId: app.id, kind: "final" }}
-                    amountLabel="Qolgan to'lov"
-                    usd={finalAmount}
+              {hasOpenInvoice ? (
+                <SectionCard title="Hisob-fakturalar">
+                  <InvoicePayment
+                    appId={app.id}
+                    invoices={invoiceList}
                     rate={rate}
-                    uzs={finalUzs}
                     cardNumber={cardNumber}
                     cardHolder={cardHolder}
-                    receiptSent={app.finalReceiptSent}
-                    askTaxPhone
-                    discountPercent={discPct}
                     walletUzs={walletUzs}
+                    discountPercent={discPct}
                   />
-                </div>
-              )}
-
-                  </div>
                 </SectionCard>
               ) : payments.length === 0 ? (
                 <p className="text-sm text-slate-400 py-6 text-center">Hozircha to&apos;lov amali yo&apos;q.</p>

@@ -34,12 +34,10 @@ export function appAdvanceStage(app: AppView, pricing?: Pricing): boolean {
   return !app.receiptSent || isPreWork(app.serviceType, app.status);
 }
 
-// YAKUNIY to'lov ko'rsatiladimi. Avans tasdiqlanmaguncha yakuniy ko'rsatilmaydi.
+// YAKUNIY to'lov ko'rsatiladimi (mustaqil — avansdan qat'i nazar, invoice modeli).
 export function showFinalPayment(app: AppView, pricing?: Pricing): boolean {
   if (!pricing) return false;
   if (Math.round(finalUsdApp(app, pricing)) <= 0) return false;
-  const adv = getInstallment(app.payment, "advance");
-  if (adv && adv.state !== "confirmed") return false; // avval avans tasdiqlanishi kerak
   const fin = getInstallment(app.payment, "final");
   if (fin) return isShown(fin);
   // fallback

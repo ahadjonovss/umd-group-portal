@@ -17,12 +17,13 @@ async function setInstallment(
   fields: Record<string, unknown>
 ): Promise<void> {
   try {
-    const key = kindToInstallment(kind);
     const col = requestId ? "requests" : "apps";
     const id = requestId ?? appId;
     if (!id) return;
+    // Ilovada "full" (to'liq) to'lov — avans va yakuniy qismlarini birga belgilaydi.
+    const keys = !requestId && kind === "full" ? ["advance", "final"] : [kindToInstallment(kind)];
     const update: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(fields)) update[`payment.installments.${key}.${k}`] = v;
+    for (const key of keys) for (const [k, v] of Object.entries(fields)) update[`payment.installments.${key}.${k}`] = v;
     await adminDb.collection(col).doc(id).update(update);
   } catch (e) {
     console.error("[setInstallment] xato:", e);
@@ -31,11 +32,12 @@ async function setInstallment(
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final" | "transfer" | "update" | "renewal" | "push_certificate";
+export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate";
 
 const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   advance: "Avans",
   final: "Yakuniy",
+  full: "To'liq to'lov",
   transfer: "Transfer",
   update: "Update",
   renewal: "Obuna uzaytirish",
@@ -216,28 +218,30 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
   if (p.status === "confirmed") return;
 
   const requestId = p.requestId as string | null | undefined;
+  const advanceStatusStep = async (appId: string, serviceType: ServiceType) => {
+    const appSnap = await adminDb.collection("apps").doc(appId).get();
+    if (!appSnap.exists) return;
+    const st = appSnap.get("status") as AppStatus;
+    const flow = getStatusFlow(serviceType);
+    const idx = flow.indexOf(st);
+    const work = workStartStatus(serviceType);
+    const workIdx = flow.indexOf(work);
+    if (idx >= 0 && workIdx >= 0 && idx < workIdx) await setAppStatus(appId, work);
+  };
+
   if (requestId) {
     // Request to'lovi: so'rovni keyingi bosqichga o'tkazadi
     await confirmRequestPayment(requestId);
   } else if (p.kind === "final") {
     // Yakuniy (qolgan) to'lov tasdiqlandi
     await setFinalPaid(p.appId as string);
+  } else if (p.kind === "full") {
+    // To'liq to'lov: avans + yakuniy birga — status ilgarilaydi va yakuniy to'landi
+    await advanceStatusStep(p.appId as string, p.serviceType as ServiceType);
+    await setFinalPaid(p.appId as string);
   } else {
     // Ariza avans to'lovi: ilova statusini keyingi bosqichga
-    const appId = p.appId as string;
-    const serviceType = p.serviceType as ServiceType;
-    const appSnap = await adminDb.collection("apps").doc(appId).get();
-    if (appSnap.exists) {
-      const st = appSnap.get("status") as AppStatus;
-      const flow = getStatusFlow(serviceType);
-      const idx = flow.indexOf(st);
-      const work = workStartStatus(serviceType);
-      const workIdx = flow.indexOf(work);
-      // Avans to'lov-oldi bosqichda (submitted / review) tasdiqlanса — ish bosqichiga o'tkazamiz.
-      if (idx >= 0 && workIdx >= 0 && idx < workIdx) {
-        await setAppStatus(appId, work);
-      }
-    }
+    await advanceStatusStep(p.appId as string, p.serviceType as ServiceType);
   }
 
   // Hamyon: admin kiritgan haqiqiy summadan ortiqcha qismi hamyonga tushadi.
@@ -310,6 +314,8 @@ export async function rejectPayment(paymentId: string, actor?: Actor): Promise<v
     await adminDb.collection("requests").doc(requestId).update({ receiptSent: false });
   } else if (p.kind === "final") {
     await adminDb.collection("apps").doc(p.appId as string).update({ finalReceiptSent: false });
+  } else if (p.kind === "full") {
+    await adminDb.collection("apps").doc(p.appId as string).update({ receiptSent: false, finalReceiptSent: false });
   } else {
     await adminDb.collection("apps").doc(p.appId as string).update({ receiptSent: false });
   }

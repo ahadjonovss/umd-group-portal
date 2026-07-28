@@ -10,6 +10,7 @@ import type { ServiceType } from "@/types";
 const KIND_LABEL: Record<PaymentView["kind"], string> = {
   advance: "Avans",
   final: "Yakuniy",
+  full: "To'liq to'lov",
   transfer: "Transfer",
   update: "Update",
   renewal: "Obuna uzaytirish",
@@ -19,6 +20,7 @@ const KIND_LABEL: Record<PaymentView["kind"], string> = {
 const KIND_COLOR: Record<PaymentView["kind"], string> = {
   advance: "bg-amber-400",
   final: "bg-emerald-500",
+  full: "bg-indigo-500",
   transfer: "bg-violet-500",
   update: "bg-blue-500",
   renewal: "bg-teal-500",
