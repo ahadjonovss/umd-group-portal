@@ -66,6 +66,30 @@ export function fullyPaid(p: PaymentState | null | undefined): boolean {
 }
 
 // Umumiy holat.
+// ── Update paketi ──────────────────────────────
+export interface UpdatePackage {
+  active: boolean;
+  startDate: string | null;
+  endDate: string | null;
+  quota: number;
+  used: number;
+  priceUsd: number;
+  reminded?: boolean;
+}
+
+// Paket hozir amaldami (faol + kvota bor + muddati o'tmagan).
+export function pkgActive(pkg: UpdatePackage | null | undefined): boolean {
+  if (!pkg || !pkg.active) return false;
+  if (pkg.used >= pkg.quota) return false;
+  if (pkg.endDate && new Date(pkg.endDate).getTime() < Date.now()) return false;
+  return true;
+}
+
+export function pkgDaysLeft(pkg: UpdatePackage | null | undefined): number {
+  if (!pkg || !pkg.endDate) return 0;
+  return Math.ceil((new Date(pkg.endDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+}
+
 export function paymentStatus(p: PaymentState | null | undefined): "unpaid" | "partial" | "paid" {
   if (!p || !p.installments) return "unpaid";
   const vals = Object.values(p.installments).filter(Boolean) as Installment[];

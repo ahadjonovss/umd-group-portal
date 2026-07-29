@@ -9,6 +9,10 @@ export interface Pricing {
   appleTransfer: number; // App Store transfer
   updateAndroid: number; // Android update (har biri)
   updateIos: number; // iOS update (har biri)
+  updatePackageAndroid: number; // Android oylik update paketi narxi
+  updatePackageIos: number; // iOS oylik update paketi narxi
+  updatePackageDays: number; // paket muddati (kun)
+  updatePackageQuota: number; // paketdagi update soni
   pushCertificate: number; // Apple push notification sertifikati
   accountGooglePersonal: number; // Google Play — shaxsiy akkaunt ochish
   accountGoogleCorporate: number; // Google Play — korporativ akkaunt ochish
@@ -29,6 +33,10 @@ export const DEFAULT_PRICING: Pricing = {
   appleTransfer: 5,
   updateAndroid: 3,
   updateIos: 5,
+  updatePackageAndroid: 10,
+  updatePackageIos: 15,
+  updatePackageDays: 30,
+  updatePackageQuota: 5,
   pushCertificate: 5,
   accountGooglePersonal: 50,
   accountGoogleCorporate: 90,
@@ -57,6 +65,10 @@ function normalize(x: Partial<Pricing>): Pricing {
     appleTransfer: num(x.appleTransfer, DEFAULT_PRICING.appleTransfer),
     updateAndroid: num(x.updateAndroid, DEFAULT_PRICING.updateAndroid),
     updateIos: num(x.updateIos, DEFAULT_PRICING.updateIos),
+    updatePackageAndroid: num(x.updatePackageAndroid, DEFAULT_PRICING.updatePackageAndroid),
+    updatePackageIos: num(x.updatePackageIos, DEFAULT_PRICING.updatePackageIos),
+    updatePackageDays: num(x.updatePackageDays, DEFAULT_PRICING.updatePackageDays),
+    updatePackageQuota: num(x.updatePackageQuota, DEFAULT_PRICING.updatePackageQuota),
     pushCertificate: num(x.pushCertificate, DEFAULT_PRICING.pushCertificate),
     accountGooglePersonal: num(x.accountGooglePersonal, DEFAULT_PRICING.accountGooglePersonal),
     accountGoogleCorporate: num(x.accountGoogleCorporate, DEFAULT_PRICING.accountGoogleCorporate),

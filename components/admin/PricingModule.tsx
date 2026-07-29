@@ -16,14 +16,15 @@ function NumField({
   label: string;
   value: number;
   onChange: (v: number) => void;
-  unit: "$" | "%";
+  unit: string;
   max?: number;
 }) {
+  const isDollar = unit === "$";
   return (
     <div className="flex items-center justify-between gap-3 py-2.5 border-b border-slate-100 last:border-0">
       <span className="text-sm text-slate-700">{label}</span>
       <div className="relative">
-        {unit === "$" && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>}
+        {isDollar && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>}
         <input
           type="number"
           min={0}
@@ -32,10 +33,10 @@ function NumField({
           value={Number.isFinite(value) ? value : 0}
           onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           className={`w-28 h-9 rounded-lg border border-slate-200 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 ${
-            unit === "$" ? "pl-6 pr-2" : "pl-2 pr-7"
+            isDollar ? "pl-6 pr-2" : "pl-2 pr-9"
           }`}
         />
-        {unit === "%" && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>}
+        {!isDollar && <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">{unit}</span>}
       </div>
     </div>
   );
@@ -103,6 +104,11 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="iOS update (har biri)" value={p.updateIos} onChange={(v) => set("updateIos", v)} />
             <NumField unit="$" label="Push sertifikat (Apple)" value={p.pushCertificate} onChange={(v) => set("pushCertificate", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.updateAdvance} onChange={(v) => set("updateAdvance", v)} />
+            <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-500">Update paketi (oylik)</div>
+            <NumField unit="$" label="Update paketi — Android" value={p.updatePackageAndroid} onChange={(v) => set("updatePackageAndroid", v)} />
+            <NumField unit="$" label="Update paketi — iOS" value={p.updatePackageIos} onChange={(v) => set("updatePackageIos", v)} />
+            <NumField unit="kun" label="Paket muddati" value={p.updatePackageDays} onChange={(v) => set("updatePackageDays", v)} />
+            <NumField unit="ta" label="Paketdagi update soni" value={p.updatePackageQuota} onChange={(v) => set("updatePackageQuota", v)} />
           </>
         )}
         {sub === "account" && (

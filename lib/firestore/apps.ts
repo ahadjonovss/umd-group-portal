@@ -224,6 +224,16 @@ export interface AppView {
     renewedCount: number;
   };
   payment: PaymentState | null;
+  // Oylik update paketi (obuna) — kvotali
+  updatePackage: null | {
+    active: boolean;
+    startDate: string | null;
+    endDate: string | null;
+    quota: number;
+    used: number;
+    priceUsd: number;
+    reminded: boolean; // tugash eslatmasi yuborilganmi
+  };
 }
 
 function tsToIso(v: unknown): string | null {
@@ -270,6 +280,17 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
         }
       : null,
     payment: (x.payment as PaymentState) ?? null,
+    updatePackage: x.updatePackage
+      ? {
+          active: Boolean(x.updatePackage.active),
+          startDate: tsToIso(x.updatePackage.startDate),
+          endDate: tsToIso(x.updatePackage.endDate),
+          quota: x.updatePackage.quota ?? 0,
+          used: x.updatePackage.used ?? 0,
+          priceUsd: x.updatePackage.priceUsd ?? 0,
+          reminded: Boolean(x.updatePackage.reminded),
+        }
+      : null,
   };
 }
 
@@ -425,5 +446,46 @@ export async function renewSubscription(
       `Obuna 9 oyga uzaytirildi (${fromLabel}) — yangi tugash: ${newEnd.toISOString().slice(0, 10)}`,
       actor
     );
+  }
+}
+
+// Update paketini faollashtirish (to'lov tasdiqlangach). Yangi paket — kvota 0 dan.
+export async function activateUpdatePackage(
+  appId: string,
+  opts: { days: number; quota: number; priceUsd: number; actor?: Actor; startedAt?: Date }
+): Promise<void> {
+  const { days, quota, priceUsd, actor, startedAt = new Date() } = opts;
+  const end = new Date(startedAt.getTime() + days * 24 * 60 * 60 * 1000);
+  await adminDb.collection(APPS).doc(appId).update({
+    updatePackage: {
+      active: true,
+      startDate: Timestamp.fromDate(startedAt),
+      endDate: Timestamp.fromDate(end),
+      quota,
+      used: 0,
+      priceUsd,
+      reminded: false,
+    },
+  });
+  if (actor) {
+    await logActivity(
+      appId,
+      "update_package_activated",
+      `Update paketi faollashtirildi (${quota} ta update · ${days} kun) — tugash: ${end.toISOString().slice(0, 10)}`,
+      actor
+    );
+  }
+}
+
+// Update paketidan bitta update ishlatilganda (so'rov yakunlanganda) chaqiriladi.
+export async function consumeUpdatePackage(appId: string, actor?: Actor): Promise<void> {
+  const ref = adminDb.collection(APPS).doc(appId);
+  const snap = await ref.get();
+  const pkg = snap.get("updatePackage") as { used?: number; quota?: number } | null;
+  if (!pkg) return;
+  const used = (pkg.used ?? 0) + 1;
+  await ref.update({ "updatePackage.used": used });
+  if (actor) {
+    await logActivity(appId, "update_package_used", `Update paketidan foydalanildi (${used}/${pkg.quota ?? 0})`, actor);
   }
 }

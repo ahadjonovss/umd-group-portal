@@ -74,6 +74,7 @@ export function appNeedsPayment(
   renewalReq?: RequestView | null,
   pushReq?: RequestView | null
 ): boolean {
+  if (isTerminalError(app.status)) return false; // rad etilgan / bekor qilingan — to'lov kerak emas
   const adv = getInstallment(app.payment, "advance");
   const fin = getInstallment(app.payment, "final");
   const advanceAmt = pricing ? Math.round(advanceUsdApp(app, pricing)) : 0;

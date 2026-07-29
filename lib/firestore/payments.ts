@@ -1,7 +1,7 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/lib/firebase/admin";
 import { getStatusFlow, workStartStatus, type AppStatus } from "@/lib/app-status";
-import { setAppStatus, setFinalPaid } from "@/lib/firestore/apps";
+import { setAppStatus, setFinalPaid, activateUpdatePackage } from "@/lib/firestore/apps";
 import { confirmRequestPayment } from "@/lib/firestore/requests";
 import { markDiscountUsed } from "@/lib/firestore/discounts";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
@@ -17,6 +17,7 @@ async function setInstallment(
   fields: Record<string, unknown>
 ): Promise<void> {
   try {
+    if (kind === "update_package") return; // paket sotib olish — installmentga tegmaydi
     const col = requestId ? "requests" : "apps";
     const id = requestId ?? appId;
     if (!id) return;
@@ -32,7 +33,7 @@ async function setInstallment(
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate";
+export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate" | "update_package";
 
 const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   advance: "Avans",
@@ -42,6 +43,7 @@ const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   update: "Update",
   renewal: "Obuna uzaytirish",
   push_certificate: "Push sertifikat",
+  update_package: "Update paketi",
 };
 
 export interface CreatePaymentInput {
@@ -61,6 +63,8 @@ export interface CreatePaymentInput {
   taxPhone?: string | null; // soliq cheki uchun telefon (yakuniy/to'liq to'lovda)
   discountId?: string | null; // qo'llangan chegirma id
   discountPercent?: number; // qo'llangan chegirma foizi
+  packageDays?: number; // update paketi: muddat (kun)
+  packageQuota?: number; // update paketi: update soni
 }
 
 export async function createPayment(input: CreatePaymentInput): Promise<string> {
@@ -239,6 +243,14 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     // To'liq to'lov: avans + yakuniy birga — status ilgarilaydi va yakuniy to'landi
     await advanceStatusStep(p.appId as string, p.serviceType as ServiceType);
     await setFinalPaid(p.appId as string);
+  } else if (p.kind === "update_package") {
+    // Update paketi sotib olindi — faollashtiramiz
+    await activateUpdatePackage(p.appId as string, {
+      days: (p.packageDays as number) ?? 30,
+      quota: (p.packageQuota as number) ?? 5,
+      priceUsd: (p.amountUsd as number) ?? 0,
+      actor,
+    });
   } else {
     // Ariza avans to'lovi: ilova statusini keyingi bosqichga
     await advanceStatusStep(p.appId as string, p.serviceType as ServiceType);

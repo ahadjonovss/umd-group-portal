@@ -10,6 +10,7 @@ import type { RequestView } from "@/lib/firestore/requests";
 import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelReviewLauncher";
 import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { DiscountAlert } from "@/components/panel/DiscountAlert";
+import { PackageExpiryAlert } from "@/components/panel/PackageExpiryAlert";
 import { getUserActiveDiscounts } from "@/lib/firestore/discounts";
 import { getUserWalletUzs } from "@/lib/firestore/users";
 import { WalletCard } from "@/components/panel/WalletCard";
@@ -119,6 +120,7 @@ export default async function PanelPage() {
         <WalletCard balanceUzs={walletUzs} />
 
         <DiscountAlert discounts={discounts} />
+        <PackageExpiryAlert apps={apps} />
         <PublishedReviewAlert apps={publishedUnreviewed} />
 
         {apps.length === 0 ? (

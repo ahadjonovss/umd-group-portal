@@ -7,6 +7,7 @@ import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import type { AppView } from "@/lib/firestore/apps";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { ActivityView } from "@/lib/firestore/activity";
+import { pkgActive, pkgDaysLeft } from "@/lib/payment-state";
 
 const FIELD_LABELS: Record<string, string> = {
   fullName: "To'liq ism",
@@ -107,6 +108,25 @@ export function AdminAppDetail({
         <div className="flex flex-col gap-4">
           {/* Boshqaruv (status, chiqarish, obuna) */}
           <AdminAppRow app={app} />
+
+          {/* Update paketi holati */}
+          {app.updatePackage && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-semibold text-slate-900 text-sm">Update paketi</h3>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${
+                  pkgActive(app.updatePackage) ? "bg-cyan-50 text-cyan-700 ring-cyan-200" : "bg-slate-100 text-slate-500 ring-slate-200"
+                }`}>
+                  {pkgActive(app.updatePackage) ? `Faol · ${pkgDaysLeft(app.updatePackage)} kun` : "Nofaol / tugagan"}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center gap-4 text-sm text-slate-700">
+                <span>Ishlatilgan: <strong>{app.updatePackage.used} / {app.updatePackage.quota}</strong></span>
+                <span className="text-slate-400">·</span>
+                <span>Narx: <strong>${app.updatePackage.priceUsd}</strong></span>
+              </div>
+            </div>
+          )}
 
           {/* Yuborilgan ma'lumotlar */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5">

@@ -39,6 +39,11 @@ export function pushCertUsd(p: Pricing): number {
   return p.pushCertificate;
 }
 
+// Oylik update paketi narxi ($). Play Market -> Android, App Store -> iOS.
+export function updatePackageUsd(serviceType: ServiceType, p: Pricing): number {
+  return serviceType === "app-store" || serviceType === "apple-transfer" ? p.updatePackageIos : p.updatePackageAndroid;
+}
+
 // Obunani uzaytirish — chiqarilgan (store'ga chiqqan paytdagi) narxning 50%i.
 export const RENEWAL_FACTOR = 0.5;
 

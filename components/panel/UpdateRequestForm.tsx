@@ -15,6 +15,7 @@ export function UpdateRequestForm({
   uzs,
   rate,
   discountPercent = 0,
+  freeByPackage = false,
 }: {
   appId: string;
   serviceType: ServiceType;
@@ -23,6 +24,7 @@ export function UpdateRequestForm({
   uzs: number | null;
   rate: number | null;
   discountPercent?: number;
+  freeByPackage?: boolean;
 }) {
   const router = useRouter();
   const isAndroid = serviceType !== "app-store";
@@ -87,18 +89,22 @@ export function UpdateRequestForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-5">
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <p className="text-sm font-semibold text-blue-800">{appName} — Update chiqarish</p>
-        <p className="text-sm font-bold text-slate-900 mt-2">
-          Narx: ${usd}
-          {uzs ? (
-            <span className="font-normal text-slate-500">
-              {" "}
-              (~{uzs.toLocaleString("en-US")} so&apos;m{rate ? `, 1$=${rate.toLocaleString("en-US")}` : ""})
-            </span>
-          ) : null}
-        </p>
-        {discountPercent > 0 && (
+      <div className={`${freeByPackage ? "bg-cyan-50 border-cyan-200" : "bg-blue-50 border-blue-200"} border rounded-xl p-4`}>
+        <p className={`text-sm font-semibold ${freeByPackage ? "text-cyan-800" : "text-blue-800"}`}>{appName} — Update chiqarish</p>
+        {freeByPackage ? (
+          <p className="text-sm font-bold text-cyan-800 mt-2">🎁 Update paketi ichida — bepul</p>
+        ) : (
+          <p className="text-sm font-bold text-slate-900 mt-2">
+            Narx: ${usd}
+            {uzs ? (
+              <span className="font-normal text-slate-500">
+                {" "}
+                (~{uzs.toLocaleString("en-US")} so&apos;m{rate ? `, 1$=${rate.toLocaleString("en-US")}` : ""})
+              </span>
+            ) : null}
+          </p>
+        )}
+        {!freeByPackage && discountPercent > 0 && (
           <p className="text-xs font-semibold text-emerald-600 mt-1">🎉 Chegirma qo&apos;llandi: −{discountPercent}%</p>
         )}
       </div>

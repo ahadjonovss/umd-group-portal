@@ -9,7 +9,7 @@ import { getAppPayments } from "@/lib/firestore/payments";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
+import { advanceUsdApp, finalUsdApp, updatePackageUsd } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { getAppReview } from "@/lib/firestore/reviews";
 import { getAppActivity } from "@/lib/firestore/activity";
@@ -31,6 +31,7 @@ import {
   SubscriptionProgress,
   TransferSection,
   UpdateSection,
+  UpdatePackageSection,
   RenewalSection,
   PushCertSection,
   ClockIcon,
@@ -97,6 +98,7 @@ const PAYMENT_KIND_LABEL: Record<string, string> = {
   update: "Update to'lovi",
   renewal: "Obuna uzaytirish",
   push_certificate: "Push sertifikat",
+  update_package: "Update paketi",
 };
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -211,6 +213,11 @@ export default async function AppDetailPage({
   }
   // Rad etilgan / bekor qilingan arizada to'lov ko'rsatilmaydi
   const hasOpenInvoice = !isTerminalError(app.status) && invoiceList.some((i) => i.state !== "confirmed");
+
+  // Update paketi narxi/kvotasi + kutilayotgan xarid
+  const pkgPriceUsd = Math.round(updatePackageUsd(app.serviceType, pricing));
+  const pkgQuota = pricing.updatePackageQuota;
+  const pkgPurchasePending = payments.some((p) => p.kind === "update_package" && p.status === "pending");
 
   const transferReq = requests.find((r) => r.type === "transfer") ?? null;
   const updateReq = requests.find((r) => r.type === "update") ?? null;
@@ -328,6 +335,7 @@ export default async function AppDetailPage({
               {paymentDone && (app.status === "published" || (isTerminalSuccess(app.status) && platformOf(app.serviceType) === "ios")) && (
                 <SectionCard title="Amallar">
                   <div className="flex flex-col gap-4">
+                    <UpdatePackageSection app={app} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} priceUsd={pkgPriceUsd} quota={pkgQuota} rate={rate} purchasePending={pkgPurchasePending} />
                     <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
                     <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
                     <TransferSection app={app} req={transferReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />

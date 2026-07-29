@@ -6,6 +6,7 @@ import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUES
 import { STATUS_META, formatDate, platformOf } from "@/lib/labels";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { requestAwaitingPayment } from "@/lib/panel-status";
+import { pkgActive, pkgDaysLeft } from "@/lib/payment-state";
 
 export function ClockIcon() {
   return (
@@ -353,6 +354,8 @@ export function UpdateSection({
 
   const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
 
+  const freeByPackage = pkgActive(app.updatePackage);
+
   // Faol so'rov yo'q — (qayta) update so'rovi mumkin
   if (!req || !active) {
     return (
@@ -363,7 +366,7 @@ export function UpdateSection({
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
         </svg>
-        Update chiqarish
+        {freeByPackage ? "Update chiqarish (paketdan, bepul)" : "Update chiqarish"}
       </Link>
     );
   }
@@ -411,5 +414,106 @@ export function UpdateSection({
         </div>
       )}
     </div>
+  );
+}
+
+// Update paketi — 1 oylik / N ta update. Faol bo'lsa updatelar bepul.
+export function UpdatePackageSection({
+  app,
+  cardNumber,
+  cardHolder,
+  paymentDone,
+  walletUzs = 0,
+  priceUsd,
+  quota,
+  rate,
+  purchasePending = false,
+}: {
+  app: AppView;
+  cardNumber: string;
+  cardHolder: string;
+  paymentDone: boolean;
+  walletUzs?: number;
+  priceUsd: number;
+  quota: number;
+  rate: number | null;
+  purchasePending?: boolean;
+}) {
+  if (!paymentDone || isTerminalError(app.status)) return null;
+
+  const pkg = app.updatePackage;
+  const active = pkgActive(pkg);
+  const daysLeft = pkgDaysLeft(pkg);
+  const uzs = rate ? Math.round(priceUsd * rate) : null;
+
+  // Faol paket — holat kartasi (updatelar bepul)
+  if (active && pkg) {
+    const pct = pkg.quota > 0 ? Math.round((pkg.used / pkg.quota) * 100) : 0;
+    return (
+      <div className="rounded-xl bg-cyan-50 ring-1 ring-cyan-100 p-3.5 flex flex-col gap-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-cyan-800">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Update paketi faol
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white text-cyan-700 ring-1 ring-cyan-200">
+            <ClockIcon />
+            {daysLeft} kun qoldi
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs text-cyan-700/90">
+          <span>Ishlatilgan updatelar</span>
+          <span className="font-semibold">{pkg.used} / {pkg.quota}</span>
+        </div>
+        <div className="h-1.5 rounded-full bg-cyan-100 overflow-hidden">
+          <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="text-[11px] text-cyan-700/80 leading-snug">
+          Paket amal qilar ekan, updatelar bepul chiqariladi. Kvota yoki muddat tugasa — yangi paket olishingiz mumkin.
+        </p>
+      </div>
+    );
+  }
+
+  // Paket yo'q yoki tugagan — sotib olish
+  const expired = Boolean(pkg && pkg.active); // bor edi, lekin kvota/muddat tugadi
+  return (
+    <details className="rounded-xl bg-slate-50 ring-1 ring-slate-100 overflow-hidden">
+      <summary className="flex items-center justify-between gap-2 p-3.5 cursor-pointer list-none select-none">
+        <span className="flex flex-col">
+          <span className="text-sm font-semibold text-slate-700">
+            {expired ? "Update paketi tugadi — yangilash" : "Update paketi"}
+          </span>
+          <span className="text-xs text-slate-500">1 oy · {quota} ta update bepul</span>
+        </span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold">
+          ${priceUsd}
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </summary>
+      <div className="px-3.5 pb-3.5 border-t border-slate-100 pt-3 flex flex-col gap-3">
+        <p className="text-xs text-slate-500 leading-snug">
+          Paket faollashgach, <strong>1 oy</strong> davomida <strong>{quota} tagacha</strong> update
+          qo&apos;shimcha to&apos;lovsiz chiqariladi. Har bir alohida update {app.serviceType === "app-store" ? "$5" : "$3"} bo&apos;ladi.
+        </p>
+        <PaymentView
+          endpoint="/api/payment/receipt"
+          idPayload={{ appId: app.id, kind: "update_package" }}
+          usd={priceUsd}
+          rate={rate}
+          uzs={uzs}
+          cardNumber={cardNumber}
+          cardHolder={cardHolder}
+          walletUzs={walletUzs}
+          amountLabel="Update paketi"
+          receiptSent={purchasePending}
+          askTaxPhone
+        />
+      </div>
+    </details>
   );
 }

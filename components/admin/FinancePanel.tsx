@@ -15,6 +15,7 @@ const KIND_LABEL: Record<PaymentView["kind"], string> = {
   update: "Update",
   renewal: "Obuna uzaytirish",
   push_certificate: "Push sertifikat",
+  update_package: "Update paketi",
 };
 
 const KIND_COLOR: Record<PaymentView["kind"], string> = {
@@ -25,6 +26,7 @@ const KIND_COLOR: Record<PaymentView["kind"], string> = {
   update: "bg-blue-500",
   renewal: "bg-teal-500",
   push_certificate: "bg-sky-500",
+  update_package: "bg-cyan-500",
 };
 
 const SERVICE_COLOR: Record<ServiceType, string> = {

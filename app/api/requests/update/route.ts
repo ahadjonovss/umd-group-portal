@@ -53,9 +53,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Bu ilova uchun faol update so'rovi allaqachon bor" }, { status: 409 });
   }
 
-  const discount = await getActiveDiscount(user.uid, categoryForRequest("update"), appId);
+  // Faol update paketi bo'lsa — update bepul (paketdan hisoblanadi)
+  const pkg = app.updatePackage;
+  const usePackage = Boolean(
+    pkg && pkg.active && (pkg.used ?? 0) < (pkg.quota ?? 0) && pkg.endDate?.toMillis && pkg.endDate.toMillis() > Date.now()
+  );
+
+  const discount = usePackage ? null : await getActiveDiscount(user.uid, categoryForRequest("update"), appId);
   const pct = discount?.percent ?? 0;
-  const usd = Math.round(applyDiscount(updateUsd(serviceType, pricing), pct));
+  const usd = usePackage ? 0 : Math.round(applyDiscount(updateUsd(serviceType, pricing), pct));
   const uzs = rate ? Math.round(usd * rate) : null;
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
   const ownerName = app.contact?.fullName || user.name || user.email || "Mijoz";
@@ -79,6 +85,7 @@ export async function POST(req: NextRequest) {
       amountUzs: uzs,
       discountId: discount?.id ?? null,
       discountPercent: pct,
+      fromPackage: usePackage,
     });
   } catch (e) {
     console.error("[requests/update] create xato:", e);
@@ -91,7 +98,7 @@ export async function POST(req: NextRequest) {
       `📦 ${esc(SERVICE_LABELS[serviceType])}\n` +
       `📱 ${esc(appName)}\n` +
       `👤 ${esc(ownerName)}\n` +
-      `💵 ${esc(String(usd))}$\n` +
+      `💵 ${usePackage ? "Paket ichida \\(bepul\\)" : esc(String(usd)) + "$"}\n` +
       `📝 ${esc(releaseNotes.slice(0, 300))}` +
       tgAdminLink(appId);
     await sendTelegramMessage(text);

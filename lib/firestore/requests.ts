@@ -1,6 +1,6 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
-import { markAppTransferred, renewSubscription } from "@/lib/firestore/apps";
+import { markAppTransferred, renewSubscription, consumeUpdatePackage } from "@/lib/firestore/apps";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, isRequestPreWork, type RequestStatus, type RequestType } from "@/lib/request-status";
 import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity";
 import { newRequestPayment, type PaymentState } from "@/lib/payment-state";
@@ -22,6 +22,7 @@ export interface CreateRequestInput {
   amountUzs: number | null;
   discountId?: string | null;
   discountPercent?: number;
+  fromPackage?: boolean; // update paketi ichida (bepul)
 }
 
 export interface RequestView {
@@ -43,6 +44,7 @@ export interface RequestView {
   discountId: string | null;
   discountPercent: number;
   payment: PaymentState | null;
+  fromPackage: boolean;
   createdAt: string | null;
 }
 
@@ -71,6 +73,7 @@ function mapRequest(d: DocumentSnapshot): RequestView {
     discountId: x.discountId ?? null,
     discountPercent: x.discountPercent ?? 0,
     payment: (x.payment as PaymentState) ?? null,
+    fromPackage: Boolean(x.fromPackage),
     createdAt: iso(x.createdAt),
   };
 }
@@ -81,10 +84,14 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
     ...input,
     discountId: input.discountId ?? null,
     discountPercent: input.discountPercent ?? 0,
+    fromPackage: Boolean(input.fromPackage),
     status: "requested" as RequestStatus,
     receiptSent: false,
     note: "",
-    payment: newRequestPayment(),
+    // Paket ichida (bepul) — to'lov qismi darhol "confirmed"; aks holda "due"
+    payment: input.fromPackage
+      ? { installments: { full: { state: "confirmed", paymentId: null, taxPhone: null, taxReceiptUrl: null } } }
+      : newRequestPayment(),
     createdAt: FieldValue.serverTimestamp(),
     statusUpdatedAt: FieldValue.serverTimestamp(),
   });
@@ -150,6 +157,8 @@ export async function setRequestStatus(id: string, status: RequestStatus, actor?
   if (status === "completed") {
     if (appId && type === "transfer") await markAppTransferred(appId, act);
     if (appId && type === "subscription_renewal") await renewSubscription(appId, { actor: act });
+    // Paket ichidagi update yakunlansa — kvotadan bittasi ishlatiladi
+    if (appId && type === "update" && before.get("fromPackage")) await consumeUpdatePackage(appId, act);
   }
 
   if (actor && appId && type) {

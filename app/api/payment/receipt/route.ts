@@ -6,7 +6,7 @@ import { readFormFile } from "@/lib/form-utils";
 import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
-import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp } from "@/lib/payment";
+import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp, updatePackageUsd } from "@/lib/payment";
 import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { getUsdRate } from "@/lib/cbu";
@@ -38,7 +38,11 @@ export async function POST(req: NextRequest) {
 
   const appId = String(formData.get("appId") || "");
   const kindParam = String(formData.get("kind") || "");
-  const kind: PaymentKind = kindParam === "final" ? "final" : kindParam === "full" ? "full" : "advance";
+  const kind: PaymentKind =
+    kindParam === "final" ? "final"
+    : kindParam === "full" ? "full"
+    : kindParam === "update_package" ? "update_package"
+    : "advance";
   const taxPhone = String(formData.get("taxPhone") || "").trim();
   if (!appId) {
     return NextResponse.json({ success: false, error: "appId yo'q" }, { status: 400 });
@@ -61,9 +65,12 @@ export async function POST(req: NextRequest) {
   // Akkaunt xizmatida qolgan to'lov "yakunlandi" bosqichida.
   const finalStage = serviceType === "account" ? "completed" : "published";
 
+  // Update paketini istalgan payt sotib olish mumkin (rad etilgan holatdan tashqari — yuqorida tekshirildi).
   // To'lov qabul qilinishi payment obyektidagi qism holatiga qarab (statusdan mustaqil).
   const insts = app.payment?.installments;
-  if (kind === "full") {
+  if (kind === "update_package") {
+    // qo'shimcha installment tekshiruvi shart emas
+  } else if (kind === "full") {
     // To'liq to'lov: avans va yakuniy qismlarning ikkalasi ham to'lanmagan bo'lishi kerak
     const adv = insts?.advance;
     const fin = insts?.final;
@@ -100,22 +107,27 @@ export async function POST(req: NextRequest) {
   const pricedApp = { serviceType, servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null };
   const [pricing, payment, rate] = await Promise.all([getPricing(), getPaymentInfo(), getUsdRate()]);
 
-  // Chegirma (bo'lsa) — avans va yakuniy ikkalasiga qo'llanadi
-  const category = categoryForServiceType(serviceType);
+  // Chegirma (bo'lsa) — avans va yakuniy ikkalasiga qo'llanadi. Update paketiga chegirma yo'q.
+  const category = kind === "update_package" ? null : categoryForServiceType(serviceType);
   const discount = category ? await getActiveDiscount(user.uid, category, appId) : null;
   const pct = discount?.percent ?? 0;
 
   const baseAmount =
     kind === "final" ? finalUsdApp(pricedApp, pricing)
     : kind === "full" ? serviceBaseUsd(pricedApp, pricing)
+    : kind === "update_package" ? updatePackageUsd(serviceType, pricing)
     : advanceUsdApp(pricedApp, pricing);
   const usd = Math.round(applyDiscount(baseAmount, pct));
   const uzs = rate ? Math.round(usd * rate) : null;
-  const totalUsd = Math.round(applyDiscount(serviceBaseUsd(pricedApp, pricing), pct));
+  const totalUsd = kind === "update_package" ? usd : Math.round(applyDiscount(serviceBaseUsd(pricedApp, pricing), pct));
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
   const ownerName = app.contact?.fullName || user.name || user.email || "Mijoz";
   const ownerPhone = app.contact?.phone || "-";
-  const kindLabel = kind === "final" ? "Yakuniy to'lov" : kind === "full" ? "To'liq to'lov" : "Avans";
+  const kindLabel =
+    kind === "final" ? "Yakuniy to'lov"
+    : kind === "full" ? "To'liq to'lov"
+    : kind === "update_package" ? "Update paketi"
+    : "Avans";
 
   // Chegirmani shu ilovaga biriktiramiz (bir martalik bo'lishi uchun)
   if (discount) {
@@ -141,6 +153,9 @@ export async function POST(req: NextRequest) {
       taxPhone: taxPhone || null,
       discountId: discount?.id ?? null,
       discountPercent: pct,
+      ...(kind === "update_package"
+        ? { packageDays: pricing.updatePackageDays, packageQuota: pricing.updatePackageQuota }
+        : {}),
     });
   } catch (e) {
     console.error("[payment/receipt] createPayment xato:", e);
@@ -171,7 +186,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    if (kind === "final") await markFinalReceiptSent(appId);
+    if (kind === "update_package") { /* paket installment emas — belgilash shart emas */ }
+    else if (kind === "final") await markFinalReceiptSent(appId);
     else if (kind === "full") { await markReceiptSent(appId); await markFinalReceiptSent(appId); }
     else await markReceiptSent(appId);
     if (taxPhone) await setAppTaxPhone(appId, taxPhone);
