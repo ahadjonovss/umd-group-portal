@@ -39,10 +39,21 @@ export function InvoicePayment({
   walletUzs: number;
   discountPercent: number;
 }) {
-  const payable = invoices.filter((i) => i.state === "due" || i.state === "rejected");
-  const canFull = payable.length >= 2; // avans + yakuniy — ikkalasi ham to'lanmagan
+  const advInv = invoices.find((i) => i.key === "advance");
+  const finInv = invoices.find((i) => i.key === "final");
+  const isPayable = (i?: Invoice) => !!i && (i.state === "due" || i.state === "rejected");
+  const advPayable = isPayable(advInv);
+  const finPayable = isPayable(finInv);
+  const advDone = !advInv || advInv.state === "confirmed"; // avans to'langanmi (yoki avans yo'q)
 
-  const [choice, setChoice] = useState<Choice>(canFull ? "full" : (payable[0]?.key ?? "advance"));
+  // Alohida tanlanadigan invoicelar — YAKUNIY faqat avans to'langach chiqadi
+  const selectable: Invoice[] = [];
+  if (advPayable) selectable.push(advInv!);
+  if (finPayable && advDone) selectable.push(finInv!);
+
+  const canFull = advPayable && finPayable; // ikkalasi ham to'lanmagan -> "to'liq to'lash"
+
+  const [choice, setChoice] = useState<Choice>(canFull ? "full" : (selectable[0]?.key ?? "advance"));
 
   const fullUsd = invoices.reduce((s, i) => s + (i.state === "due" || i.state === "rejected" ? i.usd : 0), 0);
   const fullUzs = rate ? Math.round(fullUsd * rate) : null;
@@ -61,7 +72,9 @@ export function InvoicePayment({
       {/* Invoice ro'yxati */}
       <div className="flex flex-col gap-2">
         {invoices.map((i) => {
-          const b = STATE_BADGE[i.state] ?? STATE_BADGE.due;
+          // Yakuniy avans to'langunча "keyinroq" ko'rinishida turadi
+          const effState = i.key === "final" && !advDone && i.state !== "confirmed" ? "locked" : i.state;
+          const b = STATE_BADGE[effState] ?? STATE_BADGE.due;
           return (
             <div key={i.key} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5">
               <div className="min-w-0">
@@ -92,7 +105,7 @@ export function InvoicePayment({
               >
                 To&apos;liq to&apos;lash
               </button>
-              {payable.map((i) => (
+              {selectable.map((i) => (
                 <button
                   key={i.key}
                   onClick={() => setChoice(i.key)}
