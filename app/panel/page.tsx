@@ -12,8 +12,9 @@ import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { DiscountAlert } from "@/components/panel/DiscountAlert";
 import { PackageExpiryAlert } from "@/components/panel/PackageExpiryAlert";
 import { getUserActiveDiscounts } from "@/lib/firestore/discounts";
-import { getUserWalletUzs } from "@/lib/firestore/users";
+import { getUserWalletUzs, getUserTelegram } from "@/lib/firestore/users";
 import { WalletCard } from "@/components/panel/WalletCard";
+import { TelegramLinkAlert } from "@/components/panel/TelegramLinkAlert";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess } from "@/lib/app-status";
@@ -28,13 +29,14 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const [apps, admin, pricing, requests, discounts, walletUzs] = await Promise.all([
+  const [apps, admin, pricing, requests, discounts, walletUzs, telegram] = await Promise.all([
     getUserApps(user.uid),
     isAdmin(),
     getPricing(),
     getUserRequests(user.uid),
     getUserActiveDiscounts(user.uid),
     getUserWalletUzs(user.uid),
+    getUserTelegram(user.uid),
   ]);
 
   // Har ilova uchun eng so'nggi transfer / update / uzaytirish so'rovi
@@ -119,6 +121,7 @@ export default async function PanelPage() {
 
         <WalletCard balanceUzs={walletUzs} />
 
+        <TelegramLinkAlert linked={Boolean(telegram.chatId)} />
         <DiscountAlert discounts={discounts} />
         <PackageExpiryAlert apps={apps} />
         <PublishedReviewAlert apps={publishedUnreviewed} />

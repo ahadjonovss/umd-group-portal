@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "crypto";
 import { adminDb, adminAuth, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 
 export interface AdminUser {
@@ -7,6 +8,8 @@ export interface AdminUser {
   fullName: string;
   phone: string;
   telegram: string;
+  telegramChatId: string | null; // bot xabar yuborishi uchun (ulangach)
+  telegramNotify: boolean; // xabarnomalar yoqilganmi
   role: string | null;
   passwordPlain: string | null; // admin ko'rishi uchun (faqat panel orqali o'rnatilganlar)
   walletUzs: number; // hamyon balansi (so'm) — ortiqcha to'lovlardan
@@ -22,11 +25,85 @@ function mapUser(d: DocumentSnapshot): AdminUser {
     fullName: x.fullName ?? "",
     phone: x.phone ?? "",
     telegram: x.telegram ?? "",
+    telegramChatId: x.telegramChatId ?? null,
+    telegramNotify: x.telegramNotify !== false, // default yoqilgan
     role: x.role ?? null,
     passwordPlain: x.passwordPlain ?? null,
     walletUzs: typeof x.walletUzs === "number" ? x.walletUzs : 0,
     createdAt: x.createdAt instanceof Timestamp ? x.createdAt.toDate().toISOString() : null,
   };
+}
+
+// ── Telegram ulash ─────────────────────────────
+const TG_LINKS = "telegramLinks";
+const LINK_TTL_MS = 30 * 60 * 1000; // 30 daqiqa
+
+export interface UserTelegram {
+  chatId: string | null;
+  notify: boolean;
+  username: string;
+}
+
+// Foydalanuvchining Telegram holati (xabar yuborish uchun).
+export async function getUserTelegram(uid: string): Promise<UserTelegram> {
+  const d = await adminDb.collection("users").doc(uid).get();
+  const x = d.data() ?? {};
+  return {
+    chatId: x.telegramChatId ?? null,
+    notify: x.telegramNotify !== false,
+    username: x.telegramUsername ?? x.telegram ?? "",
+  };
+}
+
+// Bir martalik ulash tokeni yaratadi (deep-link uchun).
+export async function createTelegramLinkToken(uid: string): Promise<string> {
+  const token = randomBytes(9).toString("base64url"); // ~12 belgi
+  await adminDb.collection(TG_LINKS).doc(token).set({ uid, createdAt: FieldValue.serverTimestamp() });
+  return token;
+}
+
+// Tokenni tekshirib uid qaytaradi va o'chiradi (muddati o'tgan bo'lsa null).
+export async function consumeTelegramLinkToken(token: string): Promise<string | null> {
+  const ref = adminDb.collection(TG_LINKS).doc(token);
+  const snap = await ref.get();
+  if (!snap.exists) return null;
+  const x = snap.data()!;
+  await ref.delete().catch(() => {});
+  const created = x.createdAt instanceof Timestamp ? x.createdAt.toMillis() : 0;
+  if (created && Date.now() - created > LINK_TTL_MS) return null;
+  return (x.uid as string) ?? null;
+}
+
+// Chat ID bo'yicha foydalanuvchi uid'sini topadi (webhook uchun).
+export async function getUserByChatId(chatId: string | number): Promise<string | null> {
+  const snap = await adminDb.collection("users").where("telegramChatId", "==", String(chatId)).limit(1).get();
+  return snap.empty ? null : snap.docs[0].id;
+}
+
+// Chat ID ni foydalanuvchiga bog'laydi.
+export async function linkTelegramChat(uid: string, chatId: string | number, username?: string): Promise<void> {
+  await adminDb.collection("users").doc(uid).set(
+    {
+      telegramChatId: String(chatId),
+      telegramNotify: true,
+      telegramLinkedAt: FieldValue.serverTimestamp(),
+      ...(username ? { telegramUsername: username } : {}),
+    },
+    { merge: true }
+  );
+}
+
+// Ulashni uzadi.
+export async function unlinkTelegramChat(uid: string): Promise<void> {
+  await adminDb.collection("users").doc(uid).set(
+    { telegramChatId: FieldValue.delete(), telegramLinkedAt: FieldValue.delete() },
+    { merge: true }
+  );
+}
+
+// Xabarnomalarni yoqish/o'chirish.
+export async function setTelegramNotify(uid: string, on: boolean): Promise<void> {
+  await adminDb.collection("users").doc(uid).set({ telegramNotify: on }, { merge: true });
 }
 
 // Hamyon balansini o'qish (so'm).

@@ -45,6 +45,34 @@ export async function sendTelegramMessage(text: string): Promise<void> {
   }
 }
 
+// Bot username (deep-link uchun) — getMe orqali bir marta olinadi va cache qilinadi.
+let cachedBotUsername: string | null = null;
+export async function getBotUsername(): Promise<string> {
+  if (cachedBotUsername) return cachedBotUsername;
+  const res = await axios.get(`${BASE_URL}/getMe`);
+  const username = res.data?.result?.username;
+  if (!username) throw new Error("Bot username olinmadi");
+  cachedBotUsername = username;
+  return username;
+}
+
+// Berilgan chatga oddiy matn yuboradi (foydalanuvchiga to'g'ridan-to'g'ri).
+// Yuborilsa true, aks holda (bloklangan/xato) false — hech qachon throw qilmaydi.
+export async function sendTelegramTo(chatId: string | number, text: string): Promise<boolean> {
+  try {
+    const res = await axios.post(`${BASE_URL}/sendMessage`, {
+      chat_id: chatId,
+      text,
+      parse_mode: "MarkdownV2",
+      disable_web_page_preview: true,
+    });
+    return Boolean(res.data?.ok);
+  } catch (e) {
+    console.error("[telegram] sendTelegramTo xato:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
 // Inline tugma (callback) tipi
 export type InlineKeyboard = { inline_keyboard: { text: string; callback_data: string }[][] };
 
