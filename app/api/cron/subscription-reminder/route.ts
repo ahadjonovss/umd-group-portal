@@ -12,10 +12,9 @@ export const dynamic = "force-dynamic";
 const REMIND_WITHIN_DAYS = 3;
 
 function esc(t: string) {
-  return t.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+  return String(t).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
 }
 
-// Vercel cron (Authorization: Bearer CRON_SECRET) yoki ?secret=APPROVE_SECRET bilan ishlaydi.
 function authorized(req: NextRequest): boolean {
   const auth = req.headers.get("authorization") || "";
   const cronSecret = process.env.CRON_SECRET;
@@ -33,48 +32,39 @@ export async function GET(req: NextRequest) {
   const now = Date.now();
   const horizon = now + REMIND_WITHIN_DAYS * 24 * 60 * 60 * 1000;
 
-  const snap = await adminDb.collection("apps").where("updatePackage.active", "==", true).get();
+  const snap = await adminDb.collection("apps").where("subscription.active", "==", true).get();
 
   let sent = 0;
   for (const doc of snap.docs) {
     const app = doc.data();
-    const pkg = app.updatePackage;
-    if (!pkg || pkg.reminded) continue;
-    const endMs = pkg.endDate?.toMillis?.() ?? 0;
+    const sub = app.subscription;
+    if (!sub || sub.reminded) continue;
+    if (app.status !== "published") continue;
+    const endMs = sub.endDate?.toMillis?.() ?? 0;
     if (!endMs) continue;
-    // Kvota qolgan bo'lsa va muddati 3 kun ichida tugasa (lekin hali tugamagan)
-    const hasQuota = (pkg.used ?? 0) < (pkg.quota ?? 0);
-    if (!hasQuota) continue;
-    if (endMs > horizon || endMs <= now) continue;
+    if (endMs > horizon || endMs <= now) continue; // 3 kun ichida tugasa (hali tugamagan)
 
     const serviceType = app.serviceType as ServiceType;
     const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
     const ownerName = app.contact?.fullName || "Mijoz";
     const ownerUid = app.ownerUid as string | undefined;
     const daysLeft = Math.ceil((endMs - now) / (24 * 60 * 60 * 1000));
-    const left = (pkg.quota ?? 0) - (pkg.used ?? 0);
 
     try {
-      // Admin kanaliga
       await sendTelegramMessage(
-        `⏳ *UPDATE PAKETI TUGAYAPTI*\n\n` +
-          `📱 ${esc(appName)}\n` +
-          `👤 ${esc(ownerName)}\n` +
-          `📅 ${esc(String(daysLeft))} kun qoldi\n` +
-          `🔄 Qolgan updatelar: ${esc(String(left))}` +
+        `⏳ *OBUNA TUGAYAPTI*\n\n📱 ${esc(appName)}\n👤 ${esc(ownerName)}\n📅 ${esc(String(daysLeft))} kun qoldi` +
           tgAdminLink(doc.id)
       );
-      // Foydalanuvchiga (iliq)
       if (ownerUid) {
         await notifyUser(
           ownerUid,
-          `⏳ Eslatma: *${esc(appName)}* update paketingiz tugayapti\n\n📅 ${esc(String(daysLeft))} kun qoldi\n🔄 Qolgan bepul updatelar: ${esc(String(left))}\n\nXohlasangiz, paketni yangilab qo'yishingiz mumkin 👍${appLink(doc.id)}`
+          `⏳ Eslatma: *${esc(appName)}* obunangiz tugayapti\n\n📅 ${esc(String(daysLeft))} kun qoldi\n\nUzaytirmasangiz, ilova store'dan olib qo'yilishi mumkin. Uzaytirishni istasangiz shu yerdan qulay 👍${appLink(doc.id)}`
         );
       }
-      await doc.ref.update({ "updatePackage.reminded": true, "updatePackage.remindedAt": FieldValue.serverTimestamp() });
+      await doc.ref.update({ "subscription.reminded": true, "subscription.remindedAt": FieldValue.serverTimestamp() });
       sent++;
     } catch (e) {
-      console.error("[cron/update-package-reminder] xato:", doc.id, e);
+      console.error("[cron/subscription-reminder] xato:", doc.id, e);
     }
   }
 

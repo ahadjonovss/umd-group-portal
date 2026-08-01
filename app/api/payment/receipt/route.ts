@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
   // Mijozga tasdiq xabari
   await notifyUser(
     user.uid,
-    `🧾 *Chekingiz qabul qilindi*\n\n📱 ${esc(appName)}\n💳 ${esc(kindLabel)} — $${esc(String(usd))}\n\nAdmin tasdiqlashini kuting\\.${appLink(appId)}`
+    `🧾 Chekingizni oldik, rahmat 🙌\n\n📱 ${esc(appName)}\n💳 ${esc(kindLabel)} · $${esc(String(usd))}\n\nTez orada tekshirib tasdiqlaymiz 👌${appLink(appId)}`
   );
 
   return NextResponse.json({ success: true });

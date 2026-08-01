@@ -294,10 +294,10 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     const name = (p.appName as string) || SERVICE_LABELS[p.serviceType as ServiceType];
     const kindLabel = PAYMENT_KIND_LABEL[(p.kind as PaymentKind) ?? "advance"];
     const amt = Math.round((p.amountUsd as number) ?? 0);
-    let msg = `✅ *To'lovingiz tasdiqlandi*\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)} — $${esc(String(amt))}`;
-    if (taxReceiptUrl) msg += `\n🧾 [Soliq cheki](${taxReceiptUrl})`;
-    if (overpay > 0) msg += `\n🪙 Hamyoningizga qo'shildi: ${esc(overpay.toLocaleString("en-US"))} so'm`;
-    msg += appLink(p.appId as string);
+    let msg = `✅ To'lovingiz qabul bo'ldi, rahmat 🙌\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)} · $${esc(String(amt))}`;
+    if (taxReceiptUrl) msg += `\n🧾 Soliq cheki: [ochish](${taxReceiptUrl})`;
+    if (overpay > 0) msg += `\n🪙 Hisobingizga ${esc(overpay.toLocaleString("en-US"))} so'm qaytib tushdi`;
+    msg += `\n\nIshni davom ettiramiz 🚀${appLink(p.appId as string)}`;
     await notifyUser(p.ownerUid as string, msg);
   }
 
@@ -364,7 +364,7 @@ export async function rejectPayment(paymentId: string, actor?: Actor): Promise<v
     const kindLabel = PAYMENT_KIND_LABEL[(p.kind as PaymentKind) ?? "advance"];
     await notifyUser(
       p.ownerUid as string,
-      `❌ *To'lovingiz rad etildi*\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)}\n\nIltimos, chekni tekshirib qayta yuboring\\.${appLink(p.appId as string)}`
+      `❌ To'lovda kichik muammo chiqdi\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)}\n\nChekni bir tekshirib, qaytadan yuboborasizmi? Rahmat 🙏${appLink(p.appId as string)}`
     );
   }
 }

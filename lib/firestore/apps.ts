@@ -104,6 +104,11 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     name: input.contact?.fullName || input.ownerEmail || "Foydalanuvchi",
     uid: input.ownerUid,
   });
+  const subName = input.appName || SERVICE_LABELS[input.serviceType];
+  await notifyUser(
+    input.ownerUid,
+    `🎉 Arizangizni oldik, rahmat 🙌\n📱 ${esc(subName)}\n\nTez orada ko'rib chiqib ishga kirishamiz — yangiliklarni shu yerda kuzatib boring 👍${appLink(ref.id)}`
+  );
   return ref.id;
 }
 
@@ -178,7 +183,7 @@ export async function setAppStatus(appId: string, status: AppStatus, actor?: Act
     const label = STATUS_META[status]?.label ?? status;
     await notifyUser(
       snap.get("ownerUid"),
-      `📱 *${esc(name)}*\n\nHolat yangilandi: *${esc(label)}*${appLink(appId)}`
+      `📱 *${esc(name)}* ilovangizda yangilik bor 👇\n\n📍 Hozirgi bosqich: *${esc(label)}*${appLink(appId)}`
     );
   }
 }
@@ -193,18 +198,22 @@ export async function endSubscription(appId: string, actor?: Actor): Promise<voi
   if (actor) await logActivity(appId, "subscription_ended", "Obuna to'xtatildi (ilova store'dan olib tashlandi)", actor);
   const s = await adminDb.collection(APPS).doc(appId).get();
   const name = s.get("appName") || SERVICE_LABELS[s.get("serviceType") as ServiceType];
-  await notifyUser(s.get("ownerUid"), `⚠️ *${esc(name)}* obunasi to'xtatildi \\(ilova store'dan olib tashlandi\\)\\.${appLink(appId)}`);
+  await notifyUser(s.get("ownerUid"), `😔 Afsuski, *${esc(name)}* obunasi tugadi\nIlova store'dan vaqtincha olib qo'yildi\n\nQayta faollashtirishni istasangiz, bemalol yozing 🙌${appLink(appId)}`);
 }
 
 // Transfer yakunlangach ilova "transfer qilingan" holatiga o'tadi (obuna endi amal qilmaydi).
 export async function markAppTransferred(appId: string, actor?: Actor): Promise<void> {
-  await adminDb.collection(APPS).doc(appId).update({
+  const ref = adminDb.collection(APPS).doc(appId);
+  await ref.update({
     status: "transferred" satisfies AppStatus,
     transferredAt: FieldValue.serverTimestamp(),
     statusUpdatedAt: FieldValue.serverTimestamp(),
     "subscription.active": false,
   });
   if (actor) await logActivity(appId, "transferred", "Ilova transfer qilingan deb belgilandi", actor);
+  const s = await ref.get();
+  const name = s.get("appName") || SERVICE_LABELS[s.get("serviceType") as ServiceType];
+  await notifyUser(s.get("ownerUid"), `✅ Bo'ldi\\! *${esc(name)}* endi to'liq sizniki 🎉\n\nTransfer muvaffaqiyatli yakunlandi${appLink(appId)}`);
 }
 
 // Panel uchun seriyalashtirилgan ko'rinish (Timestamp -> ISO string).
@@ -427,10 +436,10 @@ export async function markPublished(
   }
 
   const name = snap.get("appName") || SERVICE_LABELS[serviceType];
-  const subNote = hasSubscription(serviceType) ? "\n\n🗓 Obuna 9 oyga boshlandi\\." : "";
+  const subNote = hasSubscription(serviceType) ? "\n\n🗓 Obuna bugundan 9 oyga boshlandi" : "";
   await notifyUser(
     snap.get("ownerUid"),
-    `🎉 *${esc(name)}* store'ga chiqarildi\\!${subNote}${appLink(appId)}`
+    `🎉 Tabriklaymiz\\! *${esc(name)}* store'ga chiqdi 🚀\n\nEndi hammaga ochiq${subNote}${appLink(appId)}`
   );
 }
 
@@ -458,6 +467,7 @@ export async function renewSubscription(
     "subscription.active": true,
     "subscription.renewedCount": (sub.renewedCount ?? 0) + 1,
     "subscription.lastRenewedAt": Timestamp.fromDate(renewedAt),
+    "subscription.reminded": false, // yangi muddat — eslatma qayta yuborilsin
   });
   if (actor) {
     const fromLabel = from === "today" ? "bugundan" : "tugagan kundan";
@@ -468,6 +478,11 @@ export async function renewSubscription(
       actor
     );
   }
+  const name = snap.get("appName") || SERVICE_LABELS[snap.get("serviceType") as ServiceType];
+  await notifyUser(
+    snap.get("ownerUid"),
+    `🔄 *${esc(name)}* obunasi yana 9 oyga uzaytirildi ✅\n\n🗓 Keyingi tugash sanasi: ${esc(newEnd.toISOString().slice(0, 10))}${appLink(appId)}`
+  );
 }
 
 // Update paketini faollashtirish (to'lov tasdiqlangach). Yangi paket — kvota 0 dan.
@@ -477,7 +492,8 @@ export async function activateUpdatePackage(
 ): Promise<void> {
   const { days, quota, priceUsd, actor, startedAt = new Date() } = opts;
   const end = new Date(startedAt.getTime() + days * 24 * 60 * 60 * 1000);
-  await adminDb.collection(APPS).doc(appId).update({
+  const ref = adminDb.collection(APPS).doc(appId);
+  await ref.update({
     updatePackage: {
       active: true,
       startDate: Timestamp.fromDate(startedAt),
@@ -496,6 +512,12 @@ export async function activateUpdatePackage(
       actor
     );
   }
+  const s = await ref.get();
+  const name = s.get("appName") || SERVICE_LABELS[s.get("serviceType") as ServiceType];
+  await notifyUser(
+    s.get("ownerUid"),
+    `📦 Zo'r\\! *${esc(name)}* uchun update paketi ishga tushdi 🎉\n\n🔄 ${esc(String(quota))} ta bepul update, ${esc(String(days))} kun\n🗓 ${esc(end.toISOString().slice(0, 10))} gacha amal qiladi${appLink(appId)}`
+  );
 }
 
 // Update paketidan bitta update ishlatilganda (so'rov yakunlanganda) chaqiriladi.
@@ -505,8 +527,15 @@ export async function consumeUpdatePackage(appId: string, actor?: Actor): Promis
   const pkg = snap.get("updatePackage") as { used?: number; quota?: number } | null;
   if (!pkg) return;
   const used = (pkg.used ?? 0) + 1;
+  const quota = pkg.quota ?? 0;
   await ref.update({ "updatePackage.used": used });
   if (actor) {
-    await logActivity(appId, "update_package_used", `Update paketidan foydalanildi (${used}/${pkg.quota ?? 0})`, actor);
+    await logActivity(appId, "update_package_used", `Update paketidan foydalanildi (${used}/${quota})`, actor);
   }
+  const name = snap.get("appName") || SERVICE_LABELS[snap.get("serviceType") as ServiceType];
+  const left = Math.max(0, quota - used);
+  await notifyUser(
+    snap.get("ownerUid"),
+    `🔄 *${esc(name)}* uchun yangi update chiqdi ✅\n\nPaketda yana ${esc(String(left))} ta update qoldi · ${esc(String(used))}/${esc(String(quota))}${appLink(appId)}`
+  );
 }

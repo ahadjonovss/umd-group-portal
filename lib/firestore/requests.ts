@@ -103,6 +103,11 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
     `${REQUEST_TYPE_LABEL[input.type]} so'rovi yaratildi ($${Math.round(input.amountUsd)})`,
     { type: "user", name: input.ownerName || "Foydalanuvchi", uid: input.ownerUid }
   );
+  const rName = input.appName || SERVICE_LABELS[input.serviceType];
+  await notifyUser(
+    input.ownerUid,
+    `📝 *${esc(REQUEST_TYPE_LABEL[input.type])}* so'rovingizni oldik 🙌\n📱 ${esc(rName)}\n\nTez orada ko'rib chiqamiz 👌${appLink(input.appId)}`
+  );
   return ref.id;
 }
 
@@ -172,17 +177,24 @@ export async function setRequestStatus(id: string, status: RequestStatus, actor?
     );
   }
 
-  // Foydalanuvchiga xabar
-  if (appId && type) {
+  // Foydalanuvchiga xabar.
+  // Transfer/obuna yakunlanishi markAppTransferred/renewSubscription orqali alohida xabar beradi —
+  // bu yerda takror yubormaymiz.
+  const outcomeOwned = status === "completed" && (type === "transfer" || type === "subscription_renewal");
+  if (appId && type && !outcomeOwned) {
     const ownerUid = before.get("ownerUid") as string | undefined;
     const st = before.get("serviceType") as ServiceType;
     const name = (before.get("appName") as string) || SERVICE_LABELS[st];
-    const icon = status === "completed" ? "✅" : status === "rejected" || status === "cancelled" ? "❌" : "🔧";
     if (ownerUid) {
-      await notifyUser(
-        ownerUid,
-        `${icon} *${esc(REQUEST_TYPE_LABEL[type])} so'rovi* — ${esc(name)}\n\nHolat: *${esc(requestStatusLabel(type, status))}*${appLink(appId)}`
-      );
+      let msg: string;
+      if (status === "completed") {
+        msg = `✅ *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingiz bajarildi 🎉\n📱 ${esc(name)}${appLink(appId)}`;
+      } else if (status === "rejected" || status === "cancelled") {
+        msg = `❌ *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingiz bekor qilindi\n📱 ${esc(name)}${appLink(appId)}`;
+      } else {
+        msg = `🔧 *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingizda yangilik\n📱 ${esc(name)}\n\n📍 Hozir: *${esc(requestStatusLabel(type, status))}*${appLink(appId)}`;
+      }
+      await notifyUser(ownerUid, msg);
     }
   }
 }

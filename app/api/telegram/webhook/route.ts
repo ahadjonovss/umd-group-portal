@@ -34,7 +34,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
         await linkTelegramChat(uid, chatId, msg.from?.username);
         await sendTelegramTo(
           chatId,
-          `✅ *Ulandingiz\\!*\n\nEndi ilovalaringiz bo'yicha barcha yangiliklarni shu yerda olib turasiz:\n• Status o'zgarishlari\n• To'lov tasdiqlash / rad etish\n• So'rovlar, obuna va update paketi\n\nXabarnomalarni to'xtatish uchun /stop yuboring\\.`
+          `🎉 Ulandingiz\\!\n\nEndi *UMD GROUP* dagi barcha yangiliklarni shu yerda olib turasiz — status o'zgarishlari, to'lovlar, so'rovlar, obuna va update paketi 👍\n\nBezovta qilmasligimizni istasangiz, istalgan payt /stop yuboring`
         );
       } else {
         await sendTelegramTo(chatId, `⚠️ Ulash havolasi eskirgan\\. Iltimos, kabinetdan qaytadan "Telegramni ulash" tugmasini bosing\\.`);
