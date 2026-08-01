@@ -7,6 +7,8 @@ import { markDiscountUsed } from "@/lib/firestore/discounts";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
 import { kindToInstallment } from "@/lib/payment-state";
 import { getUserWalletUzs, adjustWallet } from "@/lib/firestore/users";
+import { notifyUser, esc, appLink } from "@/lib/notify";
+import { SERVICE_LABELS } from "@/lib/labels";
 import type { ServiceType } from "@/types";
 
 // Servisning (app/request) payment obyektidagi installment holatini yangilaydi.
@@ -287,6 +289,18 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     );
   }
 
+  // Foydalanuvchiga xabar
+  {
+    const name = (p.appName as string) || SERVICE_LABELS[p.serviceType as ServiceType];
+    const kindLabel = PAYMENT_KIND_LABEL[(p.kind as PaymentKind) ?? "advance"];
+    const amt = Math.round((p.amountUsd as number) ?? 0);
+    let msg = `✅ *To'lovingiz tasdiqlandi*\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)} — $${esc(String(amt))}`;
+    if (taxReceiptUrl) msg += `\n🧾 [Soliq cheki](${taxReceiptUrl})`;
+    if (overpay > 0) msg += `\n🪙 Hamyoningizga qo'shildi: ${esc(overpay.toLocaleString("en-US"))} so'm`;
+    msg += appLink(p.appId as string);
+    await notifyUser(p.ownerUid as string, msg);
+  }
+
   // Chegirma yakuniy/to'liq to'lov tasdiqlanganda ishlatilgan deb belgilanadi
   const discountId = p.discountId as string | null | undefined;
   const completing = p.kind === "final" || (p.advancePercent ?? 0) >= 100;
@@ -342,5 +356,15 @@ export async function rejectPayment(paymentId: string, actor?: Actor): Promise<v
   if (actor) {
     const kind = (p.kind as PaymentKind) ?? "advance";
     await logActivity(p.appId as string, "payment_rejected", `${PAYMENT_KIND_LABEL[kind]} to'lovi rad etildi`, actor);
+  }
+
+  // Foydalanuvchiga xabar
+  {
+    const name = (p.appName as string) || SERVICE_LABELS[p.serviceType as ServiceType];
+    const kindLabel = PAYMENT_KIND_LABEL[(p.kind as PaymentKind) ?? "advance"];
+    await notifyUser(
+      p.ownerUid as string,
+      `❌ *To'lovingiz rad etildi*\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)}\n\nIltimos, chekni tekshirib qayta yuboring\\.${appLink(p.appId as string)}`
+    );
   }
 }

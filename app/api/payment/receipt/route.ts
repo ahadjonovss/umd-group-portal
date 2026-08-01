@@ -14,6 +14,7 @@ import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { isPayable } from "@/lib/payment-state";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
+import { notifyUser, appLink } from "@/lib/notify";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -195,6 +196,12 @@ export async function POST(req: NextRequest) {
     console.error("[payment/receipt] mark xato:", e);
     return NextResponse.json({ success: false, error: "Saqlashda xato" }, { status: 500 });
   }
+
+  // Mijozga tasdiq xabari
+  await notifyUser(
+    user.uid,
+    `🧾 *Chekingiz qabul qilindi*\n\n📱 ${esc(appName)}\n💳 ${esc(kindLabel)} — $${esc(String(usd))}\n\nAdmin tasdiqlashini kuting\\.${appLink(appId)}`
+  );
 
   return NextResponse.json({ success: true });
 }

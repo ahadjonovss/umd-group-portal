@@ -4,6 +4,8 @@ import { markAppTransferred, renewSubscription, consumeUpdatePackage } from "@/l
 import { REQUEST_TYPE_LABEL, requestStatusLabel, isRequestPreWork, type RequestStatus, type RequestType } from "@/lib/request-status";
 import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity";
 import { newRequestPayment, type PaymentState } from "@/lib/payment-state";
+import { notifyUser, esc, appLink } from "@/lib/notify";
+import { SERVICE_LABELS } from "@/lib/labels";
 import type { ServiceType } from "@/types";
 
 const REQUESTS = "requests";
@@ -168,6 +170,20 @@ export async function setRequestStatus(id: string, status: RequestStatus, actor?
       `${REQUEST_TYPE_LABEL[type]} so'rovi holati "${requestStatusLabel(type, status)}" ga o'zgartirildi`,
       actor
     );
+  }
+
+  // Foydalanuvchiga xabar
+  if (appId && type) {
+    const ownerUid = before.get("ownerUid") as string | undefined;
+    const st = before.get("serviceType") as ServiceType;
+    const name = (before.get("appName") as string) || SERVICE_LABELS[st];
+    const icon = status === "completed" ? "✅" : status === "rejected" || status === "cancelled" ? "❌" : "🔧";
+    if (ownerUid) {
+      await notifyUser(
+        ownerUid,
+        `${icon} *${esc(REQUEST_TYPE_LABEL[type])} so'rovi* — ${esc(name)}\n\nHolat: *${esc(requestStatusLabel(type, status))}*${appLink(appId)}`
+      );
+    }
   }
 }
 

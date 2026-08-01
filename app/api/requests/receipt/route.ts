@@ -11,6 +11,7 @@ import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { REQUEST_TYPE_LABEL, isRequestTerminalError, type RequestStatus, type RequestType } from "@/lib/request-status";
 import { isPayable } from "@/lib/payment-state";
+import { notifyUser, appLink } from "@/lib/notify";
 import type { ServiceType } from "@/types";
 
 export const runtime = "nodejs";
@@ -133,6 +134,12 @@ export async function POST(req: NextRequest) {
     console.error("[requests/receipt] markReceiptSent xato:", e);
     return NextResponse.json({ success: false, error: "Saqlashda xato" }, { status: 500 });
   }
+
+  // Mijozga tasdiq xabari
+  await notifyUser(
+    user.uid,
+    `🧾 *Chekingiz qabul qilindi*\n\n📱 ${esc(appName)}\n💳 ${esc(typeLabel)} — $${esc(String(usd))}\n\nAdmin tasdiqlashini kuting\\.${appLink(r.appId as string)}`
+  );
 
   return NextResponse.json({ success: true });
 }

@@ -6,7 +6,8 @@ import { getReviewedAppIds } from "@/lib/firestore/reviews";
 import { getPricing } from "@/lib/firestore/settings";
 import { fullUsd } from "@/lib/payment";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
-import { STATUS_META } from "@/lib/labels";
+import { STATUS_META, SERVICE_LABELS } from "@/lib/labels";
+import { notifyUser, esc, appLink } from "@/lib/notify";
 import { newAppPayment, appInstallmentKeys, type PaymentState } from "@/lib/payment-state";
 
 export type { AppStatus };
@@ -158,10 +159,10 @@ export async function deleteApp(appId: string): Promise<void> {
 // Admin: ilova holatini o'zgartiradi (oqim bo'ylab yoki rad etish/bekor qilish).
 export async function setAppStatus(appId: string, status: AppStatus, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(APPS).doc(appId);
+  const snap = await ref.get();
   const update: Record<string, unknown> = { status, statusUpdatedAt: FieldValue.serverTimestamp() };
   // Yakuniy bosqichga (published/completed) yetganda — yakuniy to'lov qismini "ochamiz".
   if (isTerminalSuccess(status)) {
-    const snap = await ref.get();
     const st = snap.get("serviceType") as ServiceType;
     if (appInstallmentKeys(st).includes("final")) {
       const finalState = snap.get("payment")?.installments?.final?.state;
@@ -170,6 +171,16 @@ export async function setAppStatus(appId: string, status: AppStatus, actor?: Act
   }
   await ref.update(update);
   if (actor) await logActivity(appId, "status_changed", `Holat "${STATUS_META[status]?.label ?? status}" ga o'zgartirildi`, actor);
+
+  // Foydalanuvchiga xabar (published bundan mustasno — u markPublished orqali alohida xabar beradi)
+  if (status !== "published") {
+    const name = snap.get("appName") || SERVICE_LABELS[snap.get("serviceType") as ServiceType];
+    const label = STATUS_META[status]?.label ?? status;
+    await notifyUser(
+      snap.get("ownerUid"),
+      `📱 *${esc(name)}*\n\nHolat yangilandi: *${esc(label)}*${appLink(appId)}`
+    );
+  }
 }
 
 // Obuna to'xtatildi — ilova store'dan olib tashlandi (terminal). Obuna faolsizlanadi.
@@ -180,6 +191,9 @@ export async function endSubscription(appId: string, actor?: Actor): Promise<voi
     "subscription.active": false,
   });
   if (actor) await logActivity(appId, "subscription_ended", "Obuna to'xtatildi (ilova store'dan olib tashlandi)", actor);
+  const s = await adminDb.collection(APPS).doc(appId).get();
+  const name = s.get("appName") || SERVICE_LABELS[s.get("serviceType") as ServiceType];
+  await notifyUser(s.get("ownerUid"), `⚠️ *${esc(name)}* obunasi to'xtatildi \\(ilova store'dan olib tashlandi\\)\\.${appLink(appId)}`);
 }
 
 // Transfer yakunlangach ilova "transfer qilingan" holatiga o'tadi (obuna endi amal qilmaydi).
@@ -411,6 +425,13 @@ export async function markPublished(
     const extra = hasSubscription(serviceType) ? " (obuna 9 oy boshlandi)" : "";
     await logActivity(appId, "published", `Ilova store'ga chiqarildi${extra}`, actor);
   }
+
+  const name = snap.get("appName") || SERVICE_LABELS[serviceType];
+  const subNote = hasSubscription(serviceType) ? "\n\n🗓 Obuna 9 oyga boshlandi\\." : "";
+  await notifyUser(
+    snap.get("ownerUid"),
+    `🎉 *${esc(name)}* store'ga chiqarildi\\!${subNote}${appLink(appId)}`
+  );
 }
 
 // Admin/tizim: obunani 270 kunga uzaytirish.
