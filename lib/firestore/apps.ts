@@ -4,7 +4,7 @@ import type { ServiceType } from "@/types";
 import { isTerminalSuccess, type AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
 import { getPricing } from "@/lib/firestore/settings";
-import { fullUsd } from "@/lib/payment";
+import { fullUsd, finalUsd } from "@/lib/payment";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
 import { STATUS_META, SERVICE_LABELS } from "@/lib/labels";
 import { notifyUser, esc, appLink } from "@/lib/notify";
@@ -162,6 +162,21 @@ export async function deleteApp(appId: string): Promise<void> {
 }
 
 // Admin: ilova holatini o'zgartiradi (oqim bo'ylab yoki rad etish/bekor qilish).
+// Store nomi (xabarlar uchun)
+function storeName(serviceType: ServiceType): string {
+  return serviceType === "app-store" || serviceType === "apple-transfer" ? "App Store" : "Play Market";
+}
+
+// Qolgan (yakuniy) to'lov haqida eslatma qatori — faqat to'lanmagan bo'lsa.
+function finalDueLine(snap: DocumentSnapshot, serviceType: ServiceType, pricing: Awaited<ReturnType<typeof getPricing>>): string {
+  const finState = snap.get("payment")?.installments?.final?.state;
+  const amt = Math.round(finalUsd(serviceType, pricing));
+  if ((finState === "due" || finState === "rejected") && amt > 0) {
+    return `\n\n💳 Eslatma: qolgan to'lovingiz $${amt} — iltimos, kechiktirmasdan yakunlang`;
+  }
+  return "";
+}
+
 export async function setAppStatus(appId: string, status: AppStatus, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(APPS).doc(appId);
   const snap = await ref.get();
@@ -179,12 +194,16 @@ export async function setAppStatus(appId: string, status: AppStatus, actor?: Act
 
   // Foydalanuvchiga xabar (published bundan mustasno — u markPublished orqali alohida xabar beradi)
   if (status !== "published") {
-    const name = snap.get("appName") || SERVICE_LABELS[snap.get("serviceType") as ServiceType];
-    const label = STATUS_META[status]?.label ?? status;
-    await notifyUser(
-      snap.get("ownerUid"),
-      `📱 *${esc(name)}* ilovangizda yangilik bor 👇\n\n📍 Hozirgi bosqich: *${esc(label)}*${appLink(appId)}`
-    );
+    const serviceType = snap.get("serviceType") as ServiceType;
+    const name = snap.get("appName") || SERVICE_LABELS[serviceType];
+    const meta = STATUS_META[status];
+    const label = meta?.label ?? status;
+    let msg = `📱 *${esc(name)}* — ilovangizda yangilik bor 👇\n\n📍 Bosqich: *${esc(label)}*`;
+    if (meta?.desc) msg += `\n${esc(meta.desc)}`;
+    const pricing = await getPricing();
+    msg += finalDueLine(snap, serviceType, pricing);
+    msg += appLink(appId);
+    await notifyUser(snap.get("ownerUid"), msg);
   }
 }
 
@@ -436,11 +455,21 @@ export async function markPublished(
   }
 
   const name = snap.get("appName") || SERVICE_LABELS[serviceType];
-  const subNote = hasSubscription(serviceType) ? "\n\n🗓 Obuna bugundan 9 oyga boshlandi" : "";
-  await notifyUser(
-    snap.get("ownerUid"),
-    `🎉 Tabriklaymiz\\! *${esc(name)}* store'ga chiqdi 🚀\n\nEndi hammaga ochiq${subNote}${appLink(appId)}`
-  );
+  const pricing = await getPricing();
+  let msg = `🎉 Tabriklaymiz\\! *${esc(name)}* ${esc(storeName(serviceType))}'da chiqdi 🚀\n\nEndi u store'da hammaga ochiq`;
+  if (hasSubscription(serviceType)) {
+    const endStr = new Date(publishedAt.getTime() + SUBSCRIPTION_DURATION_DAYS * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    msg += `\n🗓 Obuna ${esc(endStr)} gacha amal qiladi \\(9 oy\\)`;
+  }
+  const finalAmt = Math.round(finalUsd(serviceType, pricing));
+  const finalPaid = snap.get("payment")?.installments?.final?.state === "confirmed" || snap.get("finalPaid");
+  if (finalAmt > 0 && !finalPaid) {
+    msg += `\n\n💳 Eslatma: qolgan to'lovingiz $${finalAmt} — iltimos, kechiktirmasdan yakunlang`;
+  }
+  msg += appLink(appId);
+  await notifyUser(snap.get("ownerUid"), msg);
 }
 
 // Admin/tizim: obunani 270 kunga uzaytirish.

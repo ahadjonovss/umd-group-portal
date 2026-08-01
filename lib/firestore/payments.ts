@@ -9,6 +9,8 @@ import { kindToInstallment } from "@/lib/payment-state";
 import { getUserWalletUzs, adjustWallet } from "@/lib/firestore/users";
 import { notifyUser, esc, appLink } from "@/lib/notify";
 import { SERVICE_LABELS } from "@/lib/labels";
+import { getPricing } from "@/lib/firestore/settings";
+import { finalUsd } from "@/lib/payment";
 import type { ServiceType } from "@/types";
 
 // Servisning (app/request) payment obyektidagi installment holatini yangilaydi.
@@ -291,14 +293,30 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
 
   // Foydalanuvchiga xabar
   {
+    const kind = (p.kind as PaymentKind) ?? "advance";
     const name = (p.appName as string) || SERVICE_LABELS[p.serviceType as ServiceType];
-    const kindLabel = PAYMENT_KIND_LABEL[(p.kind as PaymentKind) ?? "advance"];
     const amt = Math.round((p.amountUsd as number) ?? 0);
-    let msg = `✅ To'lovingiz qabul bo'ldi, rahmat 🙌\n\n📱 ${esc(name)}\n💳 ${esc(kindLabel)} · $${esc(String(amt))}`;
-    if (taxReceiptUrl) msg += `\n🧾 Soliq cheki: [ochish](${taxReceiptUrl})`;
-    if (overpay > 0) msg += `\n🪙 Hisobingizga ${esc(overpay.toLocaleString("en-US"))} so'm qaytib tushdi`;
-    msg += `\n\nIshni davom ettiramiz 🚀${appLink(p.appId as string)}`;
-    await notifyUser(p.ownerUid as string, msg);
+    let head = "";
+    let extra = "";
+    if (kind === "update_package") {
+      // paket faollashuvi alohida to'liq xabar beradi — bu yerda takrorlamaymiz
+    } else if (kind === "final" || kind === "full") {
+      head = "✅ To'lovingiz to'liq yakunlandi, rahmat 🙌";
+    } else if (kind === "advance") {
+      head = "✅ Avansingiz qabul bo'ldi — ishga kirishdik 🚀";
+      const pricing = await getPricing();
+      const finalAmt = Math.round(finalUsd(p.serviceType as ServiceType, pricing));
+      if (finalAmt > 0) extra = `\n\n💳 Qolgan to'lov: $${finalAmt} — ilova store'ga chiqqach yakunlanadi`;
+    } else {
+      head = "✅ To'lovingiz qabul bo'ldi, rahmat 🙌";
+    }
+    if (head) {
+      let msg = `${head}\n\n📱 ${esc(name)}\n💳 ${esc(PAYMENT_KIND_LABEL[kind])} · $${esc(String(amt))}`;
+      if (taxReceiptUrl) msg += `\n🧾 Soliq cheki: [ochish](${taxReceiptUrl})`;
+      if (overpay > 0) msg += `\n🪙 Hisobingizga ${esc(overpay.toLocaleString("en-US"))} so'm qaytib tushdi`;
+      msg += extra + appLink(p.appId as string);
+      await notifyUser(p.ownerUid as string, msg);
+    }
   }
 
   // Chegirma yakuniy/to'liq to'lov tasdiqlanganda ishlatilgan deb belgilanadi

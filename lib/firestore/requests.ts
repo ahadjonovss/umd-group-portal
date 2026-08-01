@@ -188,11 +188,17 @@ export async function setRequestStatus(id: string, status: RequestStatus, actor?
     if (ownerUid) {
       let msg: string;
       if (status === "completed") {
-        msg = `✅ *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingiz bajarildi 🎉\n📱 ${esc(name)}${appLink(appId)}`;
+        if (type === "update") {
+          msg = `✅ *${esc(name)}* uchun yangilanish chiqarildi — ilovangiz store'da yangilandi 🎉${appLink(appId)}`;
+        } else if (type === "push_certificate") {
+          msg = `✅ *${esc(name)}* uchun push-sertifikat tayyor bo'ldi 🎉\nEndi push-bildirishnomalarni yuborsangiz bo'ladi${appLink(appId)}`;
+        } else {
+          msg = `✅ *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingiz bajarildi — *${esc(name)}* 🎉${appLink(appId)}`;
+        }
       } else if (status === "rejected" || status === "cancelled") {
-        msg = `❌ *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingiz bekor qilindi\n📱 ${esc(name)}${appLink(appId)}`;
+        msg = `❌ *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingiz bekor qilindi — *${esc(name)}*\nSavollar bo'lsa biz bilan bog'laning 🙌${appLink(appId)}`;
       } else {
-        msg = `🔧 *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingizda yangilik\n📱 ${esc(name)}\n\n📍 Hozir: *${esc(requestStatusLabel(type, status))}*${appLink(appId)}`;
+        msg = `🔧 *${esc(name)}* — *${esc(REQUEST_TYPE_LABEL[type])}* so'rovingizda yangilik\n\n📍 Bosqich: *${esc(requestStatusLabel(type, status))}*${appLink(appId)}`;
       }
       await notifyUser(ownerUid, msg);
     }
