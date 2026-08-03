@@ -496,7 +496,8 @@ export async function renewSubscription(
     "subscription.active": true,
     "subscription.renewedCount": (sub.renewedCount ?? 0) + 1,
     "subscription.lastRenewedAt": Timestamp.fromDate(renewedAt),
-    "subscription.reminded": false, // yangi muddat — eslatma qayta yuborilsin
+    "subscription.reminded": false, // eski (ishlatilmaydi)
+    "subscription.remindedOn": null, // yangi muddat — eslatmalar qayta boshlanadi
   });
   if (actor) {
     const fromLabel = from === "today" ? "bugundan" : "tugagan kundan";
