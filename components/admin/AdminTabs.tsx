@@ -400,7 +400,7 @@ export function AdminTabs({
           </>
         )}
 
-        {tab === "finance" && <FinancePanel payments={payments} discounts={discounts} users={users} />}
+        {tab === "finance" && <FinancePanel payments={payments} discounts={discounts} users={users} apps={apps} pricing={pricing} />}
 
         {tab === "discounts" && <DiscountsPanel users={users} discounts={discounts} />}
 

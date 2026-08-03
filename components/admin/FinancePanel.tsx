@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { DiscountView } from "@/lib/firestore/discounts";
 import type { AdminUser } from "@/lib/firestore/users";
+import type { AppView } from "@/lib/firestore/apps";
+import type { Pricing } from "@/lib/firestore/settings";
 import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
+import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
+import { getInstallment } from "@/lib/payment-state";
+import { isTerminalError } from "@/lib/app-status";
 import type { ServiceType } from "@/types";
 
 const KIND_LABEL: Record<PaymentView["kind"], string> = {
@@ -207,8 +212,55 @@ function topBy(rows: PaymentView[], keyOf: (p: PaymentView) => string, labelOf: 
   return Array.from(map.values()).sort((a, b) => b.usd - a.usd).slice(0, 5);
 }
 
-export function FinancePanel({ payments, discounts = [], users = [] }: { payments: PaymentView[]; discounts?: DiscountView[]; users?: AdminUser[] }) {
+export function FinancePanel({
+  payments,
+  discounts = [],
+  users = [],
+  apps = [],
+  pricing,
+}: {
+  payments: PaymentView[];
+  discounts?: DiscountView[];
+  users?: AdminUser[];
+  apps?: AppView[];
+  pricing?: Pricing;
+}) {
   const [period, setPeriod] = useState<Period>("month");
+
+  // Kutilayotgan daromad (joriy holat): to'lanmagan qismlar + shu oy uzaytiriladigan obunalar
+  const expected = useMemo(() => {
+    if (!pricing) return { owedUsd: 0, owedCount: 0, renewalUsd: 0, renewalCount: 0, totalUsd: 0 };
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const OPEN = new Set(["due", "rejected", "submitted"]);
+    let owedUsd = 0;
+    let owedCount = 0;
+    let renUsd = 0;
+    let renCount = 0;
+    for (const a of apps) {
+      // To'lanmagan avans/yakuniy qismlar
+      if (!isTerminalError(a.status) && a.status !== "transferred" && a.status !== "subscription_ended") {
+        const adv = getInstallment(a.payment, "advance");
+        const fin = getInstallment(a.payment, "final");
+        if (adv && OPEN.has(adv.state)) {
+          const amt = Math.round(advanceUsdApp(a, pricing));
+          if (amt > 0) { owedUsd += amt; owedCount++; }
+        }
+        if (fin && OPEN.has(fin.state)) {
+          const amt = Math.round(finalUsdApp(a, pricing));
+          if (amt > 0) { owedUsd += amt; owedCount++; }
+        }
+      }
+      // Shu oy tugaydigan (uzaytirilishi kutilayotgan) obunalar
+      if (a.status === "published" && a.subscription?.active && a.subscription.endDate) {
+        if (a.subscription.endDate.slice(0, 7) === curMonthKey) {
+          const amt = Math.round(renewalUsd(a, pricing));
+          if (amt > 0) { renUsd += amt; renCount++; }
+        }
+      }
+    }
+    return { owedUsd, owedCount, renewalUsd: renUsd, renewalCount: renCount, totalUsd: owedUsd + renUsd };
+  }, [apps, pricing]);
 
   // Hamyon statistikasi (davrdan mustaqil — joriy holat)
   const wallet = useMemo(() => {
@@ -380,9 +432,14 @@ export function FinancePanel({ payments, discounts = [], users = [] }: { payment
           <p className="text-2xl font-bold mt-1 text-slate-900">{usd(data.avgUsd)}</p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
-          <p className="text-xs text-slate-400">Kutilayotgan</p>
-          <p className="text-2xl font-bold mt-1 text-amber-600">{usd(data.pendingUsd)}</p>
-          <p className="text-xs text-slate-400 mt-0.5">{data.pendingCount} ta to&apos;lov</p>
+          <p className="text-xs text-slate-400">Kutilayotgan daromad</p>
+          <p className="text-2xl font-bold mt-1 text-amber-600">{usd(expected.totalUsd)}</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {expected.owedCount > 0 && <>💳 {expected.owedCount} to&apos;lov</>}
+            {expected.owedCount > 0 && expected.renewalCount > 0 && " · "}
+            {expected.renewalCount > 0 && <>🔄 {expected.renewalCount} uzaytirish</>}
+            {expected.owedCount === 0 && expected.renewalCount === 0 && "yo'q"}
+          </p>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
           <p className="text-xs text-slate-400">Eng daromadli</p>
