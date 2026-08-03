@@ -18,6 +18,15 @@ export function AdminUserListItem({ user }: { user: AdminUser }) {
         <div className="flex items-center gap-2">
           <p className="font-semibold text-slate-900 truncate">{user.fullName || "—"}</p>
           {isAdmin && <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white text-[10px] font-semibold">ADMIN</span>}
+          {user.telegramChatId ? (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 ring-1 ring-sky-200 text-[10px] font-semibold flex-shrink-0" title="Telegram ulangan">
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500" /> TG
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 text-slate-400 ring-1 ring-slate-200 text-[10px] font-medium flex-shrink-0" title="Telegram ulanmagan">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-300" /> TG
+            </span>
+          )}
         </div>
         <p className="text-xs text-slate-500 truncate">{user.email}</p>
         <p className="text-xs text-slate-400 truncate">

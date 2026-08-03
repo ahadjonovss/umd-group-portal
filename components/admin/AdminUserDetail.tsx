@@ -111,6 +111,20 @@ function ProfileEditor({ user }: { user: AdminUser }) {
           <InfoRow label="To'liq ism" value={user.fullName} />
           <InfoRow label="Telefon" value={user.phone} />
           <InfoRow label="Telegram" value={user.telegram ? `@${user.telegram}` : ""} />
+          <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0">
+            <span className="text-sm text-slate-500">Telegram holati</span>
+            {user.telegramChatId ? (
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
+                Ulangan{user.telegramNotify ? "" : " · xabarnoma o'chirilgan"}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                Ulanmagan
+              </span>
+            )}
+          </div>
           {msg?.ok && <p className="text-xs text-emerald-600 mt-2">✓ {msg.text}</p>}
         </div>
       )}
