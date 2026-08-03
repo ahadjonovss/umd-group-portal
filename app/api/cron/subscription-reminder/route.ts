@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, FieldValue } from "@/lib/firebase/admin";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { notifyUser, appLink } from "@/lib/notify";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     const daysLeft = Math.ceil((endMs - now) / (24 * 60 * 60 * 1000));
 
     try {
-      await sendTelegramMessage(
+      await notifier.general(
         `⏳ *OBUNA TUGAYAPTI*\n\n📱 ${esc(appName)}\n👤 ${esc(ownerName)}\n📅 ${esc(String(daysLeft))} kun qoldi` +
           tgAdminLink(doc.id)
       );

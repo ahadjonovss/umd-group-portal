@@ -5,7 +5,7 @@ import { createRequest, hasActiveRequest } from "@/lib/firestore/requests";
 import { getPricing } from "@/lib/firestore/settings";
 import { renewalUsd, finalUsd } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       `📞 ${esc(ownerPhone)}\n` +
       `💵 ${esc(String(usd))}$ · +9 oy` +
       tgAdminLink(appId);
-    await sendTelegramMessage(text);
+    await notifier.requests(text);
   } catch {
     // jiddiy emas
   }

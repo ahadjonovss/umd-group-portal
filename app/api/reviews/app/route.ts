@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { adminDb } from "@/lib/firebase/admin";
 import { createAppReview, hasReviewedApp } from "@/lib/firestore/reviews";
 import { isTerminalSuccess, type AppStatus } from "@/lib/app-status";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { tgAdminLink } from "@/lib/site";
 import type { ServiceType } from "@/types";
 
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       `📦 ${esc(appName || serviceType)}\n` +
       `💬 ${esc(comment.trim())}` +
       tgAdminLink(appId);
-    await sendTelegramMessage(text);
+    await notifier.feedback(text);
   } catch {
     // jiddiy emas
   }

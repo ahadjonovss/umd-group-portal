@@ -45,6 +45,88 @@ export async function sendTelegramMessage(text: string): Promise<void> {
   }
 }
 
+// ── Past darajali (thread-aware) yuboruvchilar ─────────────────────
+// Guruh topiclariga (message_thread_id) yoki oddiy chatga yuborish uchun.
+type Keyboard = { inline_keyboard: { text: string; callback_data: string }[][] };
+
+export async function sendMessageRaw(opts: {
+  chatId: string | number;
+  text: string;
+  threadId?: number | null;
+  replyMarkup?: Keyboard;
+}): Promise<boolean> {
+  try {
+    const res = await axios.post(`${BASE_URL}/sendMessage`, {
+      chat_id: opts.chatId,
+      text: opts.text,
+      parse_mode: "MarkdownV2",
+      disable_web_page_preview: true,
+      ...(opts.threadId ? { message_thread_id: opts.threadId } : {}),
+      ...(opts.replyMarkup ? { reply_markup: opts.replyMarkup } : {}),
+    });
+    return Boolean(res.data?.ok);
+  } catch (e) {
+    console.error("[telegram] sendMessageRaw:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+export async function sendPhotoRaw(opts: {
+  chatId: string | number;
+  buffer: Buffer;
+  filename: string;
+  caption: string;
+  threadId?: number | null;
+  replyMarkup?: Keyboard;
+}): Promise<boolean> {
+  try {
+    const form = new FormData();
+    form.append("chat_id", String(opts.chatId));
+    if (opts.threadId) form.append("message_thread_id", String(opts.threadId));
+    form.append("photo", opts.buffer, { filename: opts.filename, contentType: "image/jpeg" });
+    form.append("caption", opts.caption);
+    form.append("parse_mode", "MarkdownV2");
+    if (opts.replyMarkup) form.append("reply_markup", JSON.stringify(opts.replyMarkup));
+    const res = await axios.post(`${BASE_URL}/sendPhoto`, form, {
+      headers: form.getHeaders(),
+      maxBodyLength: MAX_FILE_SIZE,
+      maxContentLength: MAX_FILE_SIZE,
+      timeout: 120000,
+    });
+    return Boolean(res.data?.ok);
+  } catch (e) {
+    console.error("[telegram] sendPhotoRaw:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+export async function sendDocumentRaw(opts: {
+  chatId: string | number;
+  buffer: Buffer;
+  filename: string;
+  caption: string;
+  threadId?: number | null;
+}): Promise<boolean> {
+  try {
+    const form = new FormData();
+    form.append("chat_id", String(opts.chatId));
+    if (opts.threadId) form.append("message_thread_id", String(opts.threadId));
+    form.append("document", opts.buffer, { filename: opts.filename, contentType: "application/zip" });
+    form.append("caption", opts.caption);
+    form.append("parse_mode", "MarkdownV2");
+    const res = await axios.post(`${BASE_URL}/sendDocument`, form, {
+      headers: form.getHeaders(),
+      maxBodyLength: MAX_FILE_SIZE,
+      maxContentLength: MAX_FILE_SIZE,
+      timeout: 120000,
+    });
+    return Boolean(res.data?.ok);
+  } catch (e) {
+    console.error("[telegram] sendDocumentRaw:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
 // Bot username (deep-link uchun) — getMe orqali bir marta olinadi va cache qilinadi.
 let cachedBotUsername: string | null = null;
 export async function getBotUsername(): Promise<string> {

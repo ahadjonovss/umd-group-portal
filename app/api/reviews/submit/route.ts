@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 
 const STARS = ["", "⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"];
 
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       `💬 Izoh: ${esc(comment)}\n\n` +
       `✅ [Saytda chiqarish](${esc(approveUrl)})`;
 
-    await sendTelegramMessage(text);
+    await notifier.feedback(text);
   } catch {
     // Telegram xatosi bo'lsa ham submit muvaffaqiyatli hisoblanadi
   }

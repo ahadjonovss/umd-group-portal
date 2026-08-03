@@ -5,7 +5,7 @@ import { createRequest, hasActiveRequest } from "@/lib/firestore/requests";
 import { getPricing } from "@/lib/firestore/settings";
 import { updateUsd, finalUsd } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
       `💵 ${usePackage ? "Paket ichida \\(bepul\\)" : esc(String(usd)) + "$"}\n` +
       `📝 ${esc(releaseNotes.slice(0, 300))}` +
       tgAdminLink(appId);
-    await sendTelegramMessage(text);
+    await notifier.requests(text);
   } catch {
     // jiddiy emas
   }

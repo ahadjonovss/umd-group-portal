@@ -6,7 +6,8 @@ import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { setAppTaxPhone } from "@/lib/firestore/apps";
 import { readFormFile } from "@/lib/form-utils";
 import { getUsdRate } from "@/lib/cbu";
-import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
+import { paymentButtons } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { REQUEST_TYPE_LABEL, isRequestTerminalError, type RequestStatus, type RequestType } from "@/lib/request-status";
@@ -117,7 +118,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const ext = receipt.name.split(".").pop()?.toLowerCase() || "jpg";
-    await sendPhotoToTelegram(
+    await notifier.photo(
+      "payments",
       receipt.buffer,
       `chek_${requestId}.${ext}`,
       caption,

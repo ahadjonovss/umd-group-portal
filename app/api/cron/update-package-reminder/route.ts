@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, FieldValue } from "@/lib/firebase/admin";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { notifyUser, appLink } from "@/lib/notify";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     try {
       // Admin kanaliga
-      await sendTelegramMessage(
+      await notifier.general(
         `⏳ *UPDATE PAKETI TUGAYAPTI*\n\n` +
           `📱 ${esc(appName)}\n` +
           `👤 ${esc(ownerName)}\n` +

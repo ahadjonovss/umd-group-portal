@@ -1,6 +1,7 @@
 import "server-only";
 import { getUserTelegram } from "@/lib/firestore/users";
 import { sendTelegramTo } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { SITE_URL } from "@/lib/site";
 
 // MarkdownV2 uchun maxsus belgilarni ekranlaydi.
@@ -20,7 +21,12 @@ export async function notifyUser(uid: string, text: string): Promise<void> {
     if (!uid) return;
     const tg = await getUserTelegram(uid);
     if (!tg.chatId || !tg.notify) return;
-    await sendTelegramTo(tg.chatId, text);
+    const ok = await sendTelegramTo(tg.chatId, text);
+    // Yuborilgan xabar nusxasini admin "Xabarlar" topicга
+    if (ok) {
+      const who = tg.fullName || tg.email || (tg.username ? `@${tg.username}` : uid);
+      await notifier.userMessages(`👤 *${esc(who)}* ga yuborildi:\n\n${text}`);
+    }
   } catch (e) {
     console.error("[notify] xato:", e instanceof Error ? e.message : e);
   }

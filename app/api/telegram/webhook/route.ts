@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { confirmPayment, rejectPayment } from "@/lib/firestore/payments";
-import { answerCallbackQuery, editMessageReplyMarkup, sendTelegramTo, sendTelegramMessage } from "@/lib/telegram";
+import { answerCallbackQuery, editMessageReplyMarkup, sendTelegramTo } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { consumeTelegramLinkToken, linkTelegramChat, getUserByChatId, setTelegramNotify, getUser } from "@/lib/firestore/users";
 
 function esc(t: string) {
@@ -19,7 +20,8 @@ interface CallbackQuery {
 
 interface TgMessage {
   message_id: number;
-  chat: { id: number };
+  message_thread_id?: number;
+  chat: { id: number; type?: string };
   from?: { username?: string; first_name?: string };
   text?: string;
 }
@@ -28,6 +30,16 @@ interface TgMessage {
 async function handleMessage(msg: TgMessage): Promise<void> {
   const chatId = msg.chat.id;
   const text = (msg.text || "").trim();
+
+  // /id — chat_id va topic (thread) id ni ko'rsatadi (guruh topiclarini sozlash uchun)
+  if (text === "/id" || text.startsWith("/id")) {
+    const thread = msg.message_thread_id ?? "(yo'q — General)";
+    await sendTelegramTo(
+      chatId,
+      `🆔 *Sozlash ma'lumotlari*\n\nchat\\_id: \`${esc(String(chatId))}\`\nthread\\_id: \`${esc(String(thread))}\``
+    );
+    return;
+  }
 
   // /start <token> — akkauntni ulash
   if (text.startsWith("/start")) {
@@ -44,7 +56,7 @@ async function handleMessage(msg: TgMessage): Promise<void> {
         try {
           const u = await getUser(uid);
           const tgUname = msg.from?.username ? `@${msg.from.username}` : "-";
-          await sendTelegramMessage(
+          await notifier.registrations(
             `🔗 *TELEGRAM ULANDI*\n\n` +
               `👤 ${esc(u?.fullName || "-")}\n` +
               `📧 ${esc(u?.email || "-")}\n` +

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createPlayMarketZip, buildPlayMarketInfo } from "@/lib/zip";
-import { sendZipToTelegram, buildTelegramCaption } from "@/lib/telegram";
+import { buildTelegramCaption } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { tgAdminLink } from "@/lib/site";
 import { readFormFile } from "@/lib/form-utils";
 import { getCurrentUser } from "@/lib/auth/dal";
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
 
   // 2) Telegramga yuborish (ixtiyoriy — muvaffaqiyatsiz bo'lsa ham ariza saqlangan)
   try {
-    await sendZipToTelegram(zipBuffer, filename, caption + tgAdminLink(appId));
+    await notifier.document("apps", zipBuffer, filename, caption + tgAdminLink(appId));
     await markTelegramSent(appId);
   } catch (err) {
     console.error("[PM] Telegram xato (ariza Firestore'da saqlangan):", err);

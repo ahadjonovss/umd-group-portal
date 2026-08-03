@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb, FieldValue } from "@/lib/firebase/admin";
 import { createSession, destroySession } from "@/lib/auth/session";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 
 export const runtime = "nodejs";
 
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   try {
     if (profile) {
       const tg = profile.telegram ? `@${profile.telegram}` : "-";
-      await sendTelegramMessage(
+      await notifier.registrations(
         `🆕 *YANGI RO'YXATDAN O'TISH*\n\n` +
           `👤 ${esc(profile.fullName || "-")}\n` +
           `📧 ${esc(email || "-")}\n` +
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
         const t = doc.get("telegram");
         if (t) tg = `@${t}`;
       } catch {}
-      await sendTelegramMessage(
+      await notifier.registrations(
         `🔓 *TIZIMGA KIRISH*\n\n` +
           `👤 ${esc(name)}\n` +
           `📧 ${esc(email || "-")}\n` +

@@ -3,7 +3,8 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { adminDb } from "@/lib/firebase/admin";
 import { markReceiptSent, markFinalReceiptSent, setAppTaxPhone } from "@/lib/firestore/apps";
 import { readFormFile } from "@/lib/form-utils";
-import { sendPhotoToTelegram, paymentButtons } from "@/lib/telegram";
+import { paymentButtons } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { createPayment, type PaymentKind } from "@/lib/firestore/payments";
 import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp, updatePackageUsd } from "@/lib/payment";
@@ -176,7 +177,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const ext = receipt.name.split(".").pop()?.toLowerCase();
-    await sendPhotoToTelegram(
+    await notifier.photo(
+      "payments",
       receipt.buffer,
       `chek_${appId}.${ext || "jpg"}`,
       caption,

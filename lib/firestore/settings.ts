@@ -129,3 +129,38 @@ export async function setPaymentInfo(info: PaymentInfo): Promise<void> {
     { merge: true }
   );
 }
+
+// ── Telegram guruh/topic sozlamalari ─────────────────────────────
+export type TelegramTopicKey =
+  | "payments"
+  | "requests"
+  | "apps"
+  | "feedback"
+  | "registrations"
+  | "userMessages"
+  | "general";
+
+export interface TelegramConfig {
+  groupChatId: string | null; // forum (topicli) supergруппа chat_id
+  topics: Partial<Record<TelegramTopicKey, number>>; // topic -> message_thread_id
+}
+
+export async function getTelegramConfig(): Promise<TelegramConfig> {
+  try {
+    const doc = await adminDb.collection("settings").doc("telegram").get();
+    const x = doc.data() ?? {};
+    return {
+      groupChatId: typeof x.groupChatId === "string" && x.groupChatId ? x.groupChatId : null,
+      topics: (x.topics as Partial<Record<TelegramTopicKey, number>>) ?? {},
+    };
+  } catch {
+    return { groupChatId: null, topics: {} };
+  }
+}
+
+export async function setTelegramConfig(cfg: TelegramConfig): Promise<void> {
+  await adminDb.collection("settings").doc("telegram").set(
+    { groupChatId: cfg.groupChatId ?? null, topics: cfg.topics ?? {} },
+    { merge: true }
+  );
+}

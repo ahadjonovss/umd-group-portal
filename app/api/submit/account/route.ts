@@ -4,7 +4,7 @@ import { createAppSubmission, markTelegramSent } from "@/lib/firestore/apps";
 import { getPricing } from "@/lib/firestore/settings";
 import { accountBaseUsd, type AccountPlatform, type AccountType } from "@/lib/payment";
 import { readFormFile } from "@/lib/form-utils";
-import { sendTelegramMessage, sendPhotoToTelegram, sendZipToTelegram } from "@/lib/telegram";
+import { notifier } from "@/lib/telegram-notifier";
 import { tgAdminLink } from "@/lib/site";
 
 export const runtime = "nodejs";
@@ -80,12 +80,12 @@ export async function POST(req: NextRequest) {
     if (cert) {
       const ext = (cert.name.split(".").pop() || "").toLowerCase();
       if (["jpg", "jpeg", "png", "webp"].includes(ext)) {
-        await sendPhotoToTelegram(cert.buffer, cert.name, caption);
+        await notifier.photo("apps", cert.buffer, cert.name, caption);
       } else {
-        await sendZipToTelegram(cert.buffer, cert.name, caption);
+        await notifier.document("apps", cert.buffer, cert.name, caption);
       }
     } else {
-      await sendTelegramMessage(caption);
+      await notifier.apps(caption);
     }
     await markTelegramSent(appId);
   } catch (e) {

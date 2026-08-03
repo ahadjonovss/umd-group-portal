@@ -42,6 +42,8 @@ export interface UserTelegram {
   chatId: string | null;
   notify: boolean;
   username: string;
+  fullName: string;
+  email: string | null;
 }
 
 // Foydalanuvchining Telegram holati (xabar yuborish uchun).
@@ -52,6 +54,8 @@ export async function getUserTelegram(uid: string): Promise<UserTelegram> {
     chatId: x.telegramChatId ?? null,
     notify: x.telegramNotify !== false,
     username: x.telegramUsername ?? x.telegram ?? "",
+    fullName: x.fullName ?? "",
+    email: x.email ?? null,
   };
 }
 
