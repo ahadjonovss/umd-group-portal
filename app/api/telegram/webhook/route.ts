@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { confirmPayment, rejectPayment } from "@/lib/firestore/payments";
-import { answerCallbackQuery, editMessageReplyMarkup, sendTelegramTo } from "@/lib/telegram";
-import { consumeTelegramLinkToken, linkTelegramChat, getUserByChatId, setTelegramNotify } from "@/lib/firestore/users";
+import { answerCallbackQuery, editMessageReplyMarkup, sendTelegramTo, sendTelegramMessage } from "@/lib/telegram";
+import { consumeTelegramLinkToken, linkTelegramChat, getUserByChatId, setTelegramNotify, getUser } from "@/lib/firestore/users";
+
+function esc(t: string) {
+  return String(t).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
+}
 
 export const runtime = "nodejs";
 
@@ -36,6 +40,19 @@ async function handleMessage(msg: TgMessage): Promise<void> {
           chatId,
           `🎉 Ulandingiz\\!\n\nEndi *UMD GROUP* dagi barcha yangiliklarni shu yerda olib turasiz — status o'zgarishlari, to'lovlar, so'rovlar, obuna va update paketi 👍\n\nBezovta qilmasligimizni istasangiz, istalgan payt /stop yuboring`
         );
+        // Adminга xabar
+        try {
+          const u = await getUser(uid);
+          const tgUname = msg.from?.username ? `@${msg.from.username}` : "-";
+          await sendTelegramMessage(
+            `🔗 *TELEGRAM ULANDI*\n\n` +
+              `👤 ${esc(u?.fullName || "-")}\n` +
+              `📧 ${esc(u?.email || "-")}\n` +
+              `📱 Telegram: ${esc(tgUname)}`
+          );
+        } catch (e) {
+          console.error("[webhook] ulanish admin xabari xato:", e);
+        }
       } else {
         await sendTelegramTo(chatId, `⚠️ Ulash havolasi eskirgan\\. Iltimos, kabinetdan qaytadan "Telegramni ulash" tugmasini bosing\\.`);
       }
