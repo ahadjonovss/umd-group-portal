@@ -121,7 +121,7 @@ export default async function PanelPage() {
 
         <WalletCard balanceUzs={walletUzs} />
 
-        <TelegramLinkAlert linked={Boolean(telegram.chatId)} />
+        <TelegramLinkAlert count={telegram.chatIds.length} />
         <DiscountAlert discounts={discounts} />
         <PackageExpiryAlert apps={apps} />
         <PublishedReviewAlert apps={publishedUnreviewed} />

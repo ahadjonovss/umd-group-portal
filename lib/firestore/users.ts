@@ -8,7 +8,8 @@ export interface AdminUser {
   fullName: string;
   phone: string;
   telegram: string;
-  telegramChatId: string | null; // bot xabar yuborishi uchun (ulangach)
+  telegramChatId: string | null; // birlamchi chat (eski moslik)
+  telegramChats: { chatId: string; username: string }[]; // barcha ulangan akkauntlar
   telegramNotify: boolean; // xabarnomalar yoqilganmi
   role: string | null;
   passwordPlain: string | null; // admin ko'rishi uchun (faqat panel orqali o'rnatilganlar)
@@ -26,6 +27,11 @@ function mapUser(d: DocumentSnapshot): AdminUser {
     phone: x.phone ?? "",
     telegram: x.telegram ?? "",
     telegramChatId: x.telegramChatId ?? null,
+    telegramChats: Array.isArray(x.telegramChats)
+      ? x.telegramChats.map((c: { chatId: unknown; username?: unknown }) => ({ chatId: String(c.chatId), username: String(c.username ?? "") }))
+      : x.telegramChatId
+        ? [{ chatId: String(x.telegramChatId), username: String(x.telegramUsername ?? "") }]
+        : [],
     telegramNotify: x.telegramNotify !== false, // default yoqilgan
     role: x.role ?? null,
     passwordPlain: x.passwordPlain ?? null,
@@ -39,11 +45,17 @@ const TG_LINKS = "telegramLinks";
 const LINK_TTL_MS = 30 * 60 * 1000; // 30 daqiqa
 
 export interface UserTelegram {
-  chatId: string | null;
+  chatIds: string[]; // barcha ulangan Telegram chatlari
   notify: boolean;
   username: string;
   fullName: string;
   email: string | null;
+}
+
+// Hujjatdan barcha ulangan chat id'larni oladi (yangi massiv yoki eski bitta maydon).
+function chatIdsOf(x: Record<string, unknown>): string[] {
+  if (Array.isArray(x.telegramChatIds)) return (x.telegramChatIds as unknown[]).map(String);
+  return x.telegramChatId ? [String(x.telegramChatId)] : [];
 }
 
 // Foydalanuvchining Telegram holati (xabar yuborish uchun).
@@ -51,7 +63,7 @@ export async function getUserTelegram(uid: string): Promise<UserTelegram> {
   const d = await adminDb.collection("users").doc(uid).get();
   const x = d.data() ?? {};
   return {
-    chatId: x.telegramChatId ?? null,
+    chatIds: chatIdsOf(x),
     notify: x.telegramNotify !== false,
     username: x.telegramUsername ?? x.telegram ?? "",
     fullName: x.fullName ?? "",
@@ -80,15 +92,47 @@ export async function consumeTelegramLinkToken(token: string): Promise<string | 
 
 // Chat ID bo'yicha foydalanuvchi uid'sini topadi (webhook uchun).
 export async function getUserByChatId(chatId: string | number): Promise<string | null> {
-  const snap = await adminDb.collection("users").where("telegramChatId", "==", String(chatId)).limit(1).get();
+  const cid = String(chatId);
+  let snap = await adminDb.collection("users").where("telegramChatIds", "array-contains", cid).limit(1).get();
+  if (snap.empty) snap = await adminDb.collection("users").where("telegramChatId", "==", cid).limit(1).get();
   return snap.empty ? null : snap.docs[0].id;
 }
 
-// Chat ID ni foydalanuvchiga bog'laydi.
+interface TgChat {
+  chatId: string;
+  username: string;
+}
+
+// Chat ID ni foydalanuvchiga bog'laydi (bir user — bir nechta Telegram akkaunt).
+// Allaqachon ulangan bo'lsa takrorlanmaydi, faqat username yangilanadi.
 export async function linkTelegramChat(uid: string, chatId: string | number, username?: string): Promise<void> {
-  await adminDb.collection("users").doc(uid).set(
+  const cid = String(chatId);
+  // Bitta Telegram chat — bitta user. Boshqa userга ulangan bo'lsa, o'shandan uzamiz.
+  const prev = await getUserByChatId(cid);
+  if (prev && prev !== uid) await unlinkTelegramChat(prev, cid);
+
+  const ref = adminDb.collection("users").doc(uid);
+  const snap = await ref.get();
+  const x = snap.data() ?? {};
+
+  const ids = chatIdsOf(x);
+  const chats: TgChat[] = Array.isArray(x.telegramChats)
+    ? (x.telegramChats as TgChat[]).map((c) => ({ chatId: String(c.chatId), username: c.username ?? "" }))
+    : ids.map((id) => ({ chatId: id, username: id === String(x.telegramChatId) ? x.telegramUsername ?? "" : "" }));
+
+  if (!ids.includes(cid)) {
+    ids.push(cid);
+    chats.push({ chatId: cid, username: username ?? "" });
+  } else if (username) {
+    const c = chats.find((c) => c.chatId === cid);
+    if (c) c.username = username;
+  }
+
+  await ref.set(
     {
-      telegramChatId: String(chatId),
+      telegramChatIds: ids,
+      telegramChats: chats,
+      telegramChatId: x.telegramChatId ?? cid, // birlamchi (eski kod/UI uchun)
       telegramNotify: true,
       telegramLinkedAt: FieldValue.serverTimestamp(),
       ...(username ? { telegramUsername: username } : {}),
@@ -97,10 +141,25 @@ export async function linkTelegramChat(uid: string, chatId: string | number, use
   );
 }
 
-// Ulashni uzadi.
-export async function unlinkTelegramChat(uid: string): Promise<void> {
-  await adminDb.collection("users").doc(uid).set(
-    { telegramChatId: FieldValue.delete(), telegramLinkedAt: FieldValue.delete() },
+// Ulashni uzadi — chatId berilsa faqat o'shani, aks holda barchasini.
+export async function unlinkTelegramChat(uid: string, chatId?: string | number): Promise<void> {
+  const ref = adminDb.collection("users").doc(uid);
+  if (!chatId) {
+    await ref.set(
+      { telegramChatIds: [], telegramChats: [], telegramChatId: FieldValue.delete(), telegramLinkedAt: FieldValue.delete() },
+      { merge: true }
+    );
+    return;
+  }
+  const snap = await ref.get();
+  const x = snap.data() ?? {};
+  const cid = String(chatId);
+  const ids = chatIdsOf(x).filter((i) => i !== cid);
+  const chats: TgChat[] = (Array.isArray(x.telegramChats) ? (x.telegramChats as TgChat[]) : [])
+    .map((c) => ({ chatId: String(c.chatId), username: c.username ?? "" }))
+    .filter((c) => c.chatId !== cid);
+  await ref.set(
+    { telegramChatIds: ids, telegramChats: chats, telegramChatId: ids[0] ?? FieldValue.delete() },
     { merge: true }
   );
 }

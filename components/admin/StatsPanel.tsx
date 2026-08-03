@@ -174,8 +174,8 @@ export function StatsPanel({
 
     // ── Foydalanuvchilar ──
     const totalUsers = users.length;
-    const tgLinked = users.filter((u) => u.telegramChatId).length;
-    const tgNotify = users.filter((u) => u.telegramChatId && u.telegramNotify).length;
+    const tgLinked = users.filter((u) => u.telegramChats.length > 0).length;
+    const tgNotify = users.filter((u) => u.telegramChats.length > 0 && u.telegramNotify).length;
     const activeUsers = users.filter((u) => (u.appCount ?? 0) > 0).length;
     const newUsersMonth = users.filter((u) => (u.createdAt ?? "").slice(0, 7) === curMonth).length;
     const newUsersPrev = users.filter((u) => (u.createdAt ?? "").slice(0, 7) === prevMonth).length;

@@ -1,7 +1,23 @@
-// Kabinet: Telegramга ulanmagan foydalanuvchiga taklif alerti.
+// Kabinet: Telegram ulash taklifi / yana akkaunt qo'shish.
 // Tugma bosilganda /api/telegram/link ga o'tadi — u token yaratib botga yo'naltiradi.
-export function TelegramLinkAlert({ linked }: { linked: boolean }) {
-  if (linked) return null;
+export function TelegramLinkAlert({ count = 0 }: { count?: number }) {
+  // Allaqachon ulangan bo'lsa — kichik "yana ulash" qatori
+  if (count > 0) {
+    return (
+      <a
+        href="/api/telegram/link"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-700 mb-4 self-start"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+        Yana Telegram akkaunt ulash
+        <span className="text-slate-400">({count} ta ulangan)</span>
+      </a>
+    );
+  }
 
   return (
     <a

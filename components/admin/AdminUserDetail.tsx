@@ -113,10 +113,10 @@ function ProfileEditor({ user }: { user: AdminUser }) {
           <InfoRow label="Telegram" value={user.telegram ? `@${user.telegram}` : ""} />
           <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0">
             <span className="text-sm text-slate-500">Telegram holati</span>
-            {user.telegramChatId ? (
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                Ulangan{user.telegramNotify ? "" : " · xabarnoma o'chirilgan"}
+            {user.telegramChats.length > 0 ? (
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700 text-right">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 flex-shrink-0" />
+                {user.telegramChats.length} ta ulangan{user.telegramNotify ? "" : " · xabarnoma o'chirilgan"}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
@@ -125,6 +125,14 @@ function ProfileEditor({ user }: { user: AdminUser }) {
               </span>
             )}
           </div>
+          {user.telegramChats.length > 0 && (
+            <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0">
+              <span className="text-sm text-slate-500">Telegram akkauntlar</span>
+              <span className="text-sm text-slate-900 text-right break-all">
+                {user.telegramChats.map((c) => (c.username ? `@${c.username}` : c.chatId)).join(", ")}
+              </span>
+            </div>
+          )}
           {msg?.ok && <p className="text-xs text-emerald-600 mt-2">✓ {msg.text}</p>}
         </div>
       )}

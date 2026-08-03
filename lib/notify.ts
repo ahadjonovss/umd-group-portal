@@ -20,10 +20,15 @@ export async function notifyUser(uid: string, text: string): Promise<void> {
   try {
     if (!uid) return;
     const tg = await getUserTelegram(uid);
-    if (!tg.chatId || !tg.notify) return;
-    const ok = await sendTelegramTo(tg.chatId, text);
-    // Yuborilgan xabar nusxasini admin "Xabarlar" topicга
-    if (ok) {
+    if (!tg.notify || tg.chatIds.length === 0) return;
+    // Barcha ulangan Telegram akkauntlariga yuboramiz
+    let anyOk = false;
+    for (const chatId of tg.chatIds) {
+      const ok = await sendTelegramTo(chatId, text);
+      anyOk = anyOk || ok;
+    }
+    // Yuborilgan xabar nusxasini admin "Xabarlar" topicга (bir marta)
+    if (anyOk) {
       const who = tg.fullName || tg.email || (tg.username ? `@${tg.username}` : uid);
       await notifier.userMessages(`👤 *${esc(who)}* ga yuborildi:\n\n${text}`);
     }
