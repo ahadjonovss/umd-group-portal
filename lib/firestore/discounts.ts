@@ -1,6 +1,8 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
-import type { DiscountService } from "@/lib/discount";
+import { type DiscountService, DISCOUNT_SERVICE_LABEL } from "@/lib/discount";
+import { notifyUser, esc } from "@/lib/notify";
+import { SITE_URL } from "@/lib/site";
 
 const COL = "discounts";
 
@@ -64,6 +66,14 @@ export async function createDiscount(input: {
     createdAt: FieldValue.serverTimestamp(),
     usedAt: null,
   });
+
+  // Foydalanuvchiga xabar
+  const pctVal = Math.max(1, Math.min(100, Math.round(input.percent)));
+  await notifyUser(
+    input.ownerUid,
+    `🎁 Sizga chegirma berildi\\!\n\n*${esc(DISCOUNT_SERVICE_LABEL[input.service])}* xizmatiga *−${pctVal}%*\n🗓 ${esc(String(input.daysValid))} kun amal qiladi\n\nTo'lov qilganingizda avtomatik qo'llanadi 👍\n[Kabinetga o'tish](${SITE_URL}/panel)`
+  );
+
   return ref.id;
 }
 
