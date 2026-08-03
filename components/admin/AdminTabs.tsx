@@ -380,7 +380,7 @@ export function AdminTabs({
           </>
         )}
 
-        {tab === "subscriptions" && <SubscriptionsPanel apps={subApps} />}
+        {tab === "subscriptions" && <SubscriptionsPanel apps={subApps} linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)} />}
 
         {tab === "payments" && (
           <>

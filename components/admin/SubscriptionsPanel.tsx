@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { AppView } from "@/lib/firestore/apps";
 import { SERVICE_SHORT } from "@/lib/labels";
+import { actSendSubscriptionMessage } from "@/app/admin/actions";
 
 const SITE_URL = "https://umdgroup.uz";
 const UZ_MONTHS = ["Yanvar", "Fevral", "Mart", "Aprel", "May", "Iyun", "Iyul", "Avgust", "Sentabr", "Oktabr", "Noyabr", "Dekabr"];
@@ -28,9 +29,33 @@ function buildMessage(app: AppView, endIso: string): string {
   );
 }
 
-export function SubscriptionsPanel({ apps }: { apps: AppView[] }) {
+export function SubscriptionsPanel({ apps, linkedUids = [] }: { apps: AppView[]; linkedUids?: string[] }) {
   const [month, setMonth] = useState("");
   const [copiedId, setCopiedId] = useState("");
+  const [sentId, setSentId] = useState("");
+  const [sendingId, setSendingId] = useState("");
+  const [errId, setErrId] = useState<{ id: string; msg: string } | null>(null);
+  const linked = useMemo(() => new Set(linkedUids), [linkedUids]);
+
+  async function sendTg(app: AppView) {
+    setSendingId(app.id);
+    setErrId(null);
+    try {
+      const r = await actSendSubscriptionMessage(app.id);
+      if (r.ok) {
+        setSentId(app.id);
+        setTimeout(() => setSentId(""), 2500);
+      } else {
+        setErrId({ id: app.id, msg: r.error || "Yuborilmadi" });
+        setTimeout(() => setErrId(null), 3000);
+      }
+    } catch {
+      setErrId({ id: app.id, msg: "Xato yuz berdi" });
+      setTimeout(() => setErrId(null), 3000);
+    } finally {
+      setSendingId("");
+    }
+  }
 
   const now = new Date();
   const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -129,15 +154,30 @@ export function SubscriptionsPanel({ apps }: { apps: AppView[] }) {
                     Tugash sanasi: {dmy(end)} {expired ? "· muddati tugagan" : ""}
                   </p>
                 </div>
-                <button
-                  onClick={() => copyMessage(app, end)}
-                  className="flex-shrink-0 inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2v-2m-6-12h6a2 2 0 012 2v6m-8-8V3m0 2h4" />
-                  </svg>
-                  {copiedId === app.id ? "✓ Nusxalandi" : "Xabarni nusxalash"}
-                </button>
+                <div className="flex-shrink-0 flex items-center gap-2">
+                  {linked.has(app.ownerUid) && (
+                    <button
+                      onClick={() => sendTg(app)}
+                      disabled={sendingId === app.id}
+                      title="Foydalanuvchining Telegramiga yuborish"
+                      className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-sky-500 text-white text-sm font-semibold hover:bg-sky-600 disabled:opacity-60 transition-colors"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z" />
+                      </svg>
+                      {errId?.id === app.id ? "✕ " + errId.msg : sendingId === app.id ? "Yuborilmoqda…" : sentId === app.id ? "✓ Yuborildi" : "Telegramga yuborish"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => copyMessage(app, end)}
+                    className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2v-2m-6-12h6a2 2 0 012 2v6m-8-8V3m0 2h4" />
+                    </svg>
+                    {copiedId === app.id ? "✓ Nusxalandi" : "Xabarni nusxalash"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

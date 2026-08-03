@@ -5,7 +5,12 @@ import { requireAdmin } from "@/lib/auth/dal";
 import type { Actor } from "@/lib/firestore/activity";
 import { setAppStatus, markPublished, markAppTransferred, endSubscription, renewSubscription, deleteApp } from "@/lib/firestore/apps";
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
-import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser } from "@/lib/firestore/users";
+import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser, getUserTelegram } from "@/lib/firestore/users";
+import { adminDb } from "@/lib/firebase/admin";
+import { notifyUser, esc } from "@/lib/notify";
+import { SERVICE_SHORT } from "@/lib/labels";
+import { SITE_URL } from "@/lib/site";
+import type { ServiceType } from "@/types";
 import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest } from "@/lib/firestore/payments";
 import { setRequestStatus, setRequestNote, deleteRequest } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
@@ -18,6 +23,39 @@ import type { AppStatus } from "@/lib/app-status";
 async function adminActor(): Promise<Actor> {
   const u = await requireAdmin();
   return { type: "admin", name: u.name || u.email || "Admin", uid: u.uid };
+}
+
+// Obuna eslatma xabarini foydalanuvchining Telegramiga yuboradi (obunalar bo'limi).
+function dmy(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
+export async function actSendSubscriptionMessage(appId: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const snap = await adminDb.collection("apps").doc(appId).get();
+  if (!snap.exists) return { ok: false, error: "Ariza topilmadi" };
+  const a = snap.data()!;
+  const ownerUid = a.ownerUid as string;
+
+  const tg = await getUserTelegram(ownerUid);
+  if (tg.chatIds.length === 0) return { ok: false, error: "Telegramga ulanmagan" };
+  if (!tg.notify) return { ok: false, error: "Xabarnoma o'chirilgan" };
+
+  const endIso = a.subscription?.endDate?.toDate?.().toISOString?.();
+  if (!endIso) return { ok: false, error: "Obuna sanasi yo'q" };
+
+  const appName = esc((a.appName as string) || SERVICE_SHORT[a.serviceType as ServiceType]);
+  const date = esc(dmy(endIso));
+  const url = `${SITE_URL}/panel/app/${appId}`;
+  const msg =
+    `Assalomu alaykum, salomatmisiz? Sizning ${appName} ilovangizning UMD GROUP bilan shartnoma muddati ${date} da o'z yakuniga yetgan\\.\n\n` +
+    `Foydalanish shartlarimizga ko'ra obunani yangilashingiz kerak\\. Aks holatda ilova ogohlantirishsiz storelardan olib tashlanadi\\.\n\n` +
+    `Quyidagi havola orqali to'lovni amalga oshiring:\n[Kabinetda ochish](${url})`;
+
+  await notifyUser(ownerUid, msg);
+  return { ok: true };
 }
 
 export async function actSetStatus(appId: string, status: AppStatus) {
