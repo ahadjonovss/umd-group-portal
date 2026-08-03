@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { notifyUser, esc, appLink } from "@/lib/notify";
+import { notifyUser, esc } from "@/lib/notify";
+import { urlButton } from "@/lib/telegram";
+import { SITE_URL } from "@/lib/site";
 import { SERVICE_LABELS } from "@/lib/labels";
 import type { ServiceType } from "@/types";
 
@@ -58,22 +60,21 @@ export async function GET(req: NextRequest) {
     const name = (app.appName as string | null) || SERVICE_LABELS[serviceType];
     const ownerUid = app.ownerUid as string | undefined;
     const endStr = new Date(endMs).toISOString().slice(0, 10);
-    const link = appLink(doc.id);
 
     let msg = "";
     if (kind === "month") {
-      msg = `📅 *${esc(name)}* obunangiz shu oy tugaydi\n\n🗓 Tugash sanasi: ${esc(endStr)} \\(yana ${esc(String(daysLeft))} kun\\)\nUzluksiz ishlashi uchun oldindan uzaytirib qo'yishingiz mumkin 👍${link}`;
+      msg = `📅 *${esc(name)}* obunangiz *${esc(String(daysLeft))} kun*dan keyin yakuniga yetadi \\(${esc(endStr)}\\)\n\nUzluksiz ishlashi uchun oldindan uzaytirib qo'yishingiz mumkin 👍`;
     } else if (kind === "week") {
-      msg = `⏳ *${esc(name)}* obunangiz tugashiga *1 hafta* qoldi\n\n🗓 Tugash sanasi: ${esc(endStr)}\nIlovangiz store'da uzluksiz qolishi uchun obunani vaqtida uzaytiring 👇${link}`;
+      msg = `⏳ *${esc(name)}* obunangiz tugashiga *1 hafta* qoldi \\(${esc(endStr)}\\)\n\nIlovangiz store'da uzluksiz qolishi uchun obunani vaqtida uzaytiring`;
     } else if (kind === "day") {
-      msg = `📅 Bugun *${esc(name)}* obunangiz tugaydi\n\nIlovangiz store'da qolishi uchun bugun uzaytiring\\. Kechiksa, ilova vaqtincha olib qo'yilishi mumkin\\.${link}`;
+      msg = `📅 Bugun *${esc(name)}* obunangiz yakuniga yetadi\n\nIlovangiz store'da qolishi uchun bugun uzaytiring\\. Kechiksa, ilova vaqtincha olib qo'yilishi mumkin\\.`;
     } else {
       const late = Math.abs(daysLeft);
-      msg = `⚠️ *${esc(name)}* obunangiz *${esc(String(late))} kun* oldin tugagan\n\nIltimos, imkon qadar tezroq uzaytiring — ilova store'dan olib qo'yilmasligi uchun\\. Yordam kerak bo'lsa, yozing 🙏${link}`;
+      msg = `⚠️ *${esc(name)}* obunangiz *${esc(String(late))} kun* oldin yakuniga yetgan\n\nIloji boricha tezroq uzaytiring — ilova store'dan olib qo'yilmasligi uchun\\.`;
     }
 
     if (ownerUid) {
-      await notifyUser(ownerUid, msg);
+      await notifyUser(ownerUid, msg, urlButton("🔄 Obunani yangilash", `${SITE_URL}/panel/app/${doc.id}`));
       await doc.ref.update({ "subscription.remindedOn": todayStr });
       sent++;
     }

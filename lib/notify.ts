@@ -1,6 +1,6 @@
 import "server-only";
 import { getUserTelegram } from "@/lib/firestore/users";
-import { sendTelegramTo } from "@/lib/telegram";
+import { sendTelegramTo, type InlineKeyboard } from "@/lib/telegram";
 import { notifier } from "@/lib/telegram-notifier";
 import { SITE_URL } from "@/lib/site";
 
@@ -16,7 +16,7 @@ export function appLink(appId: string): string {
 
 // Foydalanuvchiga Telegram xabari yuboradi. Ulanmagan yoki o'chirilgan bo'lsa jim o'tadi.
 // Hech qachon throw qilmaydi — status/to'lov amallarini buzmaydi.
-export async function notifyUser(uid: string, text: string): Promise<void> {
+export async function notifyUser(uid: string, text: string, button?: InlineKeyboard): Promise<void> {
   try {
     if (!uid) return;
     const tg = await getUserTelegram(uid);
@@ -24,7 +24,7 @@ export async function notifyUser(uid: string, text: string): Promise<void> {
     // Barcha ulangan Telegram akkauntlariga yuboramiz
     let anyOk = false;
     for (const chatId of tg.chatIds) {
-      const ok = await sendTelegramTo(chatId, text);
+      const ok = await sendTelegramTo(chatId, text, button);
       anyOk = anyOk || ok;
     }
     // Yuborilgan xabar nusxasini admin "Xabarlar" topicга (bir marta)

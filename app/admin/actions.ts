@@ -8,6 +8,7 @@ import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser, getUserTelegram } from "@/lib/firestore/users";
 import { adminDb } from "@/lib/firebase/admin";
 import { notifyUser, esc } from "@/lib/notify";
+import { urlButton } from "@/lib/telegram";
 import { SERVICE_SHORT } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import type { ServiceType } from "@/types";
@@ -49,12 +50,23 @@ export async function actSendSubscriptionMessage(appId: string): Promise<{ ok: b
   const appName = esc((a.appName as string) || SERVICE_SHORT[a.serviceType as ServiceType]);
   const date = esc(dmy(endIso));
   const url = `${SITE_URL}/panel/app/${appId}`;
-  const msg =
-    `Assalomu alaykum, salomatmisiz? Sizning ${appName} ilovangizning UMD GROUP bilan shartnoma muddati ${date} da o'z yakuniga yetgan\\.\n\n` +
-    `Foydalanish shartlarimizga ko'ra obunani yangilashingiz kerak\\. Aks holatda ilova ogohlantirishsiz storelardan olib tashlanadi\\.\n\n` +
-    `Quyidagi havola orqali to'lovni amalga oshiring:\n[Kabinetda ochish](${url})`;
 
-  await notifyUser(ownerUid, msg);
+  // Muddatga qarab: kelajakda bo'lsa "N kundan keyin yetadi", o'tgan bo'lsa "N kun oldin yetgan"
+  const DAY = 24 * 60 * 60 * 1000;
+  const daysLeft = Math.floor(new Date(endIso).getTime() / DAY) - Math.floor(Date.now() / DAY);
+  let head: string;
+  if (daysLeft > 0) {
+    head = `⏳ *${appName}* obunangiz *${daysLeft} kun*dan keyin yakuniga yetadi \\(${date}\\)`;
+  } else if (daysLeft === 0) {
+    head = `📅 Bugun *${appName}* obunangiz yakuniga yetadi \\(${date}\\)`;
+  } else {
+    head = `⚠️ *${appName}* obunangiz *${Math.abs(daysLeft)} kun* oldin yakuniga yetgan \\(${date}\\)`;
+  }
+  const msg =
+    `${head}\n\n` +
+    `Foydalanish shartlarimizga ko'ra obunani yangilashingiz kerak\\. Aks holda ilova ogohlantirishsiz store'lardan olib tashlanishi mumkin\\.`;
+
+  await notifyUser(ownerUid, msg, urlButton("🔄 Obunani yangilash", url));
   return { ok: true };
 }
 

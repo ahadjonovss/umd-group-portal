@@ -47,7 +47,7 @@ export async function sendTelegramMessage(text: string): Promise<void> {
 
 // ── Past darajali (thread-aware) yuboruvchilar ─────────────────────
 // Guruh topiclariga (message_thread_id) yoki oddiy chatga yuborish uchun.
-type Keyboard = { inline_keyboard: { text: string; callback_data: string }[][] };
+type Keyboard = { inline_keyboard: { text: string; callback_data?: string; url?: string }[][] };
 
 export async function sendMessageRaw(opts: {
   chatId: string | number;
@@ -140,13 +140,14 @@ export async function getBotUsername(): Promise<string> {
 
 // Berilgan chatga oddiy matn yuboradi (foydalanuvchiga to'g'ridan-to'g'ri).
 // Yuborilsa true, aks holda (bloklangan/xato) false — hech qachon throw qilmaydi.
-export async function sendTelegramTo(chatId: string | number, text: string): Promise<boolean> {
+export async function sendTelegramTo(chatId: string | number, text: string, replyMarkup?: Keyboard): Promise<boolean> {
   try {
     const res = await axios.post(`${BASE_URL}/sendMessage`, {
       chat_id: chatId,
       text,
       parse_mode: "MarkdownV2",
       disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     });
     return Boolean(res.data?.ok);
   } catch (e) {
@@ -155,8 +156,13 @@ export async function sendTelegramTo(chatId: string | number, text: string): Pro
   }
 }
 
-// Inline tugma (callback) tipi
-export type InlineKeyboard = { inline_keyboard: { text: string; callback_data: string }[][] };
+// Inline tugma tipi (callback yoki url)
+export type InlineKeyboard = { inline_keyboard: { text: string; callback_data?: string; url?: string }[][] };
+
+// Bitta URL tugmasi (havola tugmasi)
+export function urlButton(text: string, url: string): InlineKeyboard {
+  return { inline_keyboard: [[{ text, url }]] };
+}
 
 // To'lov xabari uchun tasdiqlash/rad etish tugmalari
 export function paymentButtons(paymentId: string): InlineKeyboard {
