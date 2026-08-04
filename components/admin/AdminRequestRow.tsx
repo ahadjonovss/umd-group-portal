@@ -150,7 +150,7 @@ export function AdminRequestRow({ request }: { request: RequestView }) {
   const isPaymentConfirm = isRequestPreWork(request.status) && request.receiptSent;
 
   const meta = REQUEST_STATUS_META[request.status];
-  const next = requestNextStatus(request.status);
+  const next = requestNextStatus(request.type, request.status);
   const active = isRequestActive(request.status);
   const title = request.appName || SERVICE_SHORT[request.serviceType];
   const entries = Object.entries(request.data).filter(([, v]) => v && String(v).trim() !== "");

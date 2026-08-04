@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import { getStatusFlow, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_TYPE_LABEL, REQUEST_FLOW } from "@/lib/request-status";
+import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_TYPE_LABEL, requestFlow } from "@/lib/request-status";
 import { STATUS_META, formatDate, platformOf } from "@/lib/labels";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { requestAwaitingPayment } from "@/lib/panel-status";
@@ -52,7 +52,8 @@ export function RenewalSection({
   }
 
   const meta = REQUEST_STATUS_META[req.status];
-  const idx = REQUEST_FLOW.indexOf(req.status);
+  const flow = requestFlow(req.type);
+  const idx = flow.indexOf(req.status);
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -64,7 +65,7 @@ export function RenewalSection({
       </div>
       {idx >= 0 && (
         <div className="flex gap-1">
-          {REQUEST_FLOW.map((s, i) => (
+          {flow.map((s, i) => (
             <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= idx ? meta.dot : "bg-slate-200"}`} />
           ))}
         </div>
@@ -128,7 +129,8 @@ export function PushCertSection({
   }
 
   const meta = REQUEST_STATUS_META[req.status];
-  const idx = REQUEST_FLOW.indexOf(req.status);
+  const flow = requestFlow(req.type);
+  const idx = flow.indexOf(req.status);
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -140,7 +142,7 @@ export function PushCertSection({
       </div>
       {idx >= 0 && (
         <div className="flex gap-1">
-          {REQUEST_FLOW.map((s, i) => (
+          {flow.map((s, i) => (
             <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= idx ? meta.dot : "bg-slate-200"}`} />
           ))}
         </div>
@@ -299,7 +301,8 @@ export function TransferSection({
   }
 
   const meta = REQUEST_STATUS_META[req.status];
-  const idx = REQUEST_FLOW.indexOf(req.status);
+  const flow = requestFlow(req.type);
+  const idx = flow.indexOf(req.status);
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -311,7 +314,7 @@ export function TransferSection({
       </div>
       {idx >= 0 && (
         <div className="flex gap-1">
-          {REQUEST_FLOW.map((s, i) => (
+          {flow.map((s, i) => (
             <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= idx ? meta.dot : "bg-slate-200"}`} />
           ))}
         </div>
@@ -372,7 +375,8 @@ export function UpdateSection({
   }
 
   const meta = REQUEST_STATUS_META[req.status];
-  const idx = REQUEST_FLOW.indexOf(req.status);
+  const flow = requestFlow(req.type);
+  const idx = flow.indexOf(req.status);
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -384,7 +388,7 @@ export function UpdateSection({
       </div>
       {idx >= 0 && (
         <div className="flex gap-1">
-          {REQUEST_FLOW.map((s, i) => (
+          {flow.map((s, i) => (
             <div key={s} className={`h-1.5 flex-1 rounded-full ${i <= idx ? meta.dot : "bg-slate-200"}`} />
           ))}
         </div>
