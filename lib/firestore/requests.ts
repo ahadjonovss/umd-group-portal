@@ -157,12 +157,12 @@ export async function createCustomInvoice(input: CreateCustomInvoiceInput): Prom
   await logActivity(
     input.appId,
     "custom_invoice_created",
-    `Qo'shimcha hisob-faktura yaratildi: "${input.title}" ($${Math.round(input.amountUsd)})`,
+    `Qo'shimcha hisob-faktura yaratildi: "${input.title}" ($${input.amountUsd})`,
     input.actor
   );
   await notifyUser(
     input.ownerUid,
-    `🧾 Sizga yangi hisob\\-faktura yuborildi\n\n📌 ${esc(input.title)}\n💵 $${esc(String(Math.round(input.amountUsd)))}\n\nTo'lovni "To'lov" bo'limida amalga oshirishingiz mumkin${appLink(input.appId)}`
+    `🧾 Sizga yangi hisob\\-faktura yuborildi\n\n📌 ${esc(input.title)}\n💵 $${esc(String(input.amountUsd))}\n\nTo'lovni "To'lov" bo'limida amalga oshirishingiz mumkin${appLink(input.appId)}`
   );
   return ref.id;
 }
