@@ -71,7 +71,9 @@ export async function POST(req: NextRequest) {
         ? "renewal"
         : reqType === "push_certificate"
           ? "push_certificate"
-          : "transfer";
+          : reqType === "custom"
+            ? "custom"
+            : "transfer";
   const appName = (r.appName as string | null) || SERVICE_LABELS[serviceType];
   const usd = r.amountUsd ?? 0;
   // To'lov PAYTIDAGI kurs (so'rov yaratilgan paytdagi emas) — chek uchun aniq summa

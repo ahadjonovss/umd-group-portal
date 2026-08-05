@@ -18,6 +18,7 @@ function kindLabel(p: PaymentView): string {
     case "push_certificate": return "Push sertifikat";
     case "update_package": return "Update paketi";
     case "full": return "To'liq to'lov";
+    case "custom": return "Qo'shimcha to'lov";
     case "advance": return `Avans (${p.advancePercent}%)`;
     default: return "Yakuniy";
   }
@@ -33,6 +34,7 @@ const KIND_STYLE: Record<PaymentView["kind"], { badge: string; accent: string }>
   push_certificate: { badge: "bg-sky-100 text-sky-700", accent: "bg-sky-400" },
   update_package: { badge: "bg-cyan-100 text-cyan-700", accent: "bg-cyan-400" },
   full: { badge: "bg-indigo-100 text-indigo-700", accent: "bg-indigo-400" },
+  custom: { badge: "bg-slate-100 text-slate-700", accent: "bg-slate-400" },
 };
 
 // +998901234567 -> +998 90 123 45 67

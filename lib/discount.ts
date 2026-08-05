@@ -20,8 +20,8 @@ export function categoryForServiceType(s: ServiceType): DiscountService | null {
   return null; // transfer/apple-transfer ilova serviceType'lari chegirma bermaydi (so'rov orqali)
 }
 
-// So'rov turi -> chegirma kategoriyasi
-export function categoryForRequest(t: RequestType): DiscountService {
+// So'rov turi -> chegirma kategoriyasi ("custom" hisob-fakturalarda chegirma yo'q)
+export function categoryForRequest(t: Exclude<RequestType, "custom">): DiscountService {
   if (t === "subscription_renewal") return "renewal";
   return t; // "transfer" | "update" | "push_certificate"
 }

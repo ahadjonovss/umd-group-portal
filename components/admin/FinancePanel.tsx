@@ -21,6 +21,7 @@ const KIND_LABEL: Record<PaymentView["kind"], string> = {
   renewal: "Obuna uzaytirish",
   push_certificate: "Push sertifikat",
   update_package: "Update paketi",
+  custom: "Qo'shimcha to'lov",
 };
 
 const KIND_COLOR: Record<PaymentView["kind"], string> = {
@@ -32,6 +33,7 @@ const KIND_COLOR: Record<PaymentView["kind"], string> = {
   renewal: "bg-teal-500",
   push_certificate: "bg-sky-500",
   update_package: "bg-cyan-500",
+  custom: "bg-slate-500",
 };
 
 const SERVICE_COLOR: Record<ServiceType, string> = {
@@ -40,6 +42,7 @@ const SERVICE_COLOR: Record<ServiceType, string> = {
   "google-transfer": "bg-orange-500",
   "apple-transfer": "bg-purple-500",
   account: "bg-rose-500",
+  other: "bg-slate-500",
 };
 
 const PLATFORM_COLOR: Record<Platform, string> = {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AdminAppRow } from "@/components/admin/AdminAppRow";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
+import { CustomInvoiceForm } from "@/components/admin/CustomInvoiceForm";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import type { AppView } from "@/lib/firestore/apps";
 import type { PaymentView } from "@/lib/firestore/payments";
@@ -148,7 +149,8 @@ export function AdminAppDetail({
       )}
 
       {tab === "payment" && (
-        <div>
+        <div className="flex flex-col gap-4">
+          <CustomInvoiceForm app={app} />
           {payments.length ? (
             <div className="flex flex-col gap-3">
               {payments.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} relatedPayments={payments} />)}

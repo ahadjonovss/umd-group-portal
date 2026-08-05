@@ -37,7 +37,7 @@ async function setInstallment(
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate" | "update_package";
+export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate" | "update_package" | "custom";
 
 const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   advance: "Avans",
@@ -48,6 +48,7 @@ const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   renewal: "Obuna uzaytirish",
   push_certificate: "Push sertifikat",
   update_package: "Update paketi",
+  custom: "Qo'shimcha to'lov",
 };
 
 export interface CreatePaymentInput {

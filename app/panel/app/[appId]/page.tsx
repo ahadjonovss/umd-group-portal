@@ -34,6 +34,7 @@ import {
   UpdatePackageSection,
   RenewalSection,
   PushCertSection,
+  CustomInvoiceSection,
   ClockIcon,
 } from "@/components/panel/AppSections";
 
@@ -99,6 +100,7 @@ const PAYMENT_KIND_LABEL: Record<string, string> = {
   renewal: "Obuna uzaytirish",
   push_certificate: "Push sertifikat",
   update_package: "Update paketi",
+  custom: "Qo'shimcha to'lov",
 };
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -186,9 +188,12 @@ export default async function AppDetailPage({
   // To'lov amali kerak (to'lash mumkin bo'lgan qism) — shu holda To'lov tabı avtomatik ochiladi
   const advInst = getInstallment(app.payment, "advance");
   const finInst = getInstallment(app.payment, "final");
+  const customReqs = requests.filter((r) => r.type === "custom");
+  const customPaymentNeeded = customReqs.some((r) => isPayable(getInstallment(r.payment, "full")));
   const paymentNeeded =
     (showAdvance && (advInst ? isPayable(advInst) : !app.receiptSent)) ||
-    (showFinal && (finInst ? isPayable(finInst) : !app.finalReceiptSent));
+    (showFinal && (finInst ? isPayable(finInst) : !app.finalReceiptSent)) ||
+    customPaymentNeeded;
 
   // Hisob-fakturalar (invoice) ro'yxati
   const hasFinal = appInstallmentKeys(app.serviceType).includes("final");
@@ -330,6 +335,13 @@ export default async function AppDetailPage({
           defaultPayment={paymentNeeded}
           info={
             <>
+              {/* Qo'shimcha hisob-fakturalar (admin biriktirgan) */}
+              {customReqs.length > 0 && (
+                <SectionCard title="Qo'shimcha hisob-fakturalar">
+                  <CustomInvoiceSection reqs={customReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
+                </SectionCard>
+              )}
+
               {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat.
                   Faqat to'lovi yakunlangan chiqarilgan ilovada (yoki iOS yakunlangan — push uchun). */}
               {paymentDone && (app.status === "published" || (isTerminalSuccess(app.status) && platformOf(app.serviceType) === "ios")) && (
@@ -365,11 +377,12 @@ export default async function AppDetailPage({
                 )}
               </SectionCard>
 
-              {/* So'rovlar (transfer/update/uzaytirish) — ma'lumotlari + statusi bilan */}
-              {requests.length > 0 && (
+              {/* So'rovlar (transfer/update/uzaytirish) — ma'lumotlari + statusi bilan.
+                  Qo'shimcha hisob-fakturalar (custom) yuqorida alohida ko'rsatiladi. */}
+              {requests.filter((r) => r.type !== "custom").length > 0 && (
                 <SectionCard title="So'rovlar">
                   <div className="flex flex-col gap-3">
-                    {requests.map((r) => {
+                    {requests.filter((r) => r.type !== "custom").map((r) => {
                       const m = REQUEST_STATUS_META[r.status];
                       const dataEntries = Object.entries(r.data).filter(([, v]) => v && String(v).trim() !== "");
                       return (

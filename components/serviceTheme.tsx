@@ -18,6 +18,12 @@ export const ACCOUNT_ICON = (
   </svg>
 );
 
+export const OTHER_ICON = (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 7h6m-6 4h6m-6 4h4M6 3h9l3 3v15H6a1 1 0 01-1-1V4a1 1 0 011-1z" />
+  </svg>
+);
+
 export const SERVICE_THEME: Record<
   ServiceType,
   { gradient: string; accent: string; soft: string; text: string; icon: ReactNode }
@@ -56,6 +62,13 @@ export const SERVICE_THEME: Record<
     soft: "bg-teal-50",
     text: "text-teal-600",
     icon: ACCOUNT_ICON,
+  },
+  other: {
+    gradient: "from-slate-400 to-slate-600",
+    accent: "from-slate-400 to-slate-600",
+    soft: "bg-slate-50",
+    text: "text-slate-600",
+    icon: OTHER_ICON,
   },
 };
 

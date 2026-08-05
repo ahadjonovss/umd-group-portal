@@ -6,7 +6,7 @@ import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUES
 import { STATUS_META, formatDate, platformOf } from "@/lib/labels";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { requestAwaitingPayment } from "@/lib/panel-status";
-import { pkgActive, pkgDaysLeft } from "@/lib/payment-state";
+import { pkgActive, pkgDaysLeft, getInstallment, isPayable, type PayState } from "@/lib/payment-state";
 
 export function ClockIcon() {
   return (
@@ -519,5 +519,73 @@ export function UpdatePackageSection({
         />
       </div>
     </details>
+  );
+}
+
+const CUSTOM_INVOICE_BADGE: Record<PayState, { text: string; cls: string; dot: string }> = {
+  due: { text: "To'lanmagan", cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
+  rejected: { text: "Rad etilgan — qayta yuboring", cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
+  submitted: { text: "Yuborildi — tekshiruvda", cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  confirmed: { text: "To'langan", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  locked: { text: "Keyinroq", cls: "bg-slate-100 text-slate-500 ring-slate-200", dot: "bg-slate-400" },
+};
+
+// Admin biriktirgan qo'shimcha (custom) hisob-fakturalar — mustaqil to'lov sifatida.
+export function CustomInvoiceSection({
+  reqs,
+  cardNumber,
+  cardHolder,
+  walletUzs = 0,
+}: {
+  reqs: RequestView[];
+  cardNumber: string;
+  cardHolder: string;
+  walletUzs?: number;
+}) {
+  const items = reqs.filter((r) => r.type === "custom");
+  if (!items.length) return null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {items.map((req) => {
+        const full = getInstallment(req.payment, "full");
+        const state: PayState = (full?.state as PayState) ?? "due";
+        const badge = CUSTOM_INVOICE_BADGE[state] ?? CUSTOM_INVOICE_BADGE.due;
+        const title = req.appName || "Qo'shimcha to'lov";
+        const payable = isPayable(full);
+        return (
+          <div key={req.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">{title}</p>
+                <p className="text-xs text-slate-500">
+                  ${req.amountUsd}
+                  {req.amountUzs ? <span className="text-slate-400"> · ~{req.amountUzs.toLocaleString("en-US")} so&apos;m</span> : null}
+                </p>
+              </div>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${badge.cls}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                {badge.text}
+              </span>
+            </div>
+            {payable && (
+              <PaymentView
+                endpoint="/api/requests/receipt"
+                idPayload={{ requestId: req.id }}
+                usd={req.amountUsd}
+                rate={req.rate}
+                uzs={req.amountUzs}
+                cardNumber={cardNumber}
+                cardHolder={cardHolder}
+                walletUzs={walletUzs}
+                amountLabel={title}
+                receiptSent={req.receiptSent}
+                askTaxPhone
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

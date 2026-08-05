@@ -3,7 +3,8 @@ export type ServiceType =
   | "app-store"
   | "google-transfer"
   | "apple-transfer"
-  | "account";
+  | "account"
+  | "other";
 
 export interface PlayMarketFormData {
   // Step 1

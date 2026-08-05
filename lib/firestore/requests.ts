@@ -115,6 +115,58 @@ async function getById(id: string): Promise<DocumentSnapshot> {
   return adminDb.collection(REQUESTS).doc(id).get();
 }
 
+export interface CreateCustomInvoiceInput {
+  appId: string;
+  ownerUid: string;
+  ownerName: string;
+  ownerPhone: string;
+  title: string; // admin kiritgan nom (masalan: "Domen narxi")
+  amountUsd: number;
+  rate: number | null;
+  amountUzs: number | null;
+  actor: Actor;
+}
+
+// Admin tomonidan ariza ustiga qo'shimcha (custom) hisob-faktura biriktiriladi —
+// so'rovlar (requests) kolleksiyasida "custom" turi sifatida, servis turi "other".
+// Foydalanuvchiga oddiy to'lov sifatida (bitta "full" qism) ko'rinadi.
+export async function createCustomInvoice(input: CreateCustomInvoiceInput): Promise<string> {
+  const ref = adminDb.collection(REQUESTS).doc();
+  await ref.set({
+    appId: input.appId,
+    ownerUid: input.ownerUid,
+    ownerName: input.ownerName,
+    ownerPhone: input.ownerPhone,
+    serviceType: "other" as ServiceType,
+    appName: input.title,
+    type: "custom" as RequestType,
+    data: {},
+    amountUsd: input.amountUsd,
+    rate: input.rate,
+    amountUzs: input.amountUzs,
+    discountId: null,
+    discountPercent: 0,
+    fromPackage: false,
+    status: "requested" as RequestStatus,
+    receiptSent: false,
+    note: "",
+    payment: newRequestPayment(),
+    createdAt: FieldValue.serverTimestamp(),
+    statusUpdatedAt: FieldValue.serverTimestamp(),
+  });
+  await logActivity(
+    input.appId,
+    "custom_invoice_created",
+    `Qo'shimcha hisob-faktura yaratildi: "${input.title}" ($${Math.round(input.amountUsd)})`,
+    input.actor
+  );
+  await notifyUser(
+    input.ownerUid,
+    `🧾 Sizga yangi hisob\\-faktura yuborildi\n\n📌 ${esc(input.title)}\n💵 $${esc(String(Math.round(input.amountUsd)))}\n\nTo'lovni "To'lov" bo'limida amalga oshirishingiz mumkin${appLink(input.appId)}`
+  );
+  return ref.id;
+}
+
 // Ilova uchun faol (tugallanmagan/rad etilmagan) shu turdagi so'rov bormi?
 export async function hasActiveRequest(appId: string, type: RequestType): Promise<boolean> {
   const snap = await adminDb.collection(REQUESTS).where("appId", "==", appId).where("type", "==", type).get();

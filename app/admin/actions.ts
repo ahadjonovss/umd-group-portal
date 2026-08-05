@@ -13,12 +13,13 @@ import { SERVICE_SHORT } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import type { ServiceType } from "@/types";
 import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest } from "@/lib/firestore/payments";
-import { setRequestStatus, setRequestNote, deleteRequest } from "@/lib/firestore/requests";
+import { setRequestStatus, setRequestNote, deleteRequest, createCustomInvoice } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
 import { createDiscount, deleteDiscount } from "@/lib/firestore/discounts";
 import type { DiscountService } from "@/lib/discount";
 import type { AppStatus } from "@/lib/app-status";
+import { getUsdRate } from "@/lib/cbu";
 
 // Joriy admin sessiyasidan "kim" (actor) ma'lumotini quradi.
 async function adminActor(): Promise<Actor> {
@@ -269,4 +270,38 @@ export async function actSetPaymentNote(paymentId: string, note: string) {
   await requireAdmin();
   await setPaymentNote(paymentId, note);
   revalidatePath("/admin");
+}
+
+// Admin: ariza ustiga qo'shimcha (custom) hisob-faktura biriktiradi — nom + narx ($).
+export async function actCreateCustomInvoice(input: {
+  appId: string;
+  ownerUid: string;
+  ownerName: string;
+  ownerPhone: string;
+  title: string;
+  amountUsd: number;
+}) {
+  const actor = await adminActor();
+  const title = input.title.trim();
+  if (!title) return { ok: false, error: "Nomni kiriting" };
+  if (!input.amountUsd || input.amountUsd <= 0) return { ok: false, error: "Narxni to'g'ri kiriting" };
+  try {
+    const rate = await getUsdRate();
+    const amountUzs = rate ? Math.round(input.amountUsd * rate) : null;
+    await createCustomInvoice({
+      appId: input.appId,
+      ownerUid: input.ownerUid,
+      ownerName: input.ownerName,
+      ownerPhone: input.ownerPhone,
+      title,
+      amountUsd: input.amountUsd,
+      rate,
+      amountUzs,
+      actor,
+    });
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
 }
