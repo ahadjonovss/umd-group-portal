@@ -12,6 +12,7 @@ import { FinancePanel } from "@/components/admin/FinancePanel";
 import { StatsPanel } from "@/components/admin/StatsPanel";
 import { SubscriptionsPanel } from "@/components/admin/SubscriptionsPanel";
 import { DiscountsPanel } from "@/components/admin/DiscountsPanel";
+import { PendingInvoicesPanel } from "@/components/admin/PendingInvoicesPanel";
 import type { DiscountView } from "@/lib/firestore/discounts";
 import type { AppView } from "@/lib/firestore/apps";
 import type { AdminReview } from "@/lib/firestore/reviews";
@@ -20,13 +21,14 @@ import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isRequestActive, REQUEST_TYPE_LABEL } from "@/lib/request-status";
 import { STATUS_META, SERVICE_LABELS, PLATFORM_LABEL, platformOf } from "@/lib/labels";
+import { getInstallment, isPayable } from "@/lib/payment-state";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
-type TabKey = "users" | "live" | "subscriptions" | "payments" | "finance" | "stats" | "requests" | "reviews" | "discounts" | "settings";
+type TabKey = "users" | "live" | "subscriptions" | "payments" | "invoices" | "finance" | "stats" | "requests" | "reviews" | "discounts" | "settings";
 
-const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "finance", "stats", "requests", "reviews", "discounts", "settings"];
+const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "invoices", "finance", "stats", "requests", "reviews", "discounts", "settings"];
 const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
@@ -38,6 +40,9 @@ const ICONS: Record<TabKey, ReactNode> = {
   ),
   payments: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  ),
+  invoices: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 7h6m-6 4h6m-6 4h4M6 3h9l3 3v15H6a1 1 0 01-1-1V4a1 1 0 011-1z" />
   ),
   finance: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -238,6 +243,9 @@ export function AdminTabs({
   const pendingPayments = payments.filter((p) => p.status === "pending").length;
   const activeRequests = requests.filter((r) => isRequestActive(r.status)).length;
 
+  // To'lanmagan (kutilayotgan) custom hisob-fakturalar — qarz eslatmasi yuborish uchun
+  const pendingInvoices = requests.filter((r) => r.type === "custom" && isPayable(getInstallment(r.payment, "full")));
+
   // Jarayondagi arizalar vs chiqarilgan/transfer qilingan ilovalar
   const isLive = (a: AppView) => a.status === "published" || a.status === "transferred" || a.status === "subscription_ended";
   const arizaApps = apps.filter((a) => !isLive(a));
@@ -308,6 +316,7 @@ export function AdminTabs({
   const tabs: { key: TabKey; label: string; count: number; badge?: number }[] = [
     { key: "requests", label: "So'rovlar", count: feed.length, badge: activeRequests + activeAriza },
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
+    { key: "invoices", label: "Invoicelar", count: pendingInvoices.length, badge: pendingInvoices.length },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "live", label: "Ilovalar", count: liveApps.length },
     { key: "subscriptions", label: "Obunalar", count: subApps.length },
@@ -403,6 +412,10 @@ export function AdminTabs({
               <Empty text="Topilmadi." />
             )}
           </>
+        )}
+
+        {tab === "invoices" && (
+          <PendingInvoicesPanel items={pendingInvoices} linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)} />
         )}
 
         {tab === "finance" && <FinancePanel payments={payments} discounts={discounts} users={users} apps={apps} pricing={pricing} />}

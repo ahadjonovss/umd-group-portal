@@ -7,7 +7,7 @@ import { setAppStatus, markPublished, markAppTransferred, endSubscription, renew
 import { setReviewApproved, deleteReview } from "@/lib/firestore/reviews";
 import { setUserRole, setUserPassword, setUserEmail, setUserProfile, deleteUser, getUserTelegram } from "@/lib/firestore/users";
 import { adminDb } from "@/lib/firebase/admin";
-import { notifyUser, esc } from "@/lib/notify";
+import { notifyUser, esc, appLink } from "@/lib/notify";
 import { urlButton } from "@/lib/telegram";
 import { SERVICE_SHORT } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
@@ -304,4 +304,27 @@ export async function actCreateCustomInvoice(input: {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
   }
+}
+
+// Admin: to'lanmagan (custom) hisob-faktura bo'yicha foydalanuvchiga Telegramга qarz eslatmasi yuboradi.
+export async function actSendCustomInvoiceReminder(requestId: string): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  const snap = await adminDb.collection("requests").doc(requestId).get();
+  if (!snap.exists) return { ok: false, error: "Hisob-faktura topilmadi" };
+  const r = snap.data()!;
+  const ownerUid = r.ownerUid as string;
+
+  const tg = await getUserTelegram(ownerUid);
+  if (tg.chatIds.length === 0) return { ok: false, error: "Telegramga ulanmagan" };
+  if (!tg.notify) return { ok: false, error: "Xabarnoma o'chirilgan" };
+
+  const title = esc((r.appName as string) || "Qo'shimcha to'lov");
+  const amount = esc(String(r.amountUsd ?? 0));
+  const msg =
+    `⏰ Eslatma: to'lanmagan hisob\\-faktura mavjud\n\n` +
+    `📌 ${title}\n💵 $${amount}\n\n` +
+    `Iltimos, to'lovni "To'lov" bo'limida amalga oshiring 🙏${appLink(r.appId as string)}`;
+
+  await notifyUser(ownerUid, msg);
+  return { ok: true };
 }
