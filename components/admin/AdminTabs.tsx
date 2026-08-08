@@ -275,9 +275,10 @@ export function AdminTabs({
         if (amt > 0) out.push({ key: `${a.id}:final`, appId: a.id, title, kindLabel: "Yakuniy", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
       }
     }
-    // So'rovlar (transfer/update/uzaytirish/push/custom) — to'lanmagan
+    // So'rovlar (transfer/update/uzaytirish/push/custom) — to'lanmagan.
+    // Yakunlangan bo'lsa ham, agar to'lov qism due/rejected bo'lsa — qarz sifatida ko'rsatiladi.
     for (const r of requests) {
-      if (!isRequestActive(r.status)) continue;
+      if (r.status === "rejected" || r.status === "cancelled") continue;
       if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
       const pub = apps.find((a) => a.id === r.appId)?.publication.published ?? false;
       out.push({
