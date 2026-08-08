@@ -24,6 +24,7 @@ import { STATUS_META, SERVICE_LABELS, SERVICE_SHORT, PLATFORM_LABEL, platformOf 
 import { getInstallment, isPayable } from "@/lib/payment-state";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { isTerminalError } from "@/lib/app-status";
+import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
@@ -248,19 +249,29 @@ export function AdminTabs({
   // To'lovi kutilayotgan (to'lanmagan) BARCHA to'lovlar: avans/yakuniy + so'rovlar + custom.
   const pendingItems: PendingItem[] = useMemo(() => {
     const out: PendingItem[] = [];
-    // Ilova avans/yakuniy qismlari (due/rejected)
+    // Ilovaning amaldagi chegirma foizi (100% bo'lsa summa 0 bo'lib chiqib ketadi)
+    const discPctOf = (a: AppView): number => {
+      const cat = categoryForServiceType(a.serviceType);
+      if (!cat) return 0;
+      const d = discounts.find(
+        (x) => x.ownerUid === a.ownerUid && x.service === cat && x.status === "active" && (!x.boundAppId || x.boundAppId === a.id)
+      );
+      return d?.percent ?? 0;
+    };
+    // Ilova avans/yakuniy qismlari (due/rejected) — chegirma qo'llanadi
     for (const a of apps) {
       if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
       const title = a.appName || SERVICE_SHORT[a.serviceType];
       const owner = a.contact?.fullName || a.contact?.phone || "—";
+      const pct = discPctOf(a);
       const adv = getInstallment(a.payment, "advance");
       const fin = getInstallment(a.payment, "final");
       if (isPayable(adv)) {
-        const amt = pricing ? Math.round(advanceUsdApp(a, pricing)) : 0;
+        const amt = pricing ? Math.round(applyDiscount(advanceUsdApp(a, pricing), pct)) : 0;
         if (amt > 0) out.push({ key: `${a.id}:advance`, appId: a.id, title, kindLabel: fin ? "Avans" : "To'lov", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
       }
       if (isPayable(fin)) {
-        const amt = pricing ? Math.round(finalUsdApp(a, pricing)) : 0;
+        const amt = pricing ? Math.round(applyDiscount(finalUsdApp(a, pricing), pct)) : 0;
         if (amt > 0) out.push({ key: `${a.id}:final`, appId: a.id, title, kindLabel: "Yakuniy", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
       }
     }

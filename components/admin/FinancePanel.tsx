@@ -8,6 +8,7 @@ import type { AppView } from "@/lib/firestore/apps";
 import type { Pricing } from "@/lib/firestore/settings";
 import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
+import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { getInstallment } from "@/lib/payment-state";
 import { isTerminalError } from "@/lib/app-status";
 import type { ServiceType } from "@/types";
@@ -240,17 +241,26 @@ export function FinancePanel({
     let owedCount = 0;
     let renUsd = 0;
     let renCount = 0;
+    const discPctOf = (a: AppView): number => {
+      const cat = categoryForServiceType(a.serviceType);
+      if (!cat) return 0;
+      const d = discounts.find(
+        (x) => x.ownerUid === a.ownerUid && x.service === cat && x.status === "active" && (!x.boundAppId || x.boundAppId === a.id)
+      );
+      return d?.percent ?? 0;
+    };
     for (const a of apps) {
-      // To'lanmagan avans/yakuniy qismlar
+      // To'lanmagan avans/yakuniy qismlar (chegirma qo'llanadi)
       if (!isTerminalError(a.status) && a.status !== "transferred" && a.status !== "subscription_ended") {
+        const pct = discPctOf(a);
         const adv = getInstallment(a.payment, "advance");
         const fin = getInstallment(a.payment, "final");
         if (adv && OPEN.has(adv.state)) {
-          const amt = Math.round(advanceUsdApp(a, pricing));
+          const amt = Math.round(applyDiscount(advanceUsdApp(a, pricing), pct));
           if (amt > 0) { owedUsd += amt; owedCount++; }
         }
         if (fin && OPEN.has(fin.state)) {
-          const amt = Math.round(finalUsdApp(a, pricing));
+          const amt = Math.round(applyDiscount(finalUsdApp(a, pricing), pct));
           if (amt > 0) { owedUsd += amt; owedCount++; }
         }
       }
