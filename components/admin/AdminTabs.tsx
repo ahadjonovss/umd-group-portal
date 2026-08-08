@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { AdminAppListItem } from "@/components/admin/AdminAppListItem";
 import { AdminReviewRow } from "@/components/admin/AdminReviewRow";
 import { AdminUserListItem } from "@/components/admin/AdminUserListItem";
@@ -12,7 +12,7 @@ import { FinancePanel } from "@/components/admin/FinancePanel";
 import { StatsPanel } from "@/components/admin/StatsPanel";
 import { SubscriptionsPanel } from "@/components/admin/SubscriptionsPanel";
 import { DiscountsPanel } from "@/components/admin/DiscountsPanel";
-import { PendingInvoicesPanel } from "@/components/admin/PendingInvoicesPanel";
+import { PendingInvoicesPanel, type PendingItem } from "@/components/admin/PendingInvoicesPanel";
 import type { DiscountView } from "@/lib/firestore/discounts";
 import type { AppView } from "@/lib/firestore/apps";
 import type { AdminReview } from "@/lib/firestore/reviews";
@@ -20,8 +20,10 @@ import type { AdminUser } from "@/lib/firestore/users";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isRequestActive, REQUEST_TYPE_LABEL } from "@/lib/request-status";
-import { STATUS_META, SERVICE_LABELS, PLATFORM_LABEL, platformOf } from "@/lib/labels";
+import { STATUS_META, SERVICE_LABELS, SERVICE_SHORT, PLATFORM_LABEL, platformOf } from "@/lib/labels";
 import { getInstallment, isPayable } from "@/lib/payment-state";
+import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
+import { isTerminalError } from "@/lib/app-status";
 import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
@@ -243,8 +245,46 @@ export function AdminTabs({
   const pendingPayments = payments.filter((p) => p.status === "pending").length;
   const activeRequests = requests.filter((r) => isRequestActive(r.status)).length;
 
-  // To'lanmagan (kutilayotgan) custom hisob-fakturalar — qarz eslatmasi yuborish uchun
-  const pendingInvoices = requests.filter((r) => r.type === "custom" && isPayable(getInstallment(r.payment, "full")));
+  // To'lovi kutilayotgan (to'lanmagan) BARCHA to'lovlar: avans/yakuniy + so'rovlar + custom.
+  const pendingItems: PendingItem[] = useMemo(() => {
+    const out: PendingItem[] = [];
+    // Ilova avans/yakuniy qismlari (due/rejected)
+    for (const a of apps) {
+      if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
+      const title = a.appName || SERVICE_SHORT[a.serviceType];
+      const owner = a.contact?.fullName || a.contact?.phone || "—";
+      const adv = getInstallment(a.payment, "advance");
+      const fin = getInstallment(a.payment, "final");
+      if (isPayable(adv)) {
+        const amt = pricing ? Math.round(advanceUsdApp(a, pricing)) : 0;
+        if (amt > 0) out.push({ key: `${a.id}:advance`, appId: a.id, title, kindLabel: fin ? "Avans" : "To'lov", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
+      }
+      if (isPayable(fin)) {
+        const amt = pricing ? Math.round(finalUsdApp(a, pricing)) : 0;
+        if (amt > 0) out.push({ key: `${a.id}:final`, appId: a.id, title, kindLabel: "Yakuniy", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
+      }
+    }
+    // So'rovlar (transfer/update/uzaytirish/push/custom) — to'lanmagan
+    for (const r of requests) {
+      if (!isRequestActive(r.status)) continue;
+      if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
+      const pub = apps.find((a) => a.id === r.appId)?.publication.published ?? false;
+      out.push({
+        key: `req:${r.id}`,
+        appId: r.appId,
+        requestId: r.id,
+        title: r.appName || (r.type === "custom" ? "Qo'shimcha to'lov" : SERVICE_SHORT[r.serviceType]),
+        kindLabel: r.type === "custom" ? "Hisob-faktura" : REQUEST_TYPE_LABEL[r.type],
+        amountUsd: r.amountUsd,
+        ownerUid: r.ownerUid,
+        ownerName: r.ownerName,
+        ownerPhone: r.ownerPhone,
+        createdAt: r.createdAt,
+        published: pub,
+      });
+    }
+    return out;
+  }, [apps, requests, pricing]);
 
   // Jarayondagi arizalar vs chiqarilgan/transfer qilingan ilovalar
   const isLive = (a: AppView) => a.status === "published" || a.status === "transferred" || a.status === "subscription_ended";
@@ -316,7 +356,7 @@ export function AdminTabs({
   const tabs: { key: TabKey; label: string; count: number; badge?: number }[] = [
     { key: "requests", label: "So'rovlar", count: feed.length, badge: activeRequests + activeAriza },
     { key: "payments", label: "To'lovlar", count: payments.length, badge: pendingPayments },
-    { key: "invoices", label: "Invoicelar", count: pendingInvoices.length, badge: pendingInvoices.length },
+    { key: "invoices", label: "Invoicelar", count: pendingItems.length, badge: pendingItems.length },
     { key: "reviews", label: "Reviewlar", count: reviews.length, badge: pending },
     { key: "live", label: "Ilovalar", count: liveApps.length },
     { key: "subscriptions", label: "Obunalar", count: subApps.length },
@@ -416,9 +456,8 @@ export function AdminTabs({
 
         {tab === "invoices" && (
           <PendingInvoicesPanel
-            items={pendingInvoices}
+            items={pendingItems}
             linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)}
-            publishedAppIds={apps.filter((a) => a.publication.published).map((a) => a.id)}
           />
         )}
 

@@ -308,6 +308,42 @@ export async function actCreateCustomInvoice(input: {
 
 // Admin: to'lanmagan (custom) hisob-faktura bo'yicha foydalanuvchiga Telegramга qarz eslatmasi yuboradi.
 // Ilova store'ga chiqarilgan bo'lsa — qo'shimcha ogohlantirish (store'dan olib tashlanishi mumkinligi) qo'shiladi.
+// Umumiy: har qanday to'lanmagan to'lov (avans/yakuniy/so'rov/custom) uchun eslatma.
+export async function actSendPaymentReminder(input: {
+  appId: string;
+  requestId?: string;
+  title: string;
+  amountUsd: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+  let ownerUid = "";
+  if (input.requestId) {
+    const rs = await adminDb.collection("requests").doc(input.requestId).get();
+    ownerUid = (rs.get("ownerUid") as string) || "";
+  } else if (input.appId) {
+    const as = await adminDb.collection("apps").doc(input.appId).get();
+    ownerUid = (as.get("ownerUid") as string) || "";
+  }
+  if (!ownerUid) return { ok: false, error: "Foydalanuvchi topilmadi" };
+
+  const tg = await getUserTelegram(ownerUid);
+  if (tg.chatIds.length === 0) return { ok: false, error: "Telegramga ulanmagan" };
+  if (!tg.notify) return { ok: false, error: "Xabarnoma o'chirilgan" };
+
+  const appSnap = input.appId ? await adminDb.collection("apps").doc(input.appId).get() : null;
+  const published = Boolean(appSnap?.get("publication.published"));
+  const title = esc(input.title || "To'lov");
+  const amount = esc(String(Math.round(input.amountUsd)));
+  const warning = published ? `⚠️ Vaqtida to'lamasangiz, ilovangiz store'dan olib tashlanishi mumkin\\.\n\n` : "";
+  const msg =
+    `⏰ Eslatma: to'lanmagan to'lovingiz bor\n\n📌 ${title}\n💵 $${amount}\n\n` +
+    warning +
+    `Iltimos, to'lovni "To'lov" bo'limida amalga oshiring 🙏`;
+
+  await notifyUser(ownerUid, msg, urlButton("💳 To'lovni ochish", `${SITE_URL}/panel/app/${input.appId}`));
+  return { ok: true };
+}
+
 export async function actSendCustomInvoiceReminder(requestId: string): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const snap = await adminDb.collection("requests").doc(requestId).get();
