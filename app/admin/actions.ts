@@ -307,6 +307,7 @@ export async function actCreateCustomInvoice(input: {
 }
 
 // Admin: to'lanmagan (custom) hisob-faktura bo'yicha foydalanuvchiga Telegramга qarz eslatmasi yuboradi.
+// Ilova store'ga chiqarilgan bo'lsa — qo'shimcha ogohlantirish (store'dan olib tashlanishi mumkinligi) qo'shiladi.
 export async function actSendCustomInvoiceReminder(requestId: string): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
   const snap = await adminDb.collection("requests").doc(requestId).get();
@@ -318,12 +319,18 @@ export async function actSendCustomInvoiceReminder(requestId: string): Promise<{
   if (tg.chatIds.length === 0) return { ok: false, error: "Telegramga ulanmagan" };
   if (!tg.notify) return { ok: false, error: "Xabarnoma o'chirilgan" };
 
+  const appId = r.appId as string;
+  const appSnap = appId ? await adminDb.collection("apps").doc(appId).get() : null;
+  const published = Boolean(appSnap?.get("publication.published"));
+
   const title = esc((r.appName as string) || "Qo'shimcha to'lov");
   const amount = esc(String(r.amountUsd ?? 0));
+  const warning = published ? `⚠️ Vaqtida to'lamasangiz, ilovangiz store'dan olib tashlanishi mumkin\\.\n\n` : "";
   const msg =
     `⏰ Eslatma: to'lanmagan hisob\\-faktura mavjud\n\n` +
     `📌 ${title}\n💵 $${amount}\n\n` +
-    `Iltimos, to'lovni "To'lov" bo'limida amalga oshiring 🙏${appLink(r.appId as string)}`;
+    warning +
+    `Iltimos, to'lovni "To'lov" bo'limida amalga oshiring 🙏${appLink(appId)}`;
 
   await notifyUser(ownerUid, msg);
   return { ok: true };

@@ -415,7 +415,11 @@ export function AdminTabs({
         )}
 
         {tab === "invoices" && (
-          <PendingInvoicesPanel items={pendingInvoices} linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)} />
+          <PendingInvoicesPanel
+            items={pendingInvoices}
+            linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)}
+            publishedAppIds={apps.filter((a) => a.publication.published).map((a) => a.id)}
+          />
         )}
 
         {tab === "finance" && <FinancePanel payments={payments} discounts={discounts} users={users} apps={apps} pricing={pricing} />}

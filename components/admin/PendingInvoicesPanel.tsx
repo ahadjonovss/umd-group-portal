@@ -6,23 +6,35 @@ import type { RequestView } from "@/lib/firestore/requests";
 import { formatDate } from "@/lib/labels";
 import { actSendCustomInvoiceReminder } from "@/app/admin/actions";
 
-function buildPlainMessage(title: string, amountUsd: number): string {
+function buildPlainMessage(title: string, amountUsd: number, published: boolean): string {
+  const warning = published ? `⚠️ Vaqtida to'lamasangiz, ilovangiz store'dan olib tashlanishi mumkin.\n\n` : "";
   return (
     `⏰ Eslatma: to'lanmagan hisob-faktura mavjud\n\n` +
     `📌 ${title}\n💵 $${amountUsd}\n\n` +
+    warning +
     `Iltimos, to'lovni "To'lov" bo'limida amalga oshiring 🙏`
   );
 }
 
 // Kutilayotgan (to'lanmagan) custom hisob-fakturalar ro'yxati — har biriga
 // Telegram orqali qarz eslatmasi yuborish (yoki xabarni nusxalash) imkoni bilan.
-export function PendingInvoicesPanel({ items, linkedUids = [] }: { items: RequestView[]; linkedUids?: string[] }) {
+// publishedAppIds — store'ga chiqarilgan ilovalar id'lari (xabarga ogohlantirish qo'shish uchun).
+export function PendingInvoicesPanel({
+  items,
+  linkedUids = [],
+  publishedAppIds = [],
+}: {
+  items: RequestView[];
+  linkedUids?: string[];
+  publishedAppIds?: string[];
+}) {
   const [q, setQ] = useState("");
   const [sendingId, setSendingId] = useState("");
   const [sentId, setSentId] = useState("");
   const [copiedId, setCopiedId] = useState("");
   const [errId, setErrId] = useState<{ id: string; msg: string } | null>(null);
   const linked = useMemo(() => new Set(linkedUids), [linkedUids]);
+  const published = useMemo(() => new Set(publishedAppIds), [publishedAppIds]);
 
   const filtered = items.filter((r) => {
     if (!q.trim()) return true;
@@ -52,7 +64,9 @@ export function PendingInvoicesPanel({ items, linkedUids = [] }: { items: Reques
 
   async function copyMessage(r: RequestView) {
     try {
-      await navigator.clipboard.writeText(buildPlainMessage(r.appName || "Qo'shimcha to'lov", r.amountUsd));
+      await navigator.clipboard.writeText(
+        buildPlainMessage(r.appName || "Qo'shimcha to'lov", r.amountUsd, published.has(r.appId))
+      );
       setCopiedId(r.id);
       setTimeout(() => setCopiedId(""), 2500);
     } catch {
