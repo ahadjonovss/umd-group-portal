@@ -37,7 +37,7 @@ export function RenewalSection({
   const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
 
   // Faol so'rov yo'q — (qayta) uzaytirish mumkin
-  if (!req || !active) {
+  if (!req || (!active && !requestAwaitingPayment(req))) {
     return (
       <Link
         href={`/panel/request/renewal/${app.id}`}
@@ -114,7 +114,7 @@ export function PushCertSection({
 
   const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
 
-  if (!req || !active) {
+  if (!req || (!active && !requestAwaitingPayment(req))) {
     return (
       <Link
         href={`/panel/request/push-certificate/${app.id}`}
@@ -360,7 +360,7 @@ export function UpdateSection({
   const freeByPackage = pkgActive(app.updatePackage);
 
   // Faol so'rov yo'q — (qayta) update so'rovi mumkin
-  if (!req || !active) {
+  if (!req || (!active && !requestAwaitingPayment(req))) {
     return (
       <Link
         href={`/panel/request/update/${app.id}`}

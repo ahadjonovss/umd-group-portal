@@ -47,13 +47,15 @@ export function showFinalPayment(app: AppView, pricing?: Pricing): boolean {
   return app.status === finalStage && !app.finalPaid;
 }
 
-// So'rov to'lovi ko'rsatiladimi.
+// So'rov to'lovi ko'rsatiladimi. Yakunlangan bo'lsa ham, to'lov qismi to'lanmagan
+// (due/rejected) bo'lsa — to'lov oynasi ochiladi (ish bajarilgan, lekin puli qolgan).
 export function requestAwaitingPayment(req?: RequestView | null): boolean {
   if (!req) return false;
-  if (isRequestTerminalError(req.status) || req.status === "completed") return false;
+  if (isRequestTerminalError(req.status)) return false; // rad etilgan / bekor qilingan
   const full = getInstallment(req.payment, "full");
   if (full) return isShown(full);
-  // fallback (migratsiya qilinmagan) — terminal/completed yuqorida chiqarib yuborilgan
+  if (req.status === "completed") return false; // eski (installmentsiz) yakunlangan
+  // fallback (migratsiya qilinmagan)
   return !req.receiptSent || isRequestPreWork(req.status);
 }
 
