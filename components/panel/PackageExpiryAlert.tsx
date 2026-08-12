@@ -15,7 +15,7 @@ export function PackageExpiryAlert({ apps }: { apps: AppView[] }) {
   if (!expiring.length) return null;
 
   return (
-    <div className="flex flex-col gap-2 mb-6">
+    <div className="flex flex-col gap-2">
       {expiring.map((a) => {
         const days = pkgDaysLeft(a.updatePackage);
         const name = a.appName || SERVICE_LABELS[a.serviceType];

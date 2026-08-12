@@ -18,7 +18,7 @@ export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
   if (!apps.length) return null;
 
   return (
-    <div className="flex flex-col gap-2 mb-6">
+    <div className="flex flex-col gap-2">
       {apps.map((a) => (
         <div
           key={a.id}

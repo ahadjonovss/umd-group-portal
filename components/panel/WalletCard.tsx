@@ -6,7 +6,7 @@ export function WalletCard({ balanceUzs }: { balanceUzs: number }) {
   const [info, setInfo] = useState(false);
 
   return (
-    <div className="mb-6 rounded-2xl ring-1 ring-emerald-200/70 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm shadow-emerald-100/60 px-4 py-3.5">
+    <div className="rounded-2xl ring-1 ring-emerald-200/70 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm shadow-emerald-100/60 px-4 py-3.5">
       <div className="flex items-center gap-3.5">
         <span className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl flex-shrink-0">🪙</span>
         <div className="min-w-0 flex-1">

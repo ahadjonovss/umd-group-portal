@@ -14,7 +14,7 @@ export function PaymentAlerts({ items }: { items: PaymentAlertItem[] }) {
   const total = items.reduce((s, i) => s + i.usd, 0);
 
   return (
-    <div className="mb-6">
+    <div>
       <div className="flex items-center justify-between mb-2 px-0.5">
         <p className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
           <span>💳</span> To&apos;lov kutilmoqda

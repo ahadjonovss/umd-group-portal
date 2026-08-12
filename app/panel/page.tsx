@@ -124,9 +124,9 @@ export default async function PanelPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Hero — alertlardan tepada */}
-        <div className="mb-6">
+      <main className="max-w-4xl mx-auto px-4 py-8 flex flex-col gap-5">
+        {/* Hero */}
+        <div>
           <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 sm:p-6 shadow-lg shadow-slate-900/20">
             {/* Dekор (kesilgan) */}
             <div className="absolute inset-0 overflow-hidden rounded-3xl pointer-events-none">
@@ -153,15 +153,17 @@ export default async function PanelPage() {
           </div>
         </div>
 
+        {/* Diqqat talab qiladigan: to'lovlar */}
         <PaymentAlerts items={payAlerts} />
 
+        {/* Hamyon + bildirishnomalar */}
         <WalletCard balanceUzs={walletUzs} />
-
         <TelegramLinkAlert count={telegram.chatIds.length} />
         <DiscountAlert discounts={discounts} />
         <PackageExpiryAlert apps={apps} />
         <PublishedReviewAlert apps={publishedUnreviewed} />
 
+        {/* Ilovalar */}
         {apps.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
             <p className="text-slate-500 text-sm">Hali ariza yubormagansiz.</p>
@@ -173,13 +175,16 @@ export default async function PanelPage() {
             </Link>
           </div>
         ) : (
-          <PanelApps
-            apps={apps}
-            pricing={pricing}
-            transfer={transferByApp}
-            update={updateByApp}
-            renewal={renewalByApp}
-          />
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 mb-3 px-0.5">Ilovalarim <span className="text-slate-400 font-normal">· {apps.length} ta</span></h2>
+            <PanelApps
+              apps={apps}
+              pricing={pricing}
+              transfer={transferByApp}
+              update={updateByApp}
+              renewal={renewalByApp}
+            />
+          </div>
         )}
       </main>
     </div>
