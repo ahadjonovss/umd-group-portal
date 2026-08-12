@@ -11,16 +11,21 @@ import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelRe
 import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { DiscountAlert } from "@/components/panel/DiscountAlert";
 import { PackageExpiryAlert } from "@/components/panel/PackageExpiryAlert";
+import { PaymentAlerts } from "@/components/panel/PaymentAlerts";
 import { getUserActiveDiscounts } from "@/lib/firestore/discounts";
 import { getUserWalletUzs, getUserTelegram } from "@/lib/firestore/users";
 import { WalletCard } from "@/components/panel/WalletCard";
 import { TelegramLinkAlert } from "@/components/panel/TelegramLinkAlert";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
-import { isTerminalSuccess } from "@/lib/app-status";
+import { isTerminalSuccess, isTerminalError } from "@/lib/app-status";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { getPricing } from "@/lib/firestore/settings";
 import { getUserRequests } from "@/lib/firestore/requests";
+import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
+import { getInstallment, isPayable } from "@/lib/payment-state";
+import { categoryForServiceType, applyDiscount } from "@/lib/discount";
+import { REQUEST_TYPE_LABEL } from "@/lib/request-status";
 
 export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
 
@@ -55,6 +60,35 @@ export default async function PanelPage() {
     reviewed: a.reviewed,
     canReview: isTerminalSuccess(a.status),
   }));
+
+  // To'lovi kutilayotgan (to'lanmagan) barcha to'lovlar — home kartochkalari uchun
+  const discPctFor = (serviceType: (typeof apps)[number]["serviceType"]): number => {
+    const cat = categoryForServiceType(serviceType);
+    const d = cat ? discounts.find((x) => x.service === cat) : null;
+    return d?.percent ?? 0;
+  };
+  const payAlerts: { appId: string; title: string; label: string; usd: number }[] = [];
+  for (const a of apps) {
+    if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
+    const title = a.appName || SERVICE_LABELS[a.serviceType];
+    const pct = discPctFor(a.serviceType);
+    const adv = getInstallment(a.payment, "advance");
+    const fin = getInstallment(a.payment, "final");
+    if (isPayable(adv)) {
+      const amt = Math.round(applyDiscount(advanceUsdApp(a, pricing), pct));
+      if (amt > 0) payAlerts.push({ appId: a.id, title, label: fin ? "Avans to'lovi" : "To'lov", usd: amt });
+    }
+    if (isPayable(fin)) {
+      const amt = Math.round(applyDiscount(finalUsdApp(a, pricing), pct));
+      if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Yakuniy to'lov", usd: amt });
+    }
+  }
+  for (const r of requests) {
+    if (r.status === "rejected" || r.status === "cancelled") continue;
+    if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
+    const title = r.appName || SERVICE_LABELS[r.serviceType];
+    payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd });
+  }
 
   // Yakunlangan (chiqarilgan / transfer / akkaunt), lekin hali baholanmagan xizmatlar — eslatma banneri
   const publishedUnreviewed = apps
@@ -118,6 +152,8 @@ export default async function PanelPage() {
             </div>
           </div>
         </div>
+
+        <PaymentAlerts items={payAlerts} />
 
         <WalletCard balanceUzs={walletUzs} />
 
