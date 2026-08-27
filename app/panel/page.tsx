@@ -96,8 +96,8 @@ export default async function PanelPage() {
     payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
   }
   // Obunasi tugab, store'dan olib tashlangan ilovalar — hali faol uzaytirish so'rovi
-  // bo'lmasa ham, uzaytirish to'lovi eslatma sifatida chiqadi. Hali so'rov (yozuv) yo'q —
-  // shuning uchun "hammasini birga to'lash" guruhiga kirmaydi (key yo'q), avval alohida so'rov ochilishi kerak.
+  // bo'lmasa ham, uzaytirish to'lovi eslatma sifatida chiqadi. "renewal_pending" key —
+  // bosilganda so'rov shu yerning o'zida yaratilib, to'lov darhol ochiladi (ilovaga kirish shart emas).
   for (const a of apps) {
     if (a.status !== "subscription_ended") continue;
     const lastRenewal = renewalByApp[a.id];
@@ -109,7 +109,7 @@ export default async function PanelPage() {
     const title = a.appName || SERVICE_LABELS[a.serviceType];
     const disc = discounts.find((d) => d.service === "renewal" && (!d.boundAppId || d.boundAppId === a.id));
     const amt = Math.round(applyDiscount(renewalUsd(a, pricing), disc?.percent ?? 0));
-    if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Obunani uzaytirish", usd: amt });
+    if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Obunani uzaytirish", usd: amt, key: { type: "renewal_pending", appId: a.id } });
   }
 
   // Yakunlangan (chiqarilgan / transfer / akkaunt), lekin hali baholanmagan xizmatlar — eslatma banneri

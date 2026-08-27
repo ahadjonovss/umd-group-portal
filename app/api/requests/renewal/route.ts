@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { adminDb } from "@/lib/firebase/admin";
-import { createRequest, hasActiveRequest } from "@/lib/firestore/requests";
+import { createRequest, getActiveRequestId } from "@/lib/firestore/requests";
 import { getPricing } from "@/lib/firestore/settings";
 import { renewalUsd, finalUsd } from "@/lib/payment";
 import { getUsdRate } from "@/lib/cbu";
@@ -43,8 +43,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Bu ilovada obuna yo'q" }, { status: 400 });
   }
 
-  if (await hasActiveRequest(appId, "subscription_renewal")) {
-    return NextResponse.json({ success: false, error: "Bu ilova uchun faol uzaytirish so'rovi allaqachon bor" }, { status: 409 });
+  // Faol so'rov allaqachon bo'lsa — xato bermay, o'shani qaytaramiz (get-or-create,
+  // masalan home page'dagi "to'lash" tugmasi qayta bosilganda yoki poyga holatida foydali).
+  const existingId = await getActiveRequestId(appId, "subscription_renewal");
+  if (existingId) {
+    const existingSnap = await adminDb.collection("requests").doc(existingId).get();
+    const ex = existingSnap.data();
+    return NextResponse.json({ success: true, id: existingId, usd: ex?.amountUsd ?? null, uzs: ex?.amountUzs ?? null });
   }
 
   const serviceType = app.serviceType as ServiceType;
@@ -103,5 +108,5 @@ export async function POST(req: NextRequest) {
     // jiddiy emas
   }
 
-  return NextResponse.json({ success: true, id });
+  return NextResponse.json({ success: true, id, usd, uzs });
 }

@@ -176,6 +176,17 @@ export async function hasActiveRequest(appId: string, type: RequestType): Promis
   });
 }
 
+// Ilova uchun faol shu turdagi so'rov id'si (bo'lsa) — "get-or-create" oqimlari uchun
+// (masalan home page'dan bittada to'lash: so'rov mavjud bo'lsa — o'shani qaytaradi).
+export async function getActiveRequestId(appId: string, type: RequestType): Promise<string | null> {
+  const snap = await adminDb.collection(REQUESTS).where("appId", "==", appId).where("type", "==", type).get();
+  const active = snap.docs.find((d) => {
+    const s = d.get("status") as RequestStatus;
+    return !["completed", "rejected", "cancelled"].includes(s);
+  });
+  return active?.id ?? null;
+}
+
 export async function getUserRequests(ownerUid: string): Promise<RequestView[]> {
   const snap = await adminDb.collection(REQUESTS).where("ownerUid", "==", ownerUid).get();
   const items = snap.docs.map(mapRequest);
