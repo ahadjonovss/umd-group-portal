@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { PaymentView } from "@/lib/firestore/payments";
 import { SERVICE_SHORT, formatDate } from "@/lib/labels";
-import { actConfirmPayment, actDeletePayment } from "@/app/admin/actions";
+import { actConfirmPayment, actDeletePayment, actConfirmPaymentBatch } from "@/app/admin/actions";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
@@ -252,15 +252,40 @@ export function AdminPaymentRow({ payment, relatedPayments }: { payment: Payment
         )}
       </div>
 
+      {/* Guruh to'lov izohi — "hammasini birga to'lash" orqali kelgan bo'lsa */}
+      {payment.batchId && payment.note && (
+        <p className="text-[11px] text-blue-700 bg-blue-50 ring-1 ring-blue-100 rounded-lg px-2 py-1 -mt-0.5">
+          🔗 {payment.note}
+        </p>
+      )}
+
       {/* Tasdiqlash (faqat kutilayotgan) */}
       {payment.status === "pending" && (
-        <button
-          disabled={pending}
-          onClick={onConfirmClick}
-          className="self-start h-8 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
-        >
-          {pending ? "Tasdiqlanmoqda…" : "Tasdiqlash → keyingi bosqich"}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            disabled={pending}
+            onClick={onConfirmClick}
+            className="self-start h-8 px-3 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {pending ? "Tasdiqlanmoqda…" : "Tasdiqlash → keyingi bosqich"}
+          </button>
+          {payment.batchId && (
+            <button
+              disabled={pending}
+              title="Shu chek bilan birga yuborilgan barcha to'lovlarni tasdiqlaydi"
+              onClick={() => {
+                if (!confirm("Guruhdagi BARCHA to'lovlarni tasdiqlaysizmi?")) return;
+                start(async () => {
+                  await actConfirmPaymentBatch(payment.batchId!);
+                  router.refresh();
+                });
+              }}
+              className="self-start h-8 px-3 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 disabled:opacity-50"
+            >
+              {pending ? "…" : "🚀 Guruhni bittada tasdiqlash"}
+            </button>
+          )}
+        </div>
       )}
 
       {confirmOpen && (

@@ -174,6 +174,16 @@ export function paymentButtons(paymentId: string): InlineKeyboard {
   };
 }
 
+// "Hammasini birga to'lash" orqali yuborilgan guruh uchun — bittada tasdiqlash/rad etish.
+export function bulkPaymentButtons(batchId: string): InlineKeyboard {
+  return {
+    inline_keyboard: [[
+      { text: "✅ Barchasini tasdiqlash", callback_data: `ba:${batchId}` },
+      { text: "❌ Barchasini rad etish", callback_data: `br:${batchId}` },
+    ]],
+  };
+}
+
 export async function sendPhotoToTelegram(
   photoBuffer: Buffer,
   filename: string,

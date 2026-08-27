@@ -13,6 +13,7 @@ import { SERVICE_SHORT } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import type { ServiceType } from "@/types";
 import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest } from "@/lib/firestore/payments";
+import { confirmPaymentBatch, rejectPaymentBatch } from "@/lib/firestore/paymentBatches";
 import { setRequestStatus, setRequestNote, deleteRequest, createCustomInvoice } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
 import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
@@ -370,4 +371,19 @@ export async function actSendCustomInvoiceReminder(requestId: string): Promise<{
 
   await notifyUser(ownerUid, msg);
   return { ok: true };
+}
+
+// Admin: "hammasini birga to'lash" orqali yuborilgan guruhdagi barcha to'lovlarni bittada tasdiqlaydi.
+export async function actConfirmPaymentBatch(batchId: string) {
+  const actor = await adminActor();
+  const r = await confirmPaymentBatch(batchId, actor);
+  revalidatePath("/admin");
+  return r;
+}
+
+export async function actRejectPaymentBatch(batchId: string) {
+  const actor = await adminActor();
+  const r = await rejectPaymentBatch(batchId, actor);
+  revalidatePath("/admin");
+  return r;
 }

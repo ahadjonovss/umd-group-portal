@@ -11,7 +11,7 @@ import { PanelReviewLauncher, type ReviewItem } from "@/components/panel/PanelRe
 import { PublishedReviewAlert } from "@/components/panel/PublishedReviewAlert";
 import { DiscountAlert } from "@/components/panel/DiscountAlert";
 import { PackageExpiryAlert } from "@/components/panel/PackageExpiryAlert";
-import { PaymentAlerts } from "@/components/panel/PaymentAlerts";
+import { PaymentAlerts, type PaymentAlertItem } from "@/components/panel/PaymentAlerts";
 import { getUserActiveDiscounts } from "@/lib/firestore/discounts";
 import { getUserWalletUzs, getUserTelegram } from "@/lib/firestore/users";
 import { WalletCard } from "@/components/panel/WalletCard";
@@ -20,8 +20,9 @@ import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess, isTerminalError } from "@/lib/app-status";
 import { SERVICE_LABELS } from "@/lib/labels";
-import { getPricing } from "@/lib/firestore/settings";
+import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUserRequests } from "@/lib/firestore/requests";
+import { getUsdRate } from "@/lib/cbu";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
 import { getInstallment, isPayable } from "@/lib/payment-state";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
@@ -34,7 +35,7 @@ export const dynamic = "force-dynamic";
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const [apps, admin, pricing, requests, discounts, walletUzs, telegram] = await Promise.all([
+  const [apps, admin, pricing, requests, discounts, walletUzs, telegram, paymentInfo, usdRate] = await Promise.all([
     getUserApps(user.uid),
     isAdmin(),
     getPricing(),
@@ -42,7 +43,12 @@ export default async function PanelPage() {
     getUserActiveDiscounts(user.uid),
     getUserWalletUzs(user.uid),
     getUserTelegram(user.uid),
+    getPaymentInfo(),
+    getUsdRate(),
   ]);
+  const rate = usdRate ?? null;
+  const cardNumber = paymentInfo?.cardNumber ?? "";
+  const cardHolder = paymentInfo?.cardHolder ?? "";
 
   // Har ilova uchun eng so'nggi transfer / update / uzaytirish so'rovi
   const transferByApp: Record<string, RequestView> = {};
@@ -67,7 +73,7 @@ export default async function PanelPage() {
     const d = cat ? discounts.find((x) => x.service === cat) : null;
     return d?.percent ?? 0;
   };
-  const payAlerts: { appId: string; title: string; label: string; usd: number }[] = [];
+  const payAlerts: PaymentAlertItem[] = [];
   for (const a of apps) {
     if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
     const title = a.appName || SERVICE_LABELS[a.serviceType];
@@ -76,21 +82,22 @@ export default async function PanelPage() {
     const fin = getInstallment(a.payment, "final");
     if (isPayable(adv)) {
       const amt = Math.round(applyDiscount(advanceUsdApp(a, pricing), pct));
-      if (amt > 0) payAlerts.push({ appId: a.id, title, label: fin ? "Avans to'lovi" : "To'lov", usd: amt });
+      if (amt > 0) payAlerts.push({ appId: a.id, title, label: fin ? "Avans to'lovi" : "To'lov", usd: amt, key: { type: "app", appId: a.id, kind: "advance" } });
     }
     if (isPayable(fin)) {
       const amt = Math.round(applyDiscount(finalUsdApp(a, pricing), pct));
-      if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Yakuniy to'lov", usd: amt });
+      if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Yakuniy to'lov", usd: amt, key: { type: "app", appId: a.id, kind: "final" } });
     }
   }
   for (const r of requests) {
     if (r.status === "rejected" || r.status === "cancelled") continue;
     if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
     const title = r.appName || SERVICE_LABELS[r.serviceType];
-    payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd });
+    payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
   }
   // Obunasi tugab, store'dan olib tashlangan ilovalar — hali faol uzaytirish so'rovi
-  // bo'lmasa ham, uzaytirish to'lovi eslatma sifatida chiqadi.
+  // bo'lmasa ham, uzaytirish to'lovi eslatma sifatida chiqadi. Hali so'rov (yozuv) yo'q —
+  // shuning uchun "hammasini birga to'lash" guruhiga kirmaydi (key yo'q), avval alohida so'rov ochilishi kerak.
   for (const a of apps) {
     if (a.status !== "subscription_ended") continue;
     const lastRenewal = renewalByApp[a.id];
@@ -165,7 +172,7 @@ export default async function PanelPage() {
         </div>
 
         {/* Diqqat talab qiladigan: to'lovlar */}
-        <PaymentAlerts items={payAlerts} />
+        <PaymentAlerts items={payAlerts} cardNumber={cardNumber} cardHolder={cardHolder} rate={rate} walletUzs={walletUzs} />
 
         {/* Hamyon + bildirishnomalar */}
         <WalletCard balanceUzs={walletUzs} />

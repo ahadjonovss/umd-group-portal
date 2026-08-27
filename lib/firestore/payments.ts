@@ -138,6 +138,7 @@ export interface PaymentView {
   walletAppliedUzs: number; // shu to'lovda hamyondan ishlatilgan (so'm)
   netDueUzs: number | null; // mijoz o'tkazishi kerak bo'lgan (so'm)
   actualPaidUzs: number | null; // admin kiritgan — mijoz aslida to'lagan (so'm)
+  batchId: string | null; // "hammasini birga to'lash" orqali yuborilgan bo'lsa — guruh id
   createdAt: string | null;
 }
 
@@ -171,6 +172,7 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     walletAppliedUzs: typeof x.walletAppliedUzs === "number" ? x.walletAppliedUzs : 0,
     netDueUzs: typeof x.netDueUzs === "number" ? x.netDueUzs : (typeof x.amountUzs === "number" ? x.amountUzs : null),
     actualPaidUzs: typeof x.actualPaidUzs === "number" ? x.actualPaidUzs : null,
+    batchId: x.batchId ?? null,
     createdAt: iso(x.createdAt),
   };
 }
@@ -201,6 +203,18 @@ export async function getUserPayments(ownerUid: string): Promise<PaymentView[]> 
 
 export async function setPaymentNote(paymentId: string, note: string): Promise<void> {
   await adminDb.collection(PAYMENTS).doc(paymentId).update({ note: note.slice(0, 1000) });
+}
+
+// "Hammasini birga to'lash" orqali yaratilgan to'lovni guruhga biriktiradi —
+// har bir a'zo to'lov o'zining guruh izohini (jami summa) ko'rsatadi.
+export async function attachPaymentBatch(paymentId: string, batchId: string, note: string): Promise<void> {
+  await adminDb.collection(PAYMENTS).doc(paymentId).update({ batchId, note: note.slice(0, 1000) });
+}
+
+// Guruhga tegishli barcha to'lovlar.
+export async function getPaymentsByBatch(batchId: string): Promise<PaymentView[]> {
+  const snap = await adminDb.collection(PAYMENTS).where("batchId", "==", batchId).get();
+  return sortPayments(snap.docs.map(mapPayment));
 }
 
 export async function deletePayment(paymentId: string): Promise<void> {

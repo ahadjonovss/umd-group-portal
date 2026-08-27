@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { confirmPayment, rejectPayment } from "@/lib/firestore/payments";
+import { confirmPaymentBatch, rejectPaymentBatch } from "@/lib/firestore/paymentBatches";
 import { answerCallbackQuery, editMessageReplyMarkup, sendTelegramTo } from "@/lib/telegram";
 import { notifier } from "@/lib/telegram-notifier";
 import { consumeTelegramLinkToken, linkTelegramChat, getUserByChatId, setTelegramNotify, getUser } from "@/lib/firestore/users";
@@ -139,8 +140,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const [action, paymentId] = data.split(":");
-  if (!paymentId) {
+  const [action, targetId] = data.split(":");
+  if (!targetId) {
     await answerCallbackQuery(callbackId, "Noto'g'ri buyruq");
     return NextResponse.json({ ok: true });
   }
@@ -148,16 +149,28 @@ export async function POST(req: NextRequest) {
   try {
     const tgActor = { type: "admin" as const, name: "Admin (Telegram)", uid: null };
     if (action === "pc") {
-      await confirmPayment(paymentId, undefined, tgActor);
+      await confirmPayment(targetId, undefined, tgActor);
       await answerCallbackQuery(callbackId, "✅ To'lov tasdiqlandi");
       await editMessageReplyMarkup(chatId, messageId, {
         inline_keyboard: [[{ text: "✅ Tasdiqlandi", callback_data: "noop" }]],
       });
     } else if (action === "pr") {
-      await rejectPayment(paymentId, tgActor);
+      await rejectPayment(targetId, tgActor);
       await answerCallbackQuery(callbackId, "❌ To'lov rad etildi — mijoz qayta yuborishi mumkin");
       await editMessageReplyMarkup(chatId, messageId, {
         inline_keyboard: [[{ text: "❌ Rad etildi", callback_data: "noop" }]],
+      });
+    } else if (action === "ba") {
+      const r = await confirmPaymentBatch(targetId, tgActor);
+      await answerCallbackQuery(callbackId, `✅ ${r.ok} ta to'lov tasdiqlandi${r.failed ? ` (${r.failed} tasi xato)` : ""}`);
+      await editMessageReplyMarkup(chatId, messageId, {
+        inline_keyboard: [[{ text: `✅ Barchasi tasdiqlandi (${r.ok} ta)`, callback_data: "noop" }]],
+      });
+    } else if (action === "br") {
+      const r = await rejectPaymentBatch(targetId, tgActor);
+      await answerCallbackQuery(callbackId, `❌ ${r.ok} ta to'lov rad etildi${r.failed ? ` (${r.failed} tasi xato)` : ""}`);
+      await editMessageReplyMarkup(chatId, messageId, {
+        inline_keyboard: [[{ text: `❌ Barchasi rad etildi (${r.ok} ta)`, callback_data: "noop" }]],
       });
     } else {
       await answerCallbackQuery(callbackId, "Noma'lum buyruq");
