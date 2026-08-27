@@ -28,7 +28,7 @@ export default async function RenewalRequestPage({
   if (!detail) notFound();
   const app = detail.app;
   if (app.ownerUid !== user.uid) notFound();
-  if (app.status !== "published") redirect("/panel");
+  if (app.status !== "published" && app.status !== "subscription_ended") redirect("/panel");
   if (!app.subscription?.startDate) redirect(`/panel/app/${appId}`);
 
   const [pricing, rate] = await Promise.all([getPricing(), getUsdRate()]);

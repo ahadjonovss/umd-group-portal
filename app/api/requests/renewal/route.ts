@@ -36,8 +36,8 @@ export async function POST(req: NextRequest) {
   if (!snap.exists) return NextResponse.json({ success: false, error: "Ariza topilmadi" }, { status: 404 });
   const app = snap.data()!;
   if (app.ownerUid !== user.uid) return NextResponse.json({ success: false, error: "Ruxsat yo'q" }, { status: 403 });
-  if (app.status !== "published") {
-    return NextResponse.json({ success: false, error: "Obunani faqat chiqarilgan ilova uchun uzaytirish mumkin" }, { status: 400 });
+  if (app.status !== "published" && app.status !== "subscription_ended") {
+    return NextResponse.json({ success: false, error: "Obunani faqat chiqarilgan yoki muddati tugagan ilova uchun uzaytirish mumkin" }, { status: 400 });
   }
   if (!app.subscription || !app.subscription.startDate) {
     return NextResponse.json({ success: false, error: "Bu ilovada obuna yo'q" }, { status: 400 });

@@ -342,6 +342,13 @@ export default async function AppDetailPage({
                 </SectionCard>
               )}
 
+              {/* Obunasi tugab, store'dan olib tashlangan ilova — uzaytirib qayta tiklash */}
+              {app.status === "subscription_ended" && (
+                <SectionCard title="Obunani tiklash">
+                  <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
+                </SectionCard>
+              )}
+
               {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat.
                   Faqat to'lovi yakunlangan chiqarilgan ilovada (yoki iOS yakunlangan — push uchun). */}
               {paymentDone && (app.status === "published" || (isTerminalSuccess(app.status) && platformOf(app.serviceType) === "ios")) && (

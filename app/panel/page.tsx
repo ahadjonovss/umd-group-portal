@@ -22,10 +22,10 @@ import { isTerminalSuccess, isTerminalError } from "@/lib/app-status";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { getPricing } from "@/lib/firestore/settings";
 import { getUserRequests } from "@/lib/firestore/requests";
-import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
+import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
 import { getInstallment, isPayable } from "@/lib/payment-state";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
-import { REQUEST_TYPE_LABEL } from "@/lib/request-status";
+import { REQUEST_TYPE_LABEL, isRequestActive } from "@/lib/request-status";
 
 export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
 
@@ -88,6 +88,17 @@ export default async function PanelPage() {
     if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
     const title = r.appName || SERVICE_LABELS[r.serviceType];
     payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd });
+  }
+  // Obunasi tugab, store'dan olib tashlangan ilovalar — hali faol uzaytirish so'rovi
+  // bo'lmasa ham, uzaytirish to'lovi eslatma sifatida chiqadi.
+  for (const a of apps) {
+    if (a.status !== "subscription_ended") continue;
+    const lastRenewal = renewalByApp[a.id];
+    if (lastRenewal && isRequestActive(lastRenewal.status)) continue; // faol so'rov bor — yuqoridagi loop qamrab oladi
+    const title = a.appName || SERVICE_LABELS[a.serviceType];
+    const disc = discounts.find((d) => d.service === "renewal" && (!d.boundAppId || d.boundAppId === a.id));
+    const amt = Math.round(applyDiscount(renewalUsd(a, pricing), disc?.percent ?? 0));
+    if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Obunani uzaytirish", usd: amt });
   }
 
   // Yakunlangan (chiqarilgan / transfer / akkaunt), lekin hali baholanmagan xizmatlar — eslatma banneri

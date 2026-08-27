@@ -492,6 +492,8 @@ export async function renewSubscription(
   const newEnd = new Date(base.getTime() + SUBSCRIPTION_DURATION_DAYS * 24 * 60 * 60 * 1000);
 
   await ref.update({
+    // Obunasi tugab, store'dan olib tashlangan ilova bo'lsa — uzaytirilgach yana "chiqarilgan" holatga qaytadi.
+    status: "published" satisfies AppStatus,
     "subscription.endDate": Timestamp.fromDate(newEnd),
     "subscription.active": true,
     "subscription.renewedCount": (sub.renewedCount ?? 0) + 1,

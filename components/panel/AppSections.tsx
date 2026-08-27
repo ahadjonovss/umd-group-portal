@@ -31,8 +31,8 @@ export function RenewalSection({
   paymentDone: boolean;
   walletUzs?: number;
 }) {
-  // Faqat chiqarilgan + obunasi boshlangan + qolgan to'lovi yakunlangan ilovada
-  if (app.status !== "published" || !app.subscription?.startDate || !paymentDone) return null;
+  // Chiqarilgan (yoki obunasi tugab, store'dan olib tashlangan) + obunasi boshlangan + qolgan to'lovi yakunlangan ilovada
+  if ((app.status !== "published" && app.status !== "subscription_ended") || !app.subscription?.startDate || !paymentDone) return null;
 
   const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
 
