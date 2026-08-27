@@ -33,6 +33,15 @@ export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
 // Har doim yangi ma'lumot (cache'lanmasin).
 export const dynamic = "force-dynamic";
 
+// Status hali "published" bo'lib qolgan, lekin obuna muddati (endDate) allaqachon
+// o'tib ketgan ilova — admin hali "olib tashlash"ni qo'lda bosmagan bo'lishi mumkin
+// (subscription-reminder cron faqat eslatma yuboradi, statusni o'zgartirmaydi).
+function isDatedExpired(a: { status: string; subscription: { active: boolean; endDate: string | null } | null }): boolean {
+  const sub = a.subscription;
+  const endMs = sub?.endDate ? new Date(sub.endDate).getTime() : 0;
+  return a.status === "published" && Boolean(sub?.active) && endMs > 0 && endMs < Date.now();
+}
+
 export default async function PanelPage() {
   const user = await requireUser();
   const [apps, admin, pricing, requests, discounts, walletUzs, telegram, paymentInfo, usdRate] = await Promise.all([
@@ -95,11 +104,14 @@ export default async function PanelPage() {
     const title = r.appName || SERVICE_LABELS[r.serviceType];
     payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
   }
-  // Obunasi tugab, store'dan olib tashlangan ilovalar — hali faol uzaytirish so'rovi
-  // bo'lmasa ham, uzaytirish to'lovi eslatma sifatida chiqadi. "renewal_pending" key —
-  // bosilganda so'rov shu yerning o'zida yaratilib, to'lov darhol ochiladi (ilovaga kirish shart emas).
+  // Obunasi tugagan ilovalar — hali faol uzaytirish so'rovi bo'lmasa ham, uzaytirish
+  // to'lovi eslatma sifatida chiqadi. Bu ikki holatni qamrab oladi: (1) admin allaqachon
+  // "olib tashlagan" (status = subscription_ended), (2) muddati (endDate) o'tib ketgan,
+  // lekin admin hali qo'lda pullamagan — status hamon "published" bo'lib qolaveradi
+  // (faqat eslatma yuboriladi, avtomatik o'zgartirilmaydi — subscription-reminder cron'ga qarang).
+  // "renewal_pending" key — bosilganda so'rov shu yerning o'zida yaratilib, to'lov darhol ochiladi.
   for (const a of apps) {
-    if (a.status !== "subscription_ended") continue;
+    if (a.status !== "subscription_ended" && !isDatedExpired(a)) continue;
     const lastRenewal = renewalByApp[a.id];
     // Eski so'rov to'lanishi mumkin bo'lsa (yuqoridagi loop allaqachon ko'rsatadi) yoki
     // to'langan bo'lsa — qo'shimcha eslatma shart emas. Aks holda (so'rov yo'q, yoki
