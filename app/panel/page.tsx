@@ -26,7 +26,7 @@ import { getUsdRate } from "@/lib/cbu";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
 import { getInstallment, isPayable } from "@/lib/payment-state";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
-import { REQUEST_TYPE_LABEL, isRequestActive } from "@/lib/request-status";
+import { REQUEST_TYPE_LABEL } from "@/lib/request-status";
 
 export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
 
@@ -101,7 +101,11 @@ export default async function PanelPage() {
   for (const a of apps) {
     if (a.status !== "subscription_ended") continue;
     const lastRenewal = renewalByApp[a.id];
-    if (lastRenewal && isRequestActive(lastRenewal.status)) continue; // faol so'rov bor — yuqoridagi loop qamrab oladi
+    // Eski so'rov to'lanishi mumkin bo'lsa (yuqoridagi loop allaqachon ko'rsatadi) yoki
+    // to'langan bo'lsa — qo'shimcha eslatma shart emas. Aks holda (so'rov yo'q, yoki
+    // holati noaniq/eski migratsiyalanmagan yozuv) — eslatma baribir chiqadi.
+    const lastFull = lastRenewal ? getInstallment(lastRenewal.payment, "full") : null;
+    if (lastFull && (lastFull.state === "confirmed" || isPayable(lastFull))) continue;
     const title = a.appName || SERVICE_LABELS[a.serviceType];
     const disc = discounts.find((d) => d.service === "renewal" && (!d.boundAppId || d.boundAppId === a.id));
     const amt = Math.round(applyDiscount(renewalUsd(a, pricing), disc?.percent ?? 0));
