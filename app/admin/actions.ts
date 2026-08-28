@@ -12,13 +12,14 @@ import { urlButton } from "@/lib/telegram";
 import { SERVICE_SHORT } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import type { ServiceType } from "@/types";
-import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest } from "@/lib/firestore/payments";
+import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest, createPayment } from "@/lib/firestore/payments";
 import { confirmPaymentBatch, rejectPaymentBatch } from "@/lib/firestore/paymentBatches";
 import { setRequestStatus, setRequestNote, deleteRequest, createCustomInvoice } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
-import { setPricing, setPaymentInfo, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
-import { createDiscount, deleteDiscount } from "@/lib/firestore/discounts";
-import type { DiscountService } from "@/lib/discount";
+import { setPricing, setPaymentInfo, getPricing, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
+import { createDiscount, deleteDiscount, getActiveDiscount } from "@/lib/firestore/discounts";
+import { categoryForServiceType, applyDiscount, type DiscountService } from "@/lib/discount";
+import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp } from "@/lib/payment";
 import type { AppStatus } from "@/lib/app-status";
 import { getUsdRate } from "@/lib/cbu";
 
@@ -386,4 +387,54 @@ export async function actRejectPaymentBatch(batchId: string) {
   const r = await rejectPaymentBatch(batchId, actor);
   revalidatePath("/admin");
   return r;
+}
+
+// Admin: ariza to'lovini (avans/yakuniy) chek talab qilmasdan qo'lda yopadi —
+// mijoz boshqa yo'l bilan (naqd va h.k.) to'lagan bo'lsa. Odatdagi createPayment +
+// confirmPayment oqimini ishlatadi (izoh bilan) — status/xabarnoma/activity log bir xil ishlaydi.
+export async function actMarkInstallmentPaidManually(appId: string, kind: "advance" | "final") {
+  const actor = await adminActor();
+  const snap = await adminDb.collection("apps").doc(appId).get();
+  if (!snap.exists) return { ok: false, error: "Ariza topilmadi" };
+  const app = snap.data()!;
+  const installment = app.payment?.installments?.[kind];
+  if (installment && installment.state === "confirmed") {
+    return { ok: false, error: "Bu qism allaqachon to'langan" };
+  }
+
+  const serviceType = app.serviceType as ServiceType;
+  const pricedApp = { serviceType, servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null };
+  const pricing = await getPricing();
+  const category = categoryForServiceType(serviceType);
+  const discount = category ? await getActiveDiscount(app.ownerUid, category, appId) : null;
+  const pct = discount?.percent ?? 0;
+  const baseAmount = kind === "final" ? finalUsdApp(pricedApp, pricing) : advanceUsdApp(pricedApp, pricing);
+  const usd = Math.round(applyDiscount(baseAmount, pct));
+  const totalUsd = Math.round(applyDiscount(serviceBaseUsd(pricedApp, pricing), pct));
+  const appName = (app.appName as string | null) || SERVICE_SHORT[serviceType];
+
+  try {
+    const id = await createPayment({
+      appId,
+      ownerUid: app.ownerUid,
+      ownerName: app.contact?.fullName || "Mijoz",
+      ownerPhone: app.contact?.phone || "-",
+      serviceType,
+      appName,
+      kind,
+      amountUsd: usd,
+      rate: null,
+      amountUzs: null,
+      totalUsd,
+      advancePercent: advancePercentForApp(pricedApp, pricing),
+      discountId: discount?.id ?? null,
+      discountPercent: pct,
+    });
+    await setPaymentNote(id, `Qo'lda yopildi (chek yo'q) — admin: ${actor.name}`);
+    await confirmPayment(id, undefined, actor);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
 }

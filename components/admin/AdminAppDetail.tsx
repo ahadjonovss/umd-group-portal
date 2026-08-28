@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AdminAppRow } from "@/components/admin/AdminAppRow";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { CustomInvoiceForm } from "@/components/admin/CustomInvoiceForm";
+import { ManualCloseInstallment } from "@/components/admin/ManualCloseInstallment";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import type { AppView } from "@/lib/firestore/apps";
 import type { PaymentView } from "@/lib/firestore/payments";
@@ -150,6 +151,7 @@ export function AdminAppDetail({
 
       {tab === "payment" && (
         <div className="flex flex-col gap-4">
+          <ManualCloseInstallment app={app} />
           <CustomInvoiceForm app={app} />
           {payments.length ? (
             <div className="flex flex-col gap-3">
