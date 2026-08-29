@@ -17,7 +17,7 @@ function storeName(serviceType: AppView["serviceType"]): string {
   return serviceType === "app-store" || serviceType === "apple-transfer" ? "App Store" : "Play Market";
 }
 
-export function AdminAppRow({ app, paidUsd = 0, cancelFeePct = 0 }: { app: AppView; paidUsd?: number; cancelFeePct?: number }) {
+export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }: { app: AppView; paidUsd?: number; paidUzs?: number; cancelFeePct?: number }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -305,7 +305,7 @@ export function AdminAppRow({ app, paidUsd = 0, cancelFeePct = 0 }: { app: AppVi
               appId={app.id}
               label="Ariza"
               totalUsd={paidUsd}
-              totalUzs={null}
+              totalUzs={paidUzs || null}
               cancelFeePct={cancelFeePct}
               onClose={() => setRejectOpen(false)}
               onDone={() => { setRejectOpen(false); router.refresh(); }}

@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
   let appName = "";
   let entityLabel = "Ariza";
   let totalUsd = 0;
+  let totalUzs = 0;
   let baseFeePct = 0;
   const isRequest = Boolean(requestId);
 
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
     entityLabel = `${REQUEST_TYPE_LABEL[r.type as RequestType]} so'rovi`;
     const paySnap = await adminDb.collection("payments").where("requestId", "==", requestId).where("status", "==", "confirmed").get();
     totalUsd = paySnap.empty ? (r.amountUsd || 0) : paySnap.docs.reduce((s, d) => s + (d.data().amountUsd || 0), 0);
+    totalUzs = paySnap.empty ? (r.amountUzs || 0) : paySnap.docs.reduce((s, d) => s + (d.data().amountUzs || 0), 0);
     baseFeePct = pricing.requestCancelFee;
   } else {
     const appSnap = await adminDb.collection("apps").doc(appIdInput).get();
@@ -82,6 +84,7 @@ export async function POST(req: NextRequest) {
     entityLabel = "Ariza";
     const paySnap = await adminDb.collection("payments").where("appId", "==", appId).where("requestId", "==", null).where("status", "==", "confirmed").get();
     totalUsd = paySnap.docs.reduce((s, d) => s + (d.data().amountUsd || 0), 0);
+    totalUzs = paySnap.docs.reduce((s, d) => s + (d.data().amountUzs || 0), 0);
     const cat = categoryForServiceType(serviceType);
     baseFeePct = cat === "publish" ? pricing.publishCancelFee : cat === "account" ? pricing.accountCancelFee : 0;
   }
@@ -90,8 +93,10 @@ export async function POST(req: NextRequest) {
   const commissionPct = initiator === "user" && hold ? baseFeePct : 0;
   const keptUsd = Math.round((totalUsd * commissionPct) / 100);
   const refundUsd = Math.max(0, totalUsd - keptUsd);
-  const rate = (await getUsdRate()) ?? null;
-  const refundUzs = rate ? Math.round(refundUsd * rate) : null;
+  // So'm — mijoz haqiqatda to'lagan summadan hisoblanadi
+  const keptUzs = Math.round((totalUzs * commissionPct) / 100);
+  const fallbackRate = totalUzs > 0 ? 0 : ((await getUsdRate()) ?? 0);
+  const refundUzs = totalUzs > 0 ? Math.max(0, totalUzs - keptUzs) : (fallbackRate ? Math.round(refundUsd * fallbackRate) : null);
 
   // Skrinshot (qaytarish bo'lsa talab qilinadi)
   const shot = await readFormFile(formData, "screenshot");

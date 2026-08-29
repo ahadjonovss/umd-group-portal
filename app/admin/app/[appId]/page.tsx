@@ -30,9 +30,9 @@ export default async function AdminAppPage({
   const title = detail.app.appName || SERVICE_LABELS[detail.app.serviceType];
 
   // To'lanган (confirmed) ilova to'lovlari + bekor qilish komissiya %
-  const paidUsd = payments
-    .filter((p) => p.status === "confirmed" && !p.requestId)
-    .reduce((s, p) => s + (p.amountUsd || 0), 0);
+  const confirmedAppPays = payments.filter((p) => p.status === "confirmed" && !p.requestId);
+  const paidUsd = confirmedAppPays.reduce((s, p) => s + (p.amountUsd || 0), 0);
+  const paidUzs = confirmedAppPays.reduce((s, p) => s + (p.amountUzs || 0), 0);
   const cat = categoryForServiceType(detail.app.serviceType);
   const cancelFeePct = cat === "publish" ? pricing.publishCancelFee : cat === "account" ? pricing.accountCancelFee : 0;
 
@@ -60,7 +60,7 @@ export default async function AdminAppPage({
 
         <h1 className="text-xl font-bold text-slate-900 mb-5">{title}</h1>
 
-        <AdminAppDetail app={detail.app} submission={detail.submission} payments={payments} activity={activity} paidUsd={paidUsd} cancelFeePct={cancelFeePct} />
+        <AdminAppDetail app={detail.app} submission={detail.submission} payments={payments} activity={activity} paidUsd={paidUsd} paidUzs={paidUzs} cancelFeePct={cancelFeePct} />
       </main>
     </div>
   );

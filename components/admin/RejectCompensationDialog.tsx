@@ -35,8 +35,11 @@ export function RejectCompensationDialog({
   const commissionOn = initiator === "user" && hold && cancelFeePct > 0;
   const keptUsd = commissionOn ? Math.round((totalUsd * cancelFeePct) / 100) : 0;
   const refundUsd = Math.max(0, totalUsd - keptUsd);
-  const rate = totalUsd > 0 && totalUzs ? totalUzs / totalUsd : 0;
-  const refundUzs = rate ? Math.round(refundUsd * rate) : 0;
+  // So'mda (asosiy ko'rsatkich)
+  const paidUzs = totalUzs ?? 0;
+  const keptUzs = commissionOn ? Math.round((paidUzs * cancelFeePct) / 100) : 0;
+  const refundUzs = Math.max(0, paidUzs - keptUzs);
+  const som = (n: number) => n.toLocaleString("en-US") + " so'm";
   const needProof = refundUsd > 0;
 
   function pick(f: File | null) {
@@ -73,7 +76,10 @@ export function RejectCompensationDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-bold text-slate-900 mb-1">{label}ni bekor qilish</h3>
-        <p className="text-xs text-slate-500 mb-3">To&apos;langan: <strong>${totalUsd}</strong>{totalUzs ? ` · ~${totalUzs.toLocaleString("en-US")} so'm` : ""}</p>
+        <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3">
+          <p className="text-xs text-slate-500">Mijoz to&apos;lagan:</p>
+          <p className="text-lg font-bold text-slate-900">{paidUzs > 0 ? som(paidUzs) : `$${totalUsd}`}{paidUzs > 0 ? <span className="text-sm font-normal text-slate-400"> · ${totalUsd}</span> : null}</p>
+        </div>
 
         <label className="text-xs text-slate-500">Bekor qilish tashabbusi</label>
         <div className="grid grid-cols-2 gap-2 mt-1 mb-3">
@@ -88,13 +94,14 @@ export function RejectCompensationDialog({
         {initiator === "user" && cancelFeePct > 0 && (
           <label className="flex items-center gap-2 mb-3 text-sm text-slate-700">
             <input type="checkbox" checked={hold} onChange={(e) => setHold(e.target.checked)} className="w-4 h-4" />
-            Komissiya ushlansin ({cancelFeePct}% = ${Math.round((totalUsd * cancelFeePct) / 100)})
+            Komissiya ushlansin ({cancelFeePct}%{paidUzs > 0 ? ` = ${som(Math.round((paidUzs * cancelFeePct) / 100))}` : ` = $${Math.round((totalUsd * cancelFeePct) / 100)}`})
           </label>
         )}
 
         <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 mb-3 text-sm">
-          {keptUsd > 0 && <p className="text-slate-700">🧾 Komissiya (daromadда qoladi): <strong>${keptUsd}</strong></p>}
-          <p className="text-emerald-700 font-semibold mt-0.5">↩️ Mijozga qaytariladi: ${refundUsd}{refundUzs ? ` · ~${refundUzs.toLocaleString("en-US")} so'm` : ""}</p>
+          {keptUsd > 0 && <p className="text-slate-700">🧾 Komissiya (daromadда qoladi): <strong>{paidUzs > 0 ? som(keptUzs) : `$${keptUsd}`}</strong></p>}
+          <p className="text-emerald-700 font-bold mt-1 text-base">↩️ Qaytarilishi kerak: {paidUzs > 0 ? som(refundUzs) : `$${refundUsd}`}</p>
+          {paidUzs > 0 && <p className="text-[11px] text-slate-400 mt-0.5">≈ ${refundUsd}</p>}
         </div>
 
         {needProof && (
