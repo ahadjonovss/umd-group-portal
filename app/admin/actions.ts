@@ -12,7 +12,7 @@ import { urlButton } from "@/lib/telegram";
 import { SERVICE_SHORT } from "@/lib/labels";
 import { SITE_URL } from "@/lib/site";
 import type { ServiceType } from "@/types";
-import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest, createPayment } from "@/lib/firestore/payments";
+import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest, createPayment, voidRequestPayments } from "@/lib/firestore/payments";
 import { confirmPaymentBatch, rejectPaymentBatch } from "@/lib/firestore/paymentBatches";
 import { setRequestStatus, setRequestNote, deleteRequest, createCustomInvoice } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
@@ -241,6 +241,20 @@ export async function actSetRequestStatus(id: string, status: RequestStatus) {
   const actor = await adminActor();
   await setRequestStatus(id, status, actor);
   revalidatePath("/admin");
+}
+
+// So'rovni rad etadi va to'lovlarini teskari qaytaradi (kompensatsiya bilan).
+// keptUsd — ushlab qolinadigan summa ($); qolgani mijoz hamyoniga qaytadi.
+export async function actRejectRequest(id: string, keptUsd: number = 0, status: "rejected" | "cancelled" = "rejected") {
+  const actor = await adminActor();
+  const res = await voidRequestPayments(id, keptUsd, actor);
+  await setRequestStatus(id, status, actor);
+  await adminDb.collection("requests").doc(id).update({
+    "payment.installments.full.state": "rejected",
+    receiptSent: false,
+  });
+  revalidatePath("/admin");
+  return { ok: true, refundedUzs: res.refundedUzs, keptUsd: res.keptUsd };
 }
 
 // So'rovning kutilayotgan to'lovini tasdiqlaydi (soliq cheki URL bilan) va

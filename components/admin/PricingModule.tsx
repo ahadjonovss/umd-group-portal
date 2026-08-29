@@ -109,6 +109,8 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="Update paketi — iOS" value={p.updatePackageIos} onChange={(v) => set("updatePackageIos", v)} />
             <NumField unit="kun" label="Paket muddati" value={p.updatePackageDays} onChange={(v) => set("updatePackageDays", v)} />
             <NumField unit="ta" label="Paketdagi update soni" value={p.updatePackageQuota} onChange={(v) => set("updatePackageQuota", v)} />
+            <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-500">Bekor qilish</div>
+            <NumField unit="%" max={100} label="So'rov bekor komissiyasi (mijoz so'rovi bilan)" value={p.requestCancelFee} onChange={(v) => set("requestCancelFee", v)} />
           </>
         )}
         {sub === "account" && (

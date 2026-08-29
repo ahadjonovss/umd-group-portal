@@ -498,7 +498,7 @@ export function AdminTabs({
                   it.kind === "app" ? (
                     <AdminAppListItem key={`a-${it.app.id}`} app={it.app} />
                   ) : (
-                    <AdminRequestRow key={`r-${it.req.id}`} request={it.req} />
+                    <AdminRequestRow key={`r-${it.req.id}`} request={it.req} cancelFeePct={pricing.requestCancelFee} />
                   )
                 )}
               </div>

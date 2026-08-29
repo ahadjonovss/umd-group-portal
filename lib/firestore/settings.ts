@@ -24,6 +24,7 @@ export interface Pricing {
   accountAdvance: number; // akkaunt ochish — avans %
   publishCancelFee: number; // chiqarishdan voz kechilsa ushlab qolinadigan % (umumiy narxdan)
   accountCancelFee: number; // akkaunt ochishdan voz kechilsa ushlab qolinadigan % (umumiy narxdan)
+  requestCancelFee: number; // so'rov (update/transfer/...) mijoz so'rovi bilan bekor qilinsa ushlanadigan komissiya %
 }
 
 export const DEFAULT_PRICING: Pricing = {
@@ -48,6 +49,7 @@ export const DEFAULT_PRICING: Pricing = {
   accountAdvance: 70,
   publishCancelFee: 20,
   accountCancelFee: 20,
+  requestCancelFee: 20,
 };
 
 function num(v: unknown, fallback: number): number {
@@ -80,6 +82,7 @@ function normalize(x: Partial<Pricing>): Pricing {
     accountAdvance: pct(x.accountAdvance, DEFAULT_PRICING.accountAdvance),
     publishCancelFee: pct(x.publishCancelFee, DEFAULT_PRICING.publishCancelFee),
     accountCancelFee: pct(x.accountCancelFee, DEFAULT_PRICING.accountCancelFee),
+    requestCancelFee: pct(x.requestCancelFee, DEFAULT_PRICING.requestCancelFee),
   };
 }
 
