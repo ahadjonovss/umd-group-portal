@@ -475,3 +475,73 @@ export async function voidRequestPayments(
 
   return { refundedUzs: refunded, keptUsd: keptTotal };
 }
+
+// Ilova arizasi rad etilganda uning to'lovlarini (avans/yakuniy/to'liq) teskari qaytaradi.
+// voidRequestPayments bilan bir xil mantiq — faqat ilova to'lovlari (requestId == null).
+export async function voidAppPayments(
+  appId: string,
+  keptUsd: number,
+  actor?: Actor,
+  refundToWallet: boolean = true
+): Promise<{ refundedUzs: number; keptUsd: number }> {
+  const snap = await adminDb.collection(PAYMENTS).where("appId", "==", appId).where("requestId", "==", null).get();
+  let refunded = 0;
+  let keptRemaining = Math.max(0, Math.round(keptUsd));
+  let keptTotal = 0;
+
+  for (const doc of snap.docs) {
+    const p = doc.data();
+    if (p.status === "rejected") continue;
+
+    if (p.status === "pending") {
+      const applied = typeof p.walletAppliedUzs === "number" ? p.walletAppliedUzs : 0;
+      if (applied > 0) { await adjustWallet(p.ownerUid as string, applied); refunded += applied; }
+      await doc.ref.update({ status: "rejected", rejectedAt: FieldValue.serverTimestamp() });
+      continue;
+    }
+
+    const origUsd = typeof p.amountUsd === "number" ? p.amountUsd : 0;
+    const origUzs = typeof p.amountUzs === "number" ? p.amountUzs : 0;
+    const rate = origUsd > 0 && origUzs > 0 ? origUzs / origUsd : 0;
+    const kept = Math.min(keptRemaining, origUsd);
+    keptRemaining -= kept;
+    keptTotal += kept;
+    const keptUzs = rate ? Math.round(kept * rate) : 0;
+    const refundUzs = Math.max(0, origUzs - keptUzs);
+
+    if (kept <= 0) {
+      await doc.ref.update({
+        status: "rejected",
+        rejectedAt: FieldValue.serverTimestamp(),
+        compensated: true,
+        originalAmountUsd: origUsd,
+        originalAmountUzs: origUzs,
+        amountUsd: 0,
+        amountUzs: 0,
+      });
+    } else {
+      await doc.ref.update({
+        compensated: true,
+        originalAmountUsd: origUsd,
+        originalAmountUzs: origUzs,
+        amountUsd: kept,
+        amountUzs: keptUzs,
+      });
+    }
+    if (refundUzs > 0) {
+      if (refundToWallet) await adjustWallet(p.ownerUid as string, refundUzs);
+      refunded += refundUzs;
+    }
+    if (actor) {
+      const dest = refundToWallet ? "hamyonga" : "kartaga";
+      await logActivity(
+        appId,
+        "payment_rejected",
+        `Ariza rad etildi — kompensatsiya $${kept} ushlandi, ${refundUzs.toLocaleString("en-US")} so'm ${dest} qaytarildi`,
+        actor
+      );
+    }
+  }
+
+  return { refundedUzs: refunded, keptUsd: keptTotal };
+}

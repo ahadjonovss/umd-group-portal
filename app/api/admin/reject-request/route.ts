@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, getUserRole } from "@/lib/auth/dal";
 import { adminDb, FieldValue } from "@/lib/firebase/admin";
 import { getPricing } from "@/lib/firestore/settings";
-import { voidRequestPayments } from "@/lib/firestore/payments";
+import { voidRequestPayments, voidAppPayments } from "@/lib/firestore/payments";
 import { setRequestStatus } from "@/lib/firestore/requests";
+import { setAppStatus } from "@/lib/firestore/apps";
+import { categoryForServiceType } from "@/lib/discount";
 import { getUserTelegram } from "@/lib/firestore/users";
 import { sendPhotoRaw } from "@/lib/telegram";
 import { notifier } from "@/lib/telegram-notifier";
@@ -35,32 +37,59 @@ export async function POST(req: NextRequest) {
   }
 
   const requestId = String(formData.get("requestId") || "");
+  const appIdInput = String(formData.get("appId") || "");
   const initiator = String(formData.get("initiator") || "user"); // "user" | "umd"
   const hold = String(formData.get("hold") || "0") === "1"; // komissiya ushlansinmi (faqat user)
   const cardNumber = String(formData.get("cardNumber") || "").trim();
-  if (!requestId) return NextResponse.json({ success: false, error: "requestId yo'q" }, { status: 400 });
+  if (!requestId && !appIdInput) return NextResponse.json({ success: false, error: "requestId yoki appId yo'q" }, { status: 400 });
 
-  const reqRef = adminDb.collection("requests").doc(requestId);
-  const reqSnap = await reqRef.get();
-  if (!reqSnap.exists) return NextResponse.json({ success: false, error: "So'rov topilmadi" }, { status: 404 });
-  const r = reqSnap.data()!;
-  const ownerUid = r.ownerUid as string;
-  const appId = r.appId as string;
-  const serviceType = r.serviceType as ServiceType;
-  const type = r.type as RequestType;
-  const appName = (r.appName as string) || SERVICE_LABELS[serviceType];
-
-  // Tasdiqlangan to'lov (bo'lsa)
-  const paySnap = await adminDb.collection("payments").where("requestId", "==", requestId).where("status", "==", "confirmed").get();
-  const paid = !paySnap.empty;
-  const totalUsd = paid ? paySnap.docs.reduce((s, d) => s + (d.data().amountUsd || 0), 0) : (r.amountUsd || 0);
-
-  // Komissiya: faqat mijoz so'rovi bilan + ushlash tanlangan bo'lsa
   const pricing = await getPricing();
-  const commissionPct = initiator === "user" && hold ? pricing.requestCancelFee : 0;
+  const actor = { type: "admin" as const, name: user.name || user.email || "Admin", uid: user.uid };
+
+  // Umumiy o'zgaruvchilar (so'rov yoki ariza)
+  let ownerUid = "";
+  let ownerName = "";
+  let appId = "";
+  let serviceType: ServiceType = "play-market";
+  let appName = "";
+  let entityLabel = "Ariza";
+  let totalUsd = 0;
+  let baseFeePct = 0;
+  const isRequest = Boolean(requestId);
+
+  if (isRequest) {
+    const reqSnap = await adminDb.collection("requests").doc(requestId).get();
+    if (!reqSnap.exists) return NextResponse.json({ success: false, error: "So'rov topilmadi" }, { status: 404 });
+    const r = reqSnap.data()!;
+    ownerUid = r.ownerUid as string;
+    ownerName = (r.ownerName as string) || "-";
+    appId = r.appId as string;
+    serviceType = r.serviceType as ServiceType;
+    appName = (r.appName as string) || SERVICE_LABELS[serviceType];
+    entityLabel = `${REQUEST_TYPE_LABEL[r.type as RequestType]} so'rovi`;
+    const paySnap = await adminDb.collection("payments").where("requestId", "==", requestId).where("status", "==", "confirmed").get();
+    totalUsd = paySnap.empty ? (r.amountUsd || 0) : paySnap.docs.reduce((s, d) => s + (d.data().amountUsd || 0), 0);
+    baseFeePct = pricing.requestCancelFee;
+  } else {
+    const appSnap = await adminDb.collection("apps").doc(appIdInput).get();
+    if (!appSnap.exists) return NextResponse.json({ success: false, error: "Ariza topilmadi" }, { status: 404 });
+    const a = appSnap.data()!;
+    ownerUid = a.ownerUid as string;
+    ownerName = (a.contact?.fullName as string) || (a.ownerEmail as string) || "-";
+    appId = appIdInput;
+    serviceType = a.serviceType as ServiceType;
+    appName = (a.appName as string) || SERVICE_LABELS[serviceType];
+    entityLabel = "Ariza";
+    const paySnap = await adminDb.collection("payments").where("appId", "==", appId).where("requestId", "==", null).where("status", "==", "confirmed").get();
+    totalUsd = paySnap.docs.reduce((s, d) => s + (d.data().amountUsd || 0), 0);
+    const cat = categoryForServiceType(serviceType);
+    baseFeePct = cat === "publish" ? pricing.publishCancelFee : cat === "account" ? pricing.accountCancelFee : 0;
+  }
+
+  const paid = totalUsd > 0;
+  const commissionPct = initiator === "user" && hold ? baseFeePct : 0;
   const keptUsd = Math.round((totalUsd * commissionPct) / 100);
   const refundUsd = Math.max(0, totalUsd - keptUsd);
-
   const rate = (await getUsdRate()) ?? null;
   const refundUzs = rate ? Math.round(refundUsd * rate) : null;
 
@@ -71,30 +100,26 @@ export async function POST(req: NextRequest) {
     if (!shot) return NextResponse.json({ success: false, error: "To'lov skrinshotini yuklang" }, { status: 400 });
   }
 
-  const actor = { type: "admin" as const, name: user.name || user.email || "Admin", uid: user.uid };
-
-  // To'lovlarni teskari qaytarish (kartaga — hamyonga emas). Kompensatsiya confirmed holicha qoladi.
-  if (paid) {
-    await voidRequestPayments(requestId, keptUsd, actor, false);
-  }
-
-  // Refund metama'lumoti so'rovga yoziladi (audit)
-  await reqRef.update({
+  const refundMeta = {
     refund: {
-      initiator,
-      commissionPct,
-      keptUsd,
-      refundUsd,
+      initiator, commissionPct, keptUsd, refundUsd,
       refundUzs: refundUzs ?? null,
       cardNumber: cardNumber || null,
       at: FieldValue.serverTimestamp(),
       by: user.uid,
     },
-  });
+  };
 
-  // So'rovni rad etish (status + invoice yopiladi)
-  await setRequestStatus(requestId, "rejected", actor);
-  await reqRef.update({ "payment.installments.full.state": "rejected", receiptSent: false });
+  if (isRequest) {
+    if (paid) await voidRequestPayments(requestId, keptUsd, actor, false);
+    await adminDb.collection("requests").doc(requestId).update(refundMeta);
+    await setRequestStatus(requestId, "rejected", actor);
+    await adminDb.collection("requests").doc(requestId).update({ "payment.installments.full.state": "rejected", receiptSent: false });
+  } else {
+    if (paid) await voidAppPayments(appId, keptUsd, actor, false);
+    await adminDb.collection("apps").doc(appId).update(refundMeta);
+    await setAppStatus(appId, "rejected", actor);
+  }
 
   // Xabar matni
   const reasonLine = `\n📌 Sabab: ${initiator === "user" ? "sizning so'rovingiz bo'yicha" : "UMD GROUP tomonidan"}`;
@@ -106,7 +131,7 @@ export async function POST(req: NextRequest) {
     : "";
   const termsLine = `\n\n📄 [Reglament / foydalanish shartlari](${SITE_URL}/foydalanish-shartlari)`;
   const caption =
-    `↩️ *${esc(REQUEST_TYPE_LABEL[type])} so'rovi bekor qilindi*\n\n📱 ${esc(appName)}${reasonLine}${commLine}${refundLine}${termsLine}`;
+    `↩️ *${esc(entityLabel)} bekor qilindi*\n\n📱 ${esc(appName)}${reasonLine}${commLine}${refundLine}${termsLine}`;
 
   // Foydalanuvchiga: skrinshot + matn (Telegram)
   let notified = false;
@@ -115,7 +140,7 @@ export async function POST(req: NextRequest) {
     if (tg.notify && tg.chatIds.length) {
       for (const chatId of tg.chatIds) {
         if (paid && refundUsd > 0 && shot) {
-          const ok = await sendPhotoRaw({ chatId, buffer: shot.buffer, filename: `refund_${requestId}.jpg`, caption });
+          const ok = await sendPhotoRaw({ chatId, buffer: shot.buffer, filename: `refund_${requestId || appId}.jpg`, caption });
           notified = notified || ok;
         } else {
           // qaytarishsiz (masalan to'lov yo'q yoki 100% komissiya) — matn
@@ -131,9 +156,9 @@ export async function POST(req: NextRequest) {
 
   // Admin topic (To'lovlar) — nusxa + skrinshot
   try {
-    const adminCap = caption + `\n👤 ${esc(r.ownerName || "-")}` + tgAdminLink(appId);
+    const adminCap = caption + `\n👤 ${esc(ownerName)}` + tgAdminLink(appId);
     if (paid && refundUsd > 0 && shot) {
-      await notifier.photo("payments", shot.buffer, `refund_${requestId}.jpg`, adminCap);
+      await notifier.photo("payments", shot.buffer, `refund_${requestId || appId}.jpg`, adminCap);
     } else {
       await notifier.payments(adminCap);
     }

@@ -8,6 +8,8 @@ import { requireAdmin } from "@/lib/auth/dal";
 import { getAppDetail } from "@/lib/firestore/apps";
 import { getAppPayments } from "@/lib/firestore/payments";
 import { getAppActivity } from "@/lib/firestore/activity";
+import { getPricing } from "@/lib/firestore/settings";
+import { categoryForServiceType } from "@/lib/discount";
 import { SERVICE_LABELS } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Ariza — Admin — UMD GROUP" };
@@ -24,8 +26,15 @@ export default async function AdminAppPage({
   const detail = await getAppDetail(appId);
   if (!detail) notFound();
 
-  const [payments, activity] = await Promise.all([getAppPayments(appId), getAppActivity(appId)]);
+  const [payments, activity, pricing] = await Promise.all([getAppPayments(appId), getAppActivity(appId), getPricing()]);
   const title = detail.app.appName || SERVICE_LABELS[detail.app.serviceType];
+
+  // To'lanган (confirmed) ilova to'lovlari + bekor qilish komissiya %
+  const paidUsd = payments
+    .filter((p) => p.status === "confirmed" && !p.requestId)
+    .reduce((s, p) => s + (p.amountUsd || 0), 0);
+  const cat = categoryForServiceType(detail.app.serviceType);
+  const cancelFeePct = cat === "publish" ? pricing.publishCancelFee : cat === "account" ? pricing.accountCancelFee : 0;
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -51,7 +60,7 @@ export default async function AdminAppPage({
 
         <h1 className="text-xl font-bold text-slate-900 mb-5">{title}</h1>
 
-        <AdminAppDetail app={detail.app} submission={detail.submission} payments={payments} activity={activity} />
+        <AdminAppDetail app={detail.app} submission={detail.submission} payments={payments} activity={activity} paidUsd={paidUsd} cancelFeePct={cancelFeePct} />
       </main>
     </div>
   );

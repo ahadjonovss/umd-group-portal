@@ -63,11 +63,15 @@ export function AdminAppDetail({
   submission,
   payments,
   activity,
+  paidUsd = 0,
+  cancelFeePct = 0,
 }: {
   app: AppView;
   submission: Record<string, string>;
   payments: PaymentView[];
   activity: ActivityView[];
+  paidUsd?: number;
+  cancelFeePct?: number;
 }) {
   const [tab, setTab] = useState<"info" | "payment" | "activity">("info");
 
@@ -109,7 +113,7 @@ export function AdminAppDetail({
       {tab === "info" && (
         <div className="flex flex-col gap-4">
           {/* Boshqaruv (status, chiqarish, obuna) */}
-          <AdminAppRow app={app} />
+          <AdminAppRow app={app} paidUsd={paidUsd} cancelFeePct={cancelFeePct} />
 
           {/* Update paketi holati */}
           {app.updatePackage && (

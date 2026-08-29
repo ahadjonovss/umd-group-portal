@@ -8,6 +8,7 @@ import { STATUS_META, SERVICE_LABELS, accountLabel, formatDate } from "@/lib/lab
 import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
 import { RENEWAL_FACTOR } from "@/lib/payment";
 import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actRenewSubscription, actDeleteApp } from "@/app/admin/actions";
+import { RejectCompensationDialog } from "@/components/admin/RejectCompensationDialog";
 
 const SITE_URL = "https://umdgroup.uz";
 const IS_DEV = process.env.NODE_ENV === "development";
@@ -16,9 +17,10 @@ function storeName(serviceType: AppView["serviceType"]): string {
   return serviceType === "app-store" || serviceType === "apple-transfer" ? "App Store" : "Play Market";
 }
 
-export function AdminAppRow({ app }: { app: AppView }) {
+export function AdminAppRow({ app, paidUsd = 0, cancelFeePct = 0 }: { app: AppView; paidUsd?: number; cancelFeePct?: number }) {
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [rejectOpen, setRejectOpen] = useState(false);
   const theme = SERVICE_THEME[app.serviceType];
   const status = STATUS_META[app.status];
   const title = app.appName || SERVICE_LABELS[app.serviceType];
@@ -276,21 +278,38 @@ export function AdminAppRow({ app }: { app: AppView }) {
                 <>
                   <button
                     disabled={pending}
-                    onClick={() => start(() => actSetStatus(app.id, "rejected"))}
+                    onClick={() => {
+                      if (paidUsd > 0) setRejectOpen(true);
+                      else start(() => actSetStatus(app.id, "rejected"));
+                    }}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
                   >
                     Rad etish
                   </button>
-                  <button
-                    disabled={pending}
-                    onClick={() => start(() => actSetStatus(app.id, "cancelled"))}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
-                  >
-                    Bekor qilish
-                  </button>
+                  {paidUsd <= 0 && (
+                    <button
+                      disabled={pending}
+                      onClick={() => start(() => actSetStatus(app.id, "cancelled"))}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
+                    >
+                      Bekor qilish
+                    </button>
+                  )}
                 </>
               )}
             </div>
+          )}
+
+          {rejectOpen && (
+            <RejectCompensationDialog
+              appId={app.id}
+              label="Ariza"
+              totalUsd={paidUsd}
+              totalUzs={null}
+              cancelFeePct={cancelFeePct}
+              onClose={() => setRejectOpen(false)}
+              onDone={() => { setRejectOpen(false); router.refresh(); }}
+            />
           )}
 
           {/* Obuna ma'lumoti (uzaytirish user so'rovi orqali) */}
