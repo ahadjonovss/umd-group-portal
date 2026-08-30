@@ -7,6 +7,7 @@ import { AdminUserListItem } from "@/components/admin/AdminUserListItem";
 import { PricingModule } from "@/components/admin/PricingModule";
 import { CardSettings } from "@/components/admin/CardSettings";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
+import { AdminBatchRow } from "@/components/admin/AdminBatchRow";
 import { AdminRequestRow } from "@/components/admin/AdminRequestRow";
 import { FinancePanel } from "@/components/admin/FinancePanel";
 import { StatsPanel } from "@/components/admin/StatsPanel";
@@ -458,7 +459,24 @@ export function AdminTabs({
             />
             {fPay.length ? (
               <div className="flex flex-col gap-3">
-                {fPay.map((pm) => <AdminPaymentRow key={pm.id} payment={pm} relatedPayments={payments} />)}
+                {(() => {
+                  const groups: { key: string; batch?: PaymentView[]; single?: PaymentView }[] = [];
+                  const seen = new Set<string>();
+                  for (const pm of fPay) {
+                    if (pm.batchId) {
+                      if (seen.has(pm.batchId)) continue;
+                      seen.add(pm.batchId);
+                      const members = fPay.filter((x) => x.batchId === pm.batchId);
+                      if (members.length > 1) { groups.push({ key: `b-${pm.batchId}`, batch: members }); continue; }
+                    }
+                    groups.push({ key: pm.id, single: pm });
+                  }
+                  return groups.map((g) =>
+                    g.batch
+                      ? <AdminBatchRow key={g.key} payments={g.batch} />
+                      : <AdminPaymentRow key={g.key} payment={g.single!} relatedPayments={payments} />
+                  );
+                })()}
               </div>
             ) : (
               <Empty text="Topilmadi." />

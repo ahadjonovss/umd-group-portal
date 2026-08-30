@@ -389,9 +389,9 @@ export async function actSendCustomInvoiceReminder(requestId: string): Promise<{
 }
 
 // Admin: "hammasini birga to'lash" orqali yuborilgan guruhdagi barcha to'lovlarni bittada tasdiqlaydi.
-export async function actConfirmPaymentBatch(batchId: string) {
+export async function actConfirmPaymentBatch(batchId: string, taxReceiptUrl?: string, actualPaidUzs?: number) {
   const actor = await adminActor();
-  const r = await confirmPaymentBatch(batchId, actor);
+  const r = await confirmPaymentBatch(batchId, { taxReceiptUrl: taxReceiptUrl || undefined, actualPaidUzs }, actor);
   revalidatePath("/admin");
   return r;
 }

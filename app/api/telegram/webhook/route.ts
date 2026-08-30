@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
         inline_keyboard: [[{ text: "❌ Rad etildi", callback_data: "noop" }]],
       });
     } else if (action === "ba") {
-      const r = await confirmPaymentBatch(targetId, tgActor);
+      const r = await confirmPaymentBatch(targetId, undefined, tgActor);
       await answerCallbackQuery(callbackId, `✅ ${r.ok} ta to'lov tasdiqlandi${r.failed ? ` (${r.failed} tasi xato)` : ""}`);
       await editMessageReplyMarkup(chatId, messageId, {
         inline_keyboard: [[{ text: `✅ Barchasi tasdiqlandi (${r.ok} ta)`, callback_data: "noop" }]],
