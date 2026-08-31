@@ -211,10 +211,33 @@ export default async function XizmatNarxlariPage() {
           </p>
         </div>
 
-        {/* 6. Obuna yangilash */}
+        {/* 6. DUNS raqami ochish */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">6</span>
+              <div>
+                <h2 className="font-semibold text-slate-900">DUNS raqami ochish</h2>
+                <p className="text-xs text-slate-500">Biznesingiz uchun Dun &amp; Bradstreet raqami</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3 mt-3 ml-10">
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-3">
+              <p className="text-xs text-slate-500 mb-0.5">DUNS raqami</p>
+              <p className="text-xl font-bold text-slate-900">${p.duns}</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-500 mt-3 ml-10">
+            To&apos;lov <strong>100% oldindan</strong> amalga oshiriladi. Tasdiqlash muddati Dun &amp; Bradstreet
+            tomonidan belgilanadi (bir necha kundan bir necha haftagacha).
+          </p>
+        </div>
+
+        {/* 7. Obuna yangilash */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">6</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">7</span>
             <h2 className="font-semibold text-slate-900">Obunani uzaytirish (+9 oy)</h2>
           </div>
           <p className="ml-10 text-sm text-slate-600">
@@ -242,10 +265,10 @@ export default async function XizmatNarxlariPage() {
           </ul>
         </div>
 
-        {/* 6. Umumiy qoida */}
+        {/* 8. Umumiy qoida */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">6</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">8</span>
             <h2 className="font-semibold text-slate-900">To&apos;lov bo&apos;yicha umumiy qoida</h2>
           </div>
           <div className="ml-10 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800">
@@ -257,10 +280,10 @@ export default async function XizmatNarxlariPage() {
           </div>
         </div>
 
-        {/* 7. Valyuta */}
+        {/* 9. Valyuta */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-3">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">7</span>
+            <span className="w-7 h-7 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center">9</span>
             <h2 className="font-semibold text-slate-900">Valyuta kursi bo&apos;yicha hisob-kitob</h2>
           </div>
           <div className="ml-10 text-sm text-slate-600 space-y-2">

@@ -1,6 +1,6 @@
 import type { Pricing } from "@/lib/firestore/settings";
 
-export type TermsService = "publish" | "transfer" | "update" | "renewal" | "account" | "push_certificate";
+export type TermsService = "publish" | "transfer" | "update" | "renewal" | "account" | "push_certificate" | "duns";
 
 export function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
   return (
@@ -165,6 +165,33 @@ export function TermsContent({ service, pricing: p }: { service: TermsService; p
         </Section>
         <Section num="5" title="Muhim">
           <Bullet>Bu <strong>bir martalik</strong> xizmat. APNs sertifikati Apple tomonidan vaqti-vaqti bilan yangilanishi mumkin — kerak bo&apos;lganда qayta so&apos;rov yaratasiz.</Bullet>
+        </Section>
+      </>
+    );
+  }
+
+  if (service === "duns") {
+    return (
+      <>
+        <Section num="1" title="Xizmat mohiyati">
+          <p>
+            Biznesingiz uchun <strong>DUNS (Dun &amp; Bradstreet) raqami</strong>ni rasmiylashtirib berish — Apple
+            Developer Enterprise akkaunt va boshqa xalqaro xizmatlar uchun talab qilinadigan noyob biznes
+            identifikatori.
+          </p>
+        </Section>
+        <Section num="2" title="Narx va to'lov">
+          <p>Narx — <strong>${p.duns}</strong>. To&apos;lov <strong>100% oldindan</strong> amalga oshiriladi.</p>
+        </Section>
+        <Section num="3" title="Jarayon va muddat">
+          <Bullet>Kompaniya va kontakt shaxs ma&apos;lumotlarini yuborasiz, to&apos;lovni amalga oshirasiz.</Bullet>
+          <Bullet color="red">
+            Dun &amp; Bradstreet tomonidan tasdiqlash <strong>bir necha kundan bir necha haftagacha</strong>{" "}
+            cho&apos;zilishi mumkin — bu muddat UMD GROUP&apos;ga bog&apos;liq emas.
+          </Bullet>
+        </Section>
+        <Section num="4" title="Muhim">
+          <Bullet>Bu <strong>bir martalik</strong> xizmat — DUNS raqami umrbod amal qiladi.</Bullet>
         </Section>
       </>
     );
