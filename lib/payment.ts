@@ -12,6 +12,8 @@ export function fullUsd(serviceType: ServiceType, p: Pricing): number {
       return p.googleTransfer;
     case "apple-transfer":
       return p.appleTransfer;
+    case "duns":
+      return p.duns;
     default:
       return 0;
   }
@@ -19,7 +21,7 @@ export function fullUsd(serviceType: ServiceType, p: Pricing): number {
 
 // Shu xizmat uchun avans foizi.
 export function advancePercentFor(serviceType: ServiceType, p: Pricing): number {
-  return serviceType === "google-transfer" || serviceType === "apple-transfer"
+  return serviceType === "google-transfer" || serviceType === "apple-transfer" || serviceType === "duns"
     ? p.transferAdvance
     : p.publishAdvance;
 }

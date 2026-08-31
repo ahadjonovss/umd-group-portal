@@ -95,6 +95,7 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
           <>
             <NumField unit="$" label="Google Play transfer" value={p.googleTransfer} onChange={(v) => set("googleTransfer", v)} />
             <NumField unit="$" label="App Store transfer" value={p.appleTransfer} onChange={(v) => set("appleTransfer", v)} />
+            <NumField unit="$" label="DUNS raqami ochish" value={p.duns} onChange={(v) => set("duns", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.transferAdvance} onChange={(v) => set("transferAdvance", v)} />
           </>
         )}

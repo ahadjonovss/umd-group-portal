@@ -151,6 +151,19 @@ export default async function Home() {
               </svg>
             }
           />
+          <ServiceCard
+            title="DUNS raqami ochish"
+            description="Biznesingiz uchun DUNS (Dun & Bradstreet) raqamini rasmiylashtirib beramiz"
+            href="/submit/duns"
+            badge="1 qadam"
+            badgeColor="cyan"
+            delay={375}
+            icon={
+              <svg className="w-5 h-5 text-cyan-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M15 9h.01M15 13h.01M10 21v-4a2 2 0 012-2v0a2 2 0 012 2v4" />
+              </svg>
+            }
+          />
         </div>
 
         {/* Chiqarilgan ilovalar karuseli */}

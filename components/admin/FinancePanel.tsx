@@ -43,6 +43,7 @@ const SERVICE_COLOR: Record<ServiceType, string> = {
   "google-transfer": "bg-orange-500",
   "apple-transfer": "bg-purple-500",
   account: "bg-rose-500",
+  duns: "bg-cyan-500",
   other: "bg-slate-500",
 };
 

@@ -10,6 +10,7 @@ const serviceNames: Record<string, string> = {
   "app-store":        "App Store Joylashtirish",
   "google-transfer":  "Google Play Transfer",
   "apple-transfer":   "Apple App Store Transfer",
+  "duns":             "DUNS Raqami Ochish",
 };
 
 function SuccessContent({ service }: { service: string | null }) {

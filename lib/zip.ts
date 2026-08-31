@@ -135,6 +135,31 @@ ${fields.note || "-"}
 ========================================`;
 }
 
+export function buildDunsInfo(fields: Record<string, string>): string {
+  const now = new Date().toLocaleString("uz-UZ", { timeZone: "Asia/Tashkent" });
+  return `========================================
+UMD GROUP — ARIZA MA'LUMOTLARI
+========================================
+Xizmat turi:     DUNS raqami ochish
+Yuborilgan vaqt: ${now}
+
+--- MIJOZ ---
+Ism:      ${fields.fullName}
+Telefon:  ${fields.phone}
+Email:    ${fields.email}
+
+--- KOMPANIYA ---
+Kompaniya nomi:  ${fields.companyName}
+Yuridik manzil:  ${fields.legalAddress}
+Telefon:         ${fields.companyPhone}
+Veb-sayt:        ${fields.website || "-"}
+
+--- KONTAKT SHAXS ---
+F.I.O.:   ${fields.cpName}
+Telefon:  ${fields.cpPhone || "-"}
+========================================`;
+}
+
 export function buildTransferInfo(
   serviceType: string,
   fields: Record<string, string>

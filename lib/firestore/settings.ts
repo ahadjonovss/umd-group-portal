@@ -7,6 +7,7 @@ export interface Pricing {
   playMarketPublish: number; // Play Market (Android) chiqarish
   googleTransfer: number; // Google Play transfer
   appleTransfer: number; // App Store transfer
+  duns: number; // DUNS raqami ochish
   updateAndroid: number; // Android update (har biri)
   updateIos: number; // iOS update (har biri)
   updatePackageAndroid: number; // Android oylik update paketi narxi
@@ -32,6 +33,7 @@ export const DEFAULT_PRICING: Pricing = {
   playMarketPublish: 30,
   googleTransfer: 5,
   appleTransfer: 5,
+  duns: 30,
   updateAndroid: 3,
   updateIos: 5,
   updatePackageAndroid: 10,
@@ -65,6 +67,7 @@ function normalize(x: Partial<Pricing>): Pricing {
     playMarketPublish: num(x.playMarketPublish, DEFAULT_PRICING.playMarketPublish),
     googleTransfer: num(x.googleTransfer, DEFAULT_PRICING.googleTransfer),
     appleTransfer: num(x.appleTransfer, DEFAULT_PRICING.appleTransfer),
+    duns: num(x.duns, DEFAULT_PRICING.duns),
     updateAndroid: num(x.updateAndroid, DEFAULT_PRICING.updateAndroid),
     updateIos: num(x.updateIos, DEFAULT_PRICING.updateIos),
     updatePackageAndroid: num(x.updatePackageAndroid, DEFAULT_PRICING.updatePackageAndroid),

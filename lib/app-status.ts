@@ -18,7 +18,9 @@ export type AppStatus =
   // ilova boshqa akkauntga transfer qilingan (terminal)
   | "transferred"
   // obuna to'xtatildi — ilova store'dan olib tashlandi (terminal)
-  | "subscription_ended";
+  | "subscription_ended"
+  // DUNS raqami ochish — rasmiylashtirish jarayoni
+  | "processing";
 
 // Chiqarish xizmatlari oqimi. To'lov birinchi bosqichlarda amalga oshadi,
 // tasdiqlangach "preparing" (ish) bosqichiga o'tiladi — alohida "to'lov kutilmoqda" yo'q.
@@ -45,6 +47,13 @@ export const ACCOUNT_FLOW: AppStatus[] = [
   "completed",
 ];
 
+// DUNS raqami ochish oqimi — bitta to'liq to'lov, keyin rasmiylashtirish.
+export const DUNS_FLOW: AppStatus[] = [
+  "submitted",
+  "processing",
+  "completed",
+];
+
 // Oqimdan tashqari maxsus (terminal) holatlar.
 export const TERMINAL_ERROR: AppStatus[] = ["rejected", "cancelled"];
 
@@ -52,12 +61,14 @@ const TRANSFER_SERVICES: ServiceType[] = ["google-transfer", "apple-transfer"];
 
 export function getStatusFlow(serviceType: ServiceType): AppStatus[] {
   if (serviceType === "account") return ACCOUNT_FLOW;
+  if (serviceType === "duns") return DUNS_FLOW;
   return TRANSFER_SERVICES.includes(serviceType) ? TRANSFER_FLOW : PUBLISH_FLOW;
 }
 
 // Avans to'lovi tasdiqlangach o'tiladigan birinchi "ish" bosqichi.
 // To'lov shu bosqichdan OLDINGI holatlarda (submitted / review) amalga oshadi.
 export function workStartStatus(serviceType: ServiceType): AppStatus {
+  if (serviceType === "duns") return "processing";
   return TRANSFER_SERVICES.includes(serviceType) ? "transferring" : "preparing";
 }
 

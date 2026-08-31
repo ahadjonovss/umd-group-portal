@@ -7,6 +7,7 @@ export const SERVICE_LABELS: Record<ServiceType, string> = {
   "google-transfer": "Google Play — Transfer",
   "apple-transfer": "Apple App Store — Transfer",
   account: "Developer akkaunt ochish",
+  duns: "DUNS raqami ochish",
   other: "Qo'shimcha xizmat",
 };
 
@@ -46,6 +47,7 @@ export const SERVICE_SHORT: Record<ServiceType, string> = {
   "google-transfer": "Google Transfer",
   "apple-transfer": "Apple Transfer",
   account: "Akkaunt ochish",
+  duns: "DUNS raqami",
   other: "Qo'shimcha",
 };
 
@@ -56,6 +58,7 @@ export const SERVICE_BADGE: Record<ServiceType, string> = {
   "google-transfer": "bg-orange-50 text-orange-700 ring-orange-200",
   "apple-transfer": "bg-purple-50 text-purple-700 ring-purple-200",
   account: "bg-teal-50 text-teal-700 ring-teal-200",
+  duns: "bg-cyan-50 text-cyan-700 ring-cyan-200",
   other: "bg-slate-50 text-slate-700 ring-slate-200",
 };
 
@@ -112,12 +115,19 @@ export const STATUS_META: Record<
     text: "text-indigo-600",
     desc: "Akkaunt o'tkazish jarayoni ketmoqda.",
   },
+  processing: {
+    label: "Rasmiylashtirilmoqda",
+    badge: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+    dot: "bg-cyan-500",
+    text: "text-cyan-600",
+    desc: "DUNS raqamingiz rasmiylashtirilmoqda.",
+  },
   completed: {
     label: "Yakunlandi",
     badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
     dot: "bg-emerald-500",
     text: "text-emerald-600",
-    desc: "Transfer muvaffaqiyatli yakunlandi! 🎉",
+    desc: "Muvaffaqiyatli yakunlandi! 🎉",
   },
   rejected: {
     label: "Rad etildi",

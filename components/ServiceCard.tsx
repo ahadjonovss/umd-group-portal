@@ -7,7 +7,7 @@ interface ServiceCardProps {
   href: string;
   icon: ReactNode;
   badge?: string;
-  badgeColor?: "green" | "blue" | "orange" | "purple" | "teal";
+  badgeColor?: "green" | "blue" | "orange" | "purple" | "teal" | "cyan";
   delay?: number;
 }
 
@@ -17,6 +17,7 @@ const badgeStyles = {
   orange: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
   purple: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
   teal:   "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
+  cyan:   "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
 };
 
 const iconBg = {
@@ -25,6 +26,7 @@ const iconBg = {
   orange: "bg-orange-50 group-hover:bg-orange-100",
   purple: "bg-purple-50 group-hover:bg-purple-100",
   teal:   "bg-teal-50 group-hover:bg-teal-100",
+  cyan:   "bg-cyan-50 group-hover:bg-cyan-100",
 };
 
 export function ServiceCard({ title, description, href, icon, badge, badgeColor = "blue", delay = 0 }: ServiceCardProps) {

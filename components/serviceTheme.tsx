@@ -24,6 +24,12 @@ export const OTHER_ICON = (
   </svg>
 );
 
+export const DUNS_ICON = (
+  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M15 9h.01M15 13h.01M10 21v-4a2 2 0 012-2v0a2 2 0 012 2v4" />
+  </svg>
+);
+
 export const SERVICE_THEME: Record<
   ServiceType,
   { gradient: string; accent: string; soft: string; text: string; icon: ReactNode }
@@ -62,6 +68,13 @@ export const SERVICE_THEME: Record<
     soft: "bg-teal-50",
     text: "text-teal-600",
     icon: ACCOUNT_ICON,
+  },
+  duns: {
+    gradient: "from-cyan-400 to-cyan-600",
+    accent: "from-cyan-400 to-cyan-600",
+    soft: "bg-cyan-50",
+    text: "text-cyan-600",
+    icon: DUNS_ICON,
   },
   other: {
     gradient: "from-slate-400 to-slate-600",
