@@ -39,7 +39,7 @@ export function AppleTransferForm() {
       if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
       await animateProgress(95, 100, 200);
       await new Promise((r) => setTimeout(r, 500));
-      router.push("/success?service=apple-transfer");
+      router.push(`/success?service=apple-transfer&appId=${json.id}`);
     } catch (err: unknown) {
       setSubmitStatus("error");
       setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");

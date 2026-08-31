@@ -82,7 +82,7 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
       if (!res.ok || !json.success) throw new Error(json.error || "Xato yuz berdi");
       setProgress(100);
       await new Promise((r) => setTimeout(r, 400));
-      router.push("/success?service=account");
+      router.push(`/success?service=account&appId=${json.id}`);
     } catch (err2) {
       setStatus("error");
       setError(err2 instanceof Error ? err2.message : "Kutilmagan xato");

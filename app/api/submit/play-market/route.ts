@@ -118,5 +118,5 @@ export async function POST(req: NextRequest) {
     console.error("[PM] Telegram xato (ariza Firestore'da saqlangan):", err);
   }
 
-  return NextResponse.json({ success: true, message: "Ariza muvaffaqiyatli yuborildi!" });
+  return NextResponse.json({ success: true, id: appId, message: "Ariza muvaffaqiyatli yuborildi!" });
 }

@@ -185,7 +185,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
 
       localStorage.removeItem(STORAGE_KEY);
       await new Promise((r) => setTimeout(r, 500));
-      router.push("/success?service=play-market");
+      router.push(`/success?service=play-market&appId=${json.id}`);
     } catch (err: unknown) {
       stopServerAnim();
       setSubmitStatus("error");
@@ -198,7 +198,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
     data: FormData,
     onProgress: (pct: number) => void,
     onUploadDone: () => void,
-  ): Promise<{ success: boolean; error?: string; message?: string }> {
+  ): Promise<{ success: boolean; error?: string; message?: string; id?: string }> {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", url);

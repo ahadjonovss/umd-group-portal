@@ -92,5 +92,5 @@ export async function POST(req: NextRequest) {
     console.error("[submit/account] Telegram xato (ariza saqlangan):", e);
   }
 
-  return NextResponse.json({ success: true, appId });
+  return NextResponse.json({ success: true, id: appId });
 }
