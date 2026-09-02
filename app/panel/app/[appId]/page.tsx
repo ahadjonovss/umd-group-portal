@@ -17,6 +17,7 @@ import { getUserWalletUzs } from "@/lib/firestore/users";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
+import { estimatedDateIso, etaDaysForService } from "@/lib/eta";
 import { appAdvanceStage, showFinalPayment, appPaymentDone } from "@/lib/panel-status";
 import { getInstallment, isPayable, appInstallmentKeys, type PayState } from "@/lib/payment-state";
 import { InvoicePayment } from "@/components/panel/InvoicePayment";
@@ -170,6 +171,7 @@ export default async function AppDetailPage({
   const transferred = app.status === "transferred";
   const subStarted = Boolean(app.subscription?.startDate);
   const canReview = isTerminalSuccess(app.status);
+  const etaIso = estimatedDateIso(app.createdAt, etaDaysForService(app.serviceType, pricing));
 
   // Chegirma (bo'lsa) — avans va yakuniyга qo'llanadi
   const discCategory = categoryForServiceType(app.serviceType);
@@ -326,6 +328,16 @@ export default async function AppDetailPage({
               </svg>
               <span>{status.desc}</span>
             </p>
+          )}
+
+          {/* Taxminiy javob kelish sanasi (jarayonда) */}
+          {!isTerminalSuccess(app.status) && !isTerminalError(app.status) && !transferred && etaIso && (
+            <div className="mt-3 ml-2 inline-flex items-center gap-1.5 rounded-lg bg-blue-50 ring-1 ring-blue-100 px-2.5 py-1.5 text-xs font-medium text-blue-700">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Taxminan javob: {formatDate(etaIso)}
+            </div>
           )}
         </div>
 

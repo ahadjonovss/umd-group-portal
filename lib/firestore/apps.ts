@@ -8,6 +8,14 @@ import { fullUsd, finalUsd } from "@/lib/payment";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
 import { STATUS_META, SERVICE_LABELS } from "@/lib/labels";
 import { notifyUser, esc, appLink } from "@/lib/notify";
+import { estimatedDateIso, etaDaysForService } from "@/lib/eta";
+
+// ISO -> "DD.MM.YYYY" (Telegram xabarlari uchun)
+function etaDate(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
 import { newAppPayment, appInstallmentKeys, type PaymentState } from "@/lib/payment-state";
 
 export type { AppStatus };
@@ -105,9 +113,11 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     uid: input.ownerUid,
   });
   const subName = input.appName || SERVICE_LABELS[input.serviceType];
+  const etaIso = estimatedDateIso(new Date().toISOString(), etaDaysForService(input.serviceType, await getPricing()));
+  const etaLine = etaIso ? `\n\n🗓 Taxminan *${esc(etaDate(etaIso))}* da tayyor bo'ladi` : "";
   await notifyUser(
     input.ownerUid,
-    `🎉 Arizangizni oldik, rahmat 🙌\n📱 ${esc(subName)}\n\nTez orada ko'rib chiqib ishga kirishamiz — yangiliklarni shu yerda kuzatib boring 👍${appLink(ref.id)}`
+    `🎉 Arizangizni oldik, rahmat 🙌\n📱 ${esc(subName)}${etaLine}\n\nYangiliklarni shu yerda kuzatib boring 👍${appLink(ref.id)}`
   );
   return ref.id;
 }

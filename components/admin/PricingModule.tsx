@@ -42,6 +42,10 @@ function NumField({
   );
 }
 
+function SubHeader({ children }: { children: React.ReactNode }) {
+  return <div className="mt-3 mb-0.5 pt-3 border-t border-slate-100 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{children}</div>;
+}
+
 export function PricingModule({ pricing }: { pricing: Pricing }) {
   const [sub, setSub] = useState<SubKey>("publish");
   const [p, setP] = useState<Pricing>(pricing);
@@ -89,6 +93,8 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="Play Market (Android)" value={p.playMarketPublish} onChange={(v) => set("playMarketPublish", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.publishAdvance} onChange={(v) => set("publishAdvance", v)} />
             <NumField unit="%" max={100} label="Voz kechish jarimasi (umumiy narxdan)" value={p.publishCancelFee} onChange={(v) => set("publishCancelFee", v)} />
+            <SubHeader>Bajarilish muddati</SubHeader>
+            <NumField unit="ish kuni" label="Taxminiy muddat" value={p.etaPublish} onChange={(v) => set("etaPublish", v)} />
           </>
         )}
         {sub === "transfer" && (
@@ -97,6 +103,9 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="App Store transfer" value={p.appleTransfer} onChange={(v) => set("appleTransfer", v)} />
             <NumField unit="$" label="DUNS raqami ochish" value={p.duns} onChange={(v) => set("duns", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.transferAdvance} onChange={(v) => set("transferAdvance", v)} />
+            <SubHeader>Bajarilish muddati</SubHeader>
+            <NumField unit="ish kuni" label="Transfer" value={p.etaTransfer} onChange={(v) => set("etaTransfer", v)} />
+            <NumField unit="ish kuni" label="DUNS raqami" value={p.etaDuns} onChange={(v) => set("etaDuns", v)} />
           </>
         )}
         {sub === "update" && (
@@ -105,12 +114,15 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="iOS update (har biri)" value={p.updateIos} onChange={(v) => set("updateIos", v)} />
             <NumField unit="$" label="Push sertifikat (Apple)" value={p.pushCertificate} onChange={(v) => set("pushCertificate", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.updateAdvance} onChange={(v) => set("updateAdvance", v)} />
-            <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-500">Update paketi (oylik)</div>
+            <SubHeader>Update paketi (oylik)</SubHeader>
             <NumField unit="$" label="Update paketi — Android" value={p.updatePackageAndroid} onChange={(v) => set("updatePackageAndroid", v)} />
             <NumField unit="$" label="Update paketi — iOS" value={p.updatePackageIos} onChange={(v) => set("updatePackageIos", v)} />
             <NumField unit="kun" label="Paket muddati" value={p.updatePackageDays} onChange={(v) => set("updatePackageDays", v)} />
             <NumField unit="ta" label="Paketdagi update soni" value={p.updatePackageQuota} onChange={(v) => set("updatePackageQuota", v)} />
-            <div className="sm:col-span-2 mt-1 pt-3 border-t border-slate-100 text-xs font-semibold text-slate-500">Bekor qilish</div>
+            <SubHeader>Bajarilish muddati</SubHeader>
+            <NumField unit="ish kuni" label="Update" value={p.etaUpdate} onChange={(v) => set("etaUpdate", v)} />
+            <NumField unit="ish kuni" label="Push sertifikat" value={p.etaPushCert} onChange={(v) => set("etaPushCert", v)} />
+            <SubHeader>Bekor qilish</SubHeader>
             <NumField unit="%" max={100} label="So'rov bekor komissiyasi (mijoz so'rovi bilan)" value={p.requestCancelFee} onChange={(v) => set("requestCancelFee", v)} />
           </>
         )}
@@ -122,6 +134,8 @@ export function PricingModule({ pricing }: { pricing: Pricing }) {
             <NumField unit="$" label="App Store — korporativ" value={p.accountAppleCorporate} onChange={(v) => set("accountAppleCorporate", v)} />
             <NumField unit="%" max={100} label="Avans (oldindan to'lov)" value={p.accountAdvance} onChange={(v) => set("accountAdvance", v)} />
             <NumField unit="%" max={100} label="Voz kechish jarimasi (umumiy narxdan)" value={p.accountCancelFee} onChange={(v) => set("accountCancelFee", v)} />
+            <SubHeader>Bajarilish muddati</SubHeader>
+            <NumField unit="ish kuni" label="Akkaunt ochish" value={p.etaAccount} onChange={(v) => set("etaAccount", v)} />
           </>
         )}
       </div>

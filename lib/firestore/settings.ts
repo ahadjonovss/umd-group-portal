@@ -26,6 +26,13 @@ export interface Pricing {
   publishCancelFee: number; // chiqarishdan voz kechilsa ushlab qolinadigan % (umumiy narxdan)
   accountCancelFee: number; // akkaunt ochishdan voz kechilsa ushlab qolinadigan % (umumiy narxdan)
   requestCancelFee: number; // so'rov (update/transfer/...) mijoz so'rovi bilan bekor qilinsa ushlanadigan komissiya %
+  // Taxminiy bajarilish muddati — ish kunlarida (hafta oxiri hisobga olinmaydi)
+  etaPublish: number; // store'ga chiqarish
+  etaTransfer: number; // transfer
+  etaAccount: number; // akkaunt ochish
+  etaUpdate: number; // update
+  etaPushCert: number; // push sertifikat
+  etaDuns: number; // DUNS raqami
 }
 
 export const DEFAULT_PRICING: Pricing = {
@@ -52,6 +59,12 @@ export const DEFAULT_PRICING: Pricing = {
   publishCancelFee: 20,
   accountCancelFee: 20,
   requestCancelFee: 20,
+  etaPublish: 7,
+  etaTransfer: 5,
+  etaAccount: 5,
+  etaUpdate: 2,
+  etaPushCert: 3,
+  etaDuns: 14,
 };
 
 function num(v: unknown, fallback: number): number {
@@ -86,6 +99,12 @@ function normalize(x: Partial<Pricing>): Pricing {
     publishCancelFee: pct(x.publishCancelFee, DEFAULT_PRICING.publishCancelFee),
     accountCancelFee: pct(x.accountCancelFee, DEFAULT_PRICING.accountCancelFee),
     requestCancelFee: pct(x.requestCancelFee, DEFAULT_PRICING.requestCancelFee),
+    etaPublish: num(x.etaPublish, DEFAULT_PRICING.etaPublish),
+    etaTransfer: num(x.etaTransfer, DEFAULT_PRICING.etaTransfer),
+    etaAccount: num(x.etaAccount, DEFAULT_PRICING.etaAccount),
+    etaUpdate: num(x.etaUpdate, DEFAULT_PRICING.etaUpdate),
+    etaPushCert: num(x.etaPushCert, DEFAULT_PRICING.etaPushCert),
+    etaDuns: num(x.etaDuns, DEFAULT_PRICING.etaDuns),
   };
 }
 

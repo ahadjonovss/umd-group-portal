@@ -6,7 +6,16 @@ import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity"
 import { newRequestPayment, type PaymentState } from "@/lib/payment-state";
 import { notifyUser, esc, appLink } from "@/lib/notify";
 import { SERVICE_LABELS } from "@/lib/labels";
+import { getPricing } from "@/lib/firestore/settings";
+import { estimatedDateIso, etaDaysForRequest } from "@/lib/eta";
 import type { ServiceType } from "@/types";
+
+// ISO -> "DD.MM.YYYY"
+function etaDate(iso: string): string {
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
 
 const REQUESTS = "requests";
 
@@ -104,9 +113,11 @@ export async function createRequest(input: CreateRequestInput): Promise<string> 
     { type: "user", name: input.ownerName || "Foydalanuvchi", uid: input.ownerUid }
   );
   const rName = input.appName || SERVICE_LABELS[input.serviceType];
+  const etaIso = estimatedDateIso(new Date().toISOString(), etaDaysForRequest(input.type, await getPricing()));
+  const etaLine = etaIso ? `\n\n🗓 Taxminan *${esc(etaDate(etaIso))}* da tayyor bo'ladi` : "";
   await notifyUser(
     input.ownerUid,
-    `📝 *${esc(REQUEST_TYPE_LABEL[input.type])}* so'rovingizni oldik 🙌\n📱 ${esc(rName)}\n\nTez orada ko'rib chiqamiz 👌${appLink(input.appId)}`
+    `📝 *${esc(REQUEST_TYPE_LABEL[input.type])}* so'rovingizni oldik 🙌\n📱 ${esc(rName)}${etaLine}\n\nTez orada ko'rib chiqamiz 👌${appLink(input.appId)}`
   );
   return ref.id;
 }
