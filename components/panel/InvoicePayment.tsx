@@ -53,7 +53,8 @@ export function InvoicePayment({
 
   const canFull = advPayable && finPayable; // ikkalasi ham to'lanmagan -> "to'liq to'lash"
 
-  const [choice, setChoice] = useState<Choice>(canFull ? "full" : (selectable[0]?.key ?? "advance"));
+  // Default: avans (agar to'lanadigan bo'lsa), aks holda to'liq/birinchi mavjud qism
+  const [choice, setChoice] = useState<Choice>(advPayable ? "advance" : canFull ? "full" : (selectable[0]?.key ?? "advance"));
 
   const fullUsd = invoices.reduce((s, i) => s + (i.state === "due" || i.state === "rejected" ? i.usd : 0), 0);
   const fullUzs = rate ? Math.round(fullUsd * rate) : null;
