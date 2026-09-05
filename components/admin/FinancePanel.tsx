@@ -5,6 +5,7 @@ import type { PaymentView } from "@/lib/firestore/payments";
 import type { DiscountView } from "@/lib/firestore/discounts";
 import type { AdminUser } from "@/lib/firestore/users";
 import type { AppView } from "@/lib/firestore/apps";
+import type { RequestView } from "@/lib/firestore/requests";
 import type { Pricing } from "@/lib/firestore/settings";
 import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
@@ -225,19 +226,21 @@ export function FinancePanel({
   discounts = [],
   users = [],
   apps = [],
+  requests = [],
   pricing,
 }: {
   payments: PaymentView[];
   discounts?: DiscountView[];
   users?: AdminUser[];
   apps?: AppView[];
+  requests?: RequestView[];
   pricing?: Pricing;
 }) {
   const [period, setPeriod] = useState<Period>("month");
 
   // Kutilayotgan daromad (joriy holat): to'lanmagan qismlar + shu oy uzaytiriladigan obunalar
   const expected = useMemo(() => {
-    if (!pricing) return { owedUsd: 0, owedCount: 0, renewalUsd: 0, renewalCount: 0, totalUsd: 0 };
+    if (!pricing) return { owedUsd: 0, owedCount: 0, renewalUsd: 0, renewalCount: 0, requestUsd: 0, requestCount: 0, totalUsd: 0 };
     const now = new Date();
     const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const OPEN = new Set(["due", "rejected", "submitted"]);
@@ -276,8 +279,27 @@ export function FinancePanel({
         }
       }
     }
-    return { owedUsd, owedCount, renewalUsd: renUsd, renewalCount: renCount, totalUsd: owedUsd + renUsd };
-  }, [apps, pricing]);
+    // To'lanmagan so'rovlar: davriy hisob-fakturalar, qo'shimcha hisoblar, update/transfer...
+    let reqUsd = 0;
+    let reqCount = 0;
+    for (const r of requests) {
+      if (r.status === "rejected" || r.status === "cancelled") continue;
+      const full = getInstallment(r.payment, "full");
+      if (full && OPEN.has(full.state) && r.amountUsd > 0) {
+        reqUsd += Math.round(r.amountUsd);
+        reqCount++;
+      }
+    }
+    return {
+      owedUsd,
+      owedCount,
+      renewalUsd: renUsd,
+      renewalCount: renCount,
+      requestUsd: reqUsd,
+      requestCount: reqCount,
+      totalUsd: owedUsd + renUsd + reqUsd,
+    };
+  }, [apps, requests, pricing, discounts]);
 
   // Davriy (oylik) to'lovlar — MRR va qarzdorlar
   const recurring = useMemo(() => {
@@ -473,7 +495,9 @@ export function FinancePanel({
             {expected.owedCount > 0 && <>💳 {expected.owedCount} to&apos;lov</>}
             {expected.owedCount > 0 && expected.renewalCount > 0 && " · "}
             {expected.renewalCount > 0 && <>🔄 {expected.renewalCount} uzaytirish</>}
-            {expected.owedCount === 0 && expected.renewalCount === 0 && "yo'q"}
+            {expected.requestCount > 0 && (expected.owedCount > 0 || expected.renewalCount > 0) && " · "}
+            {expected.requestCount > 0 && <>🧾 {expected.requestCount} hisob-faktura</>}
+            {expected.owedCount === 0 && expected.renewalCount === 0 && expected.requestCount === 0 && "yo'q"}
           </p>
         </div>
         {(recurring.active > 0 || recurring.pendingStart > 0) && (

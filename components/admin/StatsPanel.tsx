@@ -8,7 +8,7 @@ import type { RequestView } from "@/lib/firestore/requests";
 import type { AdminReview } from "@/lib/firestore/reviews";
 import type { DiscountView } from "@/lib/firestore/discounts";
 import type { Pricing } from "@/lib/firestore/settings";
-import { SERVICE_LABELS, STATUS_META, platformOf } from "@/lib/labels";
+import { SERVICE_LABELS, STATUS_META, platformOf, appShort, statusMetaFor } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, isRequestActive } from "@/lib/request-status";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
 import { getInstallment } from "@/lib/payment-state";
@@ -170,6 +170,12 @@ export function StatsPanel({
           renewalDueUsd += Math.round(renewalUsd(a, pricing));
         }
       }
+      // To'lanmagan so'rovlar (davriy hisob-fakturalar, qo'shimcha hisoblar, update/transfer...)
+      for (const r of requests) {
+        if (r.status === "rejected" || r.status === "cancelled") continue;
+        const full = getInstallment(r.payment, "full");
+        if (full && OPEN.has(full.state)) owedUsd += Math.round(r.amountUsd);
+      }
     }
 
     // ── Foydalanuvchilar ──
@@ -212,8 +218,13 @@ export function StatsPanel({
     const byService: Record<string, number> = {};
     let iosCount = 0, androidCount = 0;
     for (const a of apps) {
-      byStatus[a.status] = (byStatus[a.status] ?? 0) + 1;
-      byService[a.serviceType] = (byService[a.serviceType] ?? 0) + 1;
+      // Custom xizmatlarda bosqich nomi katalogdan keladi ("stage1" emas)
+      byStatus[statusMetaFor(a, a.status).label] = (byStatus[statusMetaFor(a, a.status).label] ?? 0) + 1;
+      // Har bir maxsus xizmat o'z nomi bilan sanaladi
+      byService[a.serviceType === "custom" ? appShort(a) : a.serviceType] =
+        (byService[a.serviceType === "custom" ? appShort(a) : a.serviceType] ?? 0) + 1;
+      // Platforma statistikasi faqat store xizmatlariga tegishli
+      if (a.serviceType === "custom") continue;
       if (platformOf(a.serviceType) === "ios") iosCount++; else androidCount++;
     }
     const publishedCount = apps.filter((a) => a.status === "published").length;
@@ -239,6 +250,24 @@ export function StatsPanel({
     }).length;
     const totalRenewals = apps.reduce((a, x) => a + (x.subscription?.renewedCount ?? 0), 0);
     const renewalRevenue = sum(confirmed.filter((p) => p.kind === "renewal"));
+
+    // ── Davriy (oylik) to'lovlar ──
+    let mrrUsd = 0;
+    let recActive = 0;
+    let recPastDue = 0;
+    let recPending = 0;
+    for (const a of apps) {
+      const r = a.billing?.recurring;
+      if (!r || r.status === "cancelled") continue;
+      if (r.status === "pending") { recPending++; continue; }
+      if (!r.active) continue;
+      recActive++;
+      if (r.status === "past_due") recPastDue++;
+      mrrUsd += r.amountUsd / Math.max(1, r.periodMonths);
+    }
+    mrrUsd = Math.round(mrrUsd);
+    const recRevenue = sum(confirmed.filter((p) => p.kind === "recurring"));
+    const recInvoicesPaid = confirmed.filter((p) => p.kind === "recurring").length;
 
     // ── So'rovlar ──
     const reqByType: Record<string, number> = {};
@@ -281,6 +310,7 @@ export function StatsPanel({
       userMonths, topUsersPay, topUsersApps,
       totalApps, byStatus, byService, iosCount, androidCount, publishedCount, transferredCount, conversion, appMonths,
       activeSubsCount: activeSubs.length, subsEndingMonth, subsOverdue, totalRenewals, renewalRevenue,
+      mrrUsd, recActive, recPastDue, recPending, recRevenue, recInvoicesPaid,
       reqByType, reqActive, reqDone, reqRejected,
       pkgSoldCount, pkgRevenue, activePkgsCount: activePkgs.length, pkgUsageAvg,
       totalReviews, approvedReviews, avgRating,
@@ -291,11 +321,11 @@ export function StatsPanel({
 
   const SVC_COLORS: Record<string, string> = {
     "play-market": "bg-emerald-500", "app-store": "bg-blue-500", "google-transfer": "bg-orange-500",
-    "apple-transfer": "bg-purple-500", account: "bg-rose-500",
+    "apple-transfer": "bg-purple-500", account: "bg-rose-500", duns: "bg-cyan-500",
   };
-  const statusSegs: Seg[] = Object.entries(s.byStatus).map(([k, v]) => ({ label: STATUS_META[k as keyof typeof STATUS_META]?.label ?? k, value: v, color: "bg-slate-400" }));
+  const statusSegs: Seg[] = Object.entries(s.byStatus).map(([k, v]) => ({ label: k, value: v, color: "bg-slate-400" }));
   const serviceSegs: Seg[] = Object.entries(s.byService).map(([k, v]) => ({ label: SERVICE_LABELS[k as ServiceType] ?? k, value: v, color: SVC_COLORS[k] ?? "bg-slate-400" }));
-  const kindLabels: Record<string, string> = { advance: "Avans", final: "Yakuniy", full: "To'liq", transfer: "Transfer", update: "Update", renewal: "Uzaytirish", push_certificate: "Push sertifikat", update_package: "Update paketi" };
+  const kindLabels: Record<string, string> = { advance: "Avans", final: "Yakuniy", full: "To'liq", transfer: "Transfer", update: "Update", renewal: "Uzaytirish", push_certificate: "Push sertifikat", update_package: "Update paketi", recurring: "Davriy to'lov", custom: "Qo'shimcha" };
   const kindSegs: Seg[] = Object.entries(s.byKind).map(([k, v]) => ({ label: kindLabels[k] ?? k, value: Math.round(v), color: "bg-indigo-500" }));
   const reqSegs: Seg[] = Object.entries(s.reqByType).map(([k, v]) => ({ label: REQUEST_TYPE_LABEL[k as keyof typeof REQUEST_TYPE_LABEL] ?? k, value: v, color: "bg-teal-500" }));
 
@@ -361,6 +391,28 @@ export function StatsPanel({
           </div>
           <p className="text-xs text-slate-400 mt-3">Uzaytirish daromadi: <span className="font-semibold text-slate-700">{usd(s.renewalRevenue)}</span></p>
         </Section>
+        <Section title="Davriy (oylik) to'lovlar" icon="🔁">
+          {s.recActive === 0 && s.recPending === 0 ? (
+            <p className="text-sm text-slate-400">Davriy to&apos;lovli xizmat yo&apos;q.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-xl bg-purple-50 p-3"><p className="text-xl font-bold text-purple-700">{usd(s.mrrUsd)}</p><p className="text-[11px] text-slate-400">MRR (oylik)</p></div>
+                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xl font-bold text-emerald-600">{s.recActive}</p><p className="text-[11px] text-slate-400">Faol obuna</p></div>
+                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xl font-bold text-red-600">{s.recPastDue}</p><p className="text-[11px] text-slate-400">Qarzdor</p></div>
+                <div className="rounded-xl bg-slate-50 p-3"><p className="text-xl font-bold text-slate-900">{s.recPending}</p><p className="text-[11px] text-slate-400">Boshlanishi kutilmoqda</p></div>
+              </div>
+              <p className="text-xs text-slate-400 mt-3">
+                Davriy daromad: <span className="font-semibold text-slate-700">{usd(s.recRevenue)}</span>
+                <span className="text-slate-300"> · </span>
+                {s.recInvoicesPaid} ta to&apos;langan hisob
+              </p>
+            </>
+          )}
+        </Section>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
         <Section title="Update paketlari" icon="📦">
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="rounded-xl bg-slate-50 p-3"><p className="text-xl font-bold text-slate-900">{s.pkgSoldCount}</p><p className="text-[11px] text-slate-400">Sotilgan</p></div>

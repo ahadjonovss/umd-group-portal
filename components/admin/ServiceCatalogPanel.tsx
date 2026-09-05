@@ -73,7 +73,7 @@ interface Draft {
   etaDays: number;
   flow: FlowStep[];
   workStartKey: string;
-  oneTime: { enabled: boolean; amountUsd: number; advancePercent: number };
+  oneTime: { enabled: boolean; amountUsd: number; advancePercent: number; cancelFeePercent: number };
   recurring: {
     enabled: boolean;
     amountUsd: number;
@@ -305,6 +305,14 @@ export function ServiceCatalogPanel({ items }: { items: CatalogService[] }) {
                   type="number" min={0} max={100}
                   value={draft.oneTime.advancePercent}
                   onChange={(e) => set("oneTime", { ...draft.oneTime, advancePercent: parseInt(e.target.value) || 0 })}
+                  className={field}
+                />
+              </Row>
+              <Row label="Bekor qilish komissiyasi (%)" hint="Mijoz voz kechsa to'langan summadan ushlab qolinadi">
+                <input
+                  type="number" min={0} max={100}
+                  value={draft.oneTime.cancelFeePercent}
+                  onChange={(e) => set("oneTime", { ...draft.oneTime, cancelFeePercent: parseInt(e.target.value) || 0 })}
                   className={field}
                 />
               </Row>

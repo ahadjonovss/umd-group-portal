@@ -15,6 +15,8 @@ import { REQUEST_TYPE_LABEL, type RequestType } from "@/lib/request-status";
 import { tgAdminLink, SITE_URL } from "@/lib/site";
 import { getUsdRate } from "@/lib/cbu";
 import type { ServiceType } from "@/types";
+import { cancelFeePercentForApp } from "@/lib/payment";
+import { normalizeSnapshot } from "@/lib/service-def";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -86,7 +88,11 @@ export async function POST(req: NextRequest) {
     totalUsd = paySnap.docs.reduce((s, d) => s + (d.data().amountUsd || 0), 0);
     totalUzs = paySnap.docs.reduce((s, d) => s + (d.data().amountUzs || 0), 0);
     const cat = categoryForServiceType(serviceType);
-    baseFeePct = cat === "publish" ? pricing.publishCancelFee : cat === "account" ? pricing.accountCancelFee : 0;
+    baseFeePct = cancelFeePercentForApp(
+      { serviceType, catalogSnapshot: a.catalogSnapshot ? normalizeSnapshot(a.catalogSnapshot) : null },
+      pricing,
+      cat === "publish" || cat === "account" ? cat : null
+    );
   }
 
   const paid = totalUsd > 0;

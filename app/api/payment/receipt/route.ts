@@ -17,6 +17,7 @@ import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { notifyUser, appLink } from "@/lib/notify";
 import type { ServiceType } from "@/types";
+import { normalizeSnapshot } from "@/lib/service-def";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -106,7 +107,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Chek rasmi yuklanmadi" }, { status: 400 });
   }
 
-  const pricedApp = { serviceType, servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null };
+  const pricedApp = {
+    serviceType,
+    servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null,
+    // Maxsus xizmatda narx/avans foizi biriktirish snapshot'idan olinadi
+    catalogSnapshot: app.catalogSnapshot ? normalizeSnapshot(app.catalogSnapshot) : null,
+  };
   const [pricing, payment, rate] = await Promise.all([getPricing(), getPaymentInfo(), getUsdRate()]);
 
   // Chegirma (bo'lsa) — avans va yakuniy ikkalasiga qo'llanadi. Update paketiga chegirma yo'q.

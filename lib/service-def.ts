@@ -44,6 +44,7 @@ export interface OneTimePlan {
   enabled: boolean;
   amountUsd: number;
   advancePercent: number; // 100 bo'lsa — yakuniy to'lov yo'q
+  cancelFeePercent: number; // mijoz voz kechsa ushlab qolinadigan % (to'langan summadan)
 }
 
 export type RecurringStart = "on_complete" | "on_advance_paid" | "on_assign";
@@ -122,7 +123,7 @@ export const DEFAULT_FLOW: FlowStep[] = [
   { key: "completed", label: "Topshirildi", desc: "Ish muvaffaqiyatli topshirildi! 🎉" },
 ];
 
-export const DEFAULT_ONE_TIME: OneTimePlan = { enabled: true, amountUsd: 0, advancePercent: 50 };
+export const DEFAULT_ONE_TIME: OneTimePlan = { enabled: true, amountUsd: 0, advancePercent: 50, cancelFeePercent: 20 };
 
 export const DEFAULT_RECURRING: RecurringPlan = {
   enabled: false,
@@ -180,6 +181,7 @@ export function normalizePricing(v: unknown): ServicePricingModel {
       enabled: bool(one.enabled, DEFAULT_ONE_TIME.enabled),
       amountUsd: Math.max(0, num(one.amountUsd, 0)),
       advancePercent: pct(one.advancePercent, DEFAULT_ONE_TIME.advancePercent),
+      cancelFeePercent: pct(one.cancelFeePercent, DEFAULT_ONE_TIME.cancelFeePercent),
     },
     recurring: {
       enabled: bool(rec.enabled, false),

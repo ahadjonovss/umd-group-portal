@@ -113,6 +113,16 @@ export function advancePercentForApp(app: PricedApp, p: Pricing): number {
   return advancePercentFor(app.serviceType, p);
 }
 
+// Ariza bekor qilinganda ushlab qolinadigan komissiya (%).
+// Maxsus xizmatda katalog/biriktirish shartidan, aks holda umumiy sozlamadan.
+export function cancelFeePercentForApp(app: PricedApp, p: Pricing, category: "publish" | "account" | null): number {
+  const def = defOf(app);
+  if (def) return def.pricing.oneTime.cancelFeePercent;
+  if (category === "publish") return p.publishCancelFee;
+  if (category === "account") return p.accountCancelFee;
+  return 0;
+}
+
 // ── Maxsus xizmat: takrorlanuvchi (oylik) to'lov summasi ──
 export function recurringUsd(app: PricedApp & { billing?: { recurring?: { amountUsd?: number } | null } | null }): number {
   const fromBilling = app.billing?.recurring?.amountUsd;

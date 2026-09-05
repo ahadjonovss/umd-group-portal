@@ -23,6 +23,8 @@ export const REQUEST_FLOW: RequestStatus[] = [
 // Turga qarab oqim. Update'da qo'shimcha "store ko'rigida" bosqichi bor.
 export function requestFlow(type: RequestType): RequestStatus[] {
   if (type === "update") return ["requested", "review", "in_progress", "store_review", "completed"];
+  // Davriy to'lov — ish bosqichi yo'q: to'landi = yakunlandi
+  if (type === "recurring") return ["requested", "completed"];
   return REQUEST_FLOW;
 }
 

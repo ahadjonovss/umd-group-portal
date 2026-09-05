@@ -20,6 +20,7 @@ import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { notifyUser, appLink } from "@/lib/notify";
 import type { ServiceType } from "@/types";
+import { normalizeSnapshot } from "@/lib/service-def";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -103,7 +104,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "Bir yoki bir nechta to'lov allaqachon amalga oshirilgan — sahifani yangilang" }, { status: 400 });
       }
 
-      const pricedApp = { serviceType, servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null };
+      const pricedApp = {
+        serviceType,
+        servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null,
+        // Maxsus xizmatda narx/avans foizi biriktirish snapshot'idan olinadi
+        catalogSnapshot: app.catalogSnapshot ? normalizeSnapshot(app.catalogSnapshot) : null,
+      };
       const category = categoryForServiceType(serviceType);
       const discount = category ? await getActiveDiscount(user.uid, category, k.appId) : null;
       const pct = discount?.percent ?? 0;
@@ -149,6 +155,7 @@ export async function POST(req: NextRequest) {
         : reqType === "subscription_renewal" ? "renewal"
         : reqType === "push_certificate" ? "push_certificate"
         : reqType === "custom" ? "custom"
+        : reqType === "recurring" ? "recurring"
         : "transfer";
       const usd = (r.amountUsd as number) ?? 0;
       const appName = (r.appName as string | null) || SERVICE_LABELS[serviceType];

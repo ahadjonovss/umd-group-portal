@@ -36,6 +36,7 @@ import { createRecurringInvoice, getOpenRecurringInvoices } from "@/lib/firestor
 import { addMonths } from "@/lib/billing";
 import { appLabel } from "@/lib/labels";
 import { Timestamp } from "@/lib/firebase/admin";
+import { normalizeSnapshot } from "@/lib/service-def";
 
 // Joriy admin sessiyasidan "kim" (actor) ma'lumotini quradi.
 async function adminActor(): Promise<Actor> {
@@ -433,7 +434,12 @@ export async function actMarkInstallmentPaidManually(appId: string, kind: "advan
   }
 
   const serviceType = app.serviceType as ServiceType;
-  const pricedApp = { serviceType, servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null };
+  const pricedApp = {
+    serviceType,
+    servicePrice: typeof app.servicePrice === "number" ? app.servicePrice : null,
+    // Maxsus xizmatda narx/avans foizi biriktirish snapshot'idan olinadi
+    catalogSnapshot: app.catalogSnapshot ? normalizeSnapshot(app.catalogSnapshot) : null,
+  };
   const pricing = await getPricing();
   const category = categoryForServiceType(serviceType);
   const discount = category ? await getActiveDiscount(app.ownerUid, category, appId) : null;
