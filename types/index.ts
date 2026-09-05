@@ -5,6 +5,7 @@ export type ServiceType =
   | "apple-transfer"
   | "account"
   | "duns"
+  | "custom" // admin katalogidan biriktirilgan maxsus xizmat (serviceCatalog)
   | "other";
 
 export interface PlayMarketFormData {

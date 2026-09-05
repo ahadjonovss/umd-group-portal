@@ -11,6 +11,8 @@ import type { AdminUser } from "@/lib/firestore/users";
 import type { AppView } from "@/lib/firestore/apps";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { AdminReview } from "@/lib/firestore/reviews";
+import type { CatalogService } from "@/lib/service-def";
+import { AssignServiceForm } from "@/components/admin/AssignServiceForm";
 
 type TabKey = "info" | "apps" | "payments" | "reviews";
 
@@ -232,11 +234,13 @@ export function AdminUserDetail({
   apps,
   payments,
   reviews,
+  catalog = [],
 }: {
   user: AdminUser;
   apps: AppView[];
   payments: PaymentView[];
   reviews: AdminReview[];
+  catalog?: CatalogService[];
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("info");
@@ -340,12 +344,16 @@ export function AdminUserDetail({
         </div>
       )}
 
-      {tab === "apps" &&
-        (apps.length ? (
-          <div className="flex flex-col gap-3">{apps.map((a) => <AdminAppListItem key={a.id} app={a} spentUsd={spentByApp.get(a.id) ?? 0} />)}</div>
-        ) : (
-          <Empty text="Ilova yo'q." />
-        ))}
+      {tab === "apps" && (
+        <div className="flex flex-col gap-4">
+          <AssignServiceForm uid={user.uid} catalog={catalog} />
+          {apps.length ? (
+            <div className="flex flex-col gap-3">{apps.map((a) => <AdminAppListItem key={a.id} app={a} spentUsd={spentByApp.get(a.id) ?? 0} />)}</div>
+          ) : (
+            <Empty text="Ilova yo'q." />
+          )}
+        </div>
+      )}
 
       {tab === "payments" &&
         (payments.length ? (

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AppView } from "@/lib/firestore/apps";
-import { SERVICE_SHORT } from "@/lib/labels";
+import { appShort } from "@/lib/labels";
 import { actSendSubscriptionMessage } from "@/app/admin/actions";
 
 const SITE_URL = "https://umdgroup.uz";
@@ -20,7 +20,7 @@ function monthLabel(key: string): string {
 }
 
 function buildMessage(app: AppView, endIso: string): string {
-  const appName = app.appName || SERVICE_SHORT[app.serviceType];
+  const appName = app.appName || appShort(app);
   const deeplink = `${SITE_URL}/panel/app/${app.id}`;
   return (
     `Assalomu alaykum, salomatmisiz? Sizning ${appName} ilovangizning UMD GROUP bilan shartnoma muddati ${dmy(endIso)}da o'z yakuniga yetgan.\n\n` +
@@ -144,10 +144,10 @@ export function SubscriptionsPanel({ apps, linkedUids = [] }: { apps: AppView[];
               >
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-900 text-sm truncate">
-                    {app.appName || SERVICE_SHORT[app.serviceType]}
+                    {app.appName || appShort(app)}
                   </p>
                   <p className="text-xs text-slate-500 truncate">
-                    {SERVICE_SHORT[app.serviceType]}
+                    {appShort(app)}
                     {app.contact ? ` · ${app.contact.fullName} · ${app.contact.phone}` : ""}
                   </p>
                   <p className={`text-xs font-medium mt-0.5 ${expired ? "text-red-600" : "text-amber-600"}`}>

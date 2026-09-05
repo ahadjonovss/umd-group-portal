@@ -1,6 +1,7 @@
 import type { Pricing } from "@/lib/firestore/settings";
 import type { ServiceType } from "@/types";
 import type { RequestType } from "@/lib/request-status";
+import { defOf, type HasServiceDef } from "@/lib/service-def";
 
 // Boshlanish sanasidan N ish kuni (shanba/yakshanba hisobga olinmaydi) keyingi sana.
 export function addBusinessDays(start: Date, days: number): Date {
@@ -30,6 +31,13 @@ export function etaDaysForService(serviceType: ServiceType, pricing: Pricing): n
     default:
       return 0;
   }
+}
+
+// App-aware variant: maxsus xizmatda muddat katalogdan olinadi.
+export function etaDaysFor(app: HasServiceDef, pricing: Pricing): number {
+  const def = defOf(app);
+  if (def) return def.etaDays;
+  return etaDaysForService(app.serviceType, pricing);
 }
 
 // So'rov turi uchun taxminiy ish kunlari.

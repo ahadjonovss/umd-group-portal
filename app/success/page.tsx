@@ -19,6 +19,8 @@ const serviceNames: Record<string, string> = {
   "google-transfer":  "Google Play Transfer",
   "apple-transfer":   "Apple App Store Transfer",
   "duns":             "DUNS Raqami Ochish",
+  "account":          "Developer Akkaunt Ochish",
+  "custom":           "Maxsus Xizmat",
 };
 
 interface PaymentDue {

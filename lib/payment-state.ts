@@ -1,6 +1,7 @@
 // To'lov holati — statusdan mustaqil. Har servis (app/request) `payment` obyektiga ega:
 // installments (qismlar) map ko'rinishida, har biri o'z holatiga ega.
 import type { ServiceType } from "@/types";
+import { defOf, type HasServiceDef } from "@/lib/service-def";
 
 export type PayState = "locked" | "due" | "submitted" | "confirmed" | "rejected";
 export type InstallmentKey = "advance" | "final" | "full";
@@ -28,10 +29,20 @@ export function appInstallmentKeys(serviceType: ServiceType): InstallmentKey[] {
   return ["advance"]; // google-transfer / apple-transfer — 100% avans (yakuniy yo'q)
 }
 
+// App-aware variant. Maxsus xizmatda avans foizi 100 bo'lsa — bitta qism.
+export function installmentKeysFor(app: HasServiceDef): InstallmentKey[] {
+  const def = defOf(app);
+  if (def) {
+    if (!def.pricing.oneTime.enabled) return [];
+    return def.pricing.oneTime.advancePercent >= 100 ? ["advance"] : ["advance", "final"];
+  }
+  return appInstallmentKeys(app.serviceType);
+}
+
 // Yangi ilova uchun boshlang'ich payment obyekti — barcha qismlar "due"
 // (mijoz avansni ham, yakuniyni ham istalgan payt to'lay oladi).
-export function newAppPayment(serviceType: ServiceType): PaymentState {
-  const keys = appInstallmentKeys(serviceType);
+export function newAppPayment(app: HasServiceDef): PaymentState {
+  const keys = installmentKeysFor(app);
   const installments: Partial<Record<InstallmentKey, Installment>> = {};
   for (const k of keys) installments[k] = inst("due");
   return { installments };

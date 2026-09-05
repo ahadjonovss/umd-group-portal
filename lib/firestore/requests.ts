@@ -57,6 +57,10 @@ export interface RequestView {
   payment: PaymentState | null;
   fromPackage: boolean;
   createdAt: string | null;
+  // Davriy (recurring) hisob-faktura maydonlari
+  periodNo: number;
+  periodStart: string | null;
+  periodEnd: string | null;
 }
 
 function iso(v: unknown): string | null {
@@ -86,6 +90,9 @@ function mapRequest(d: DocumentSnapshot): RequestView {
     payment: (x.payment as PaymentState) ?? null,
     fromPackage: Boolean(x.fromPackage),
     createdAt: iso(x.createdAt),
+    periodNo: typeof x.periodNo === "number" ? x.periodNo : 0,
+    periodStart: iso(x.periodStart),
+    periodEnd: iso(x.periodEnd),
   };
 }
 
@@ -178,6 +185,89 @@ export async function createCustomInvoice(input: CreateCustomInvoiceInput): Prom
   return ref.id;
 }
 
+// ── Davriy (oylik) hisob-faktura ──────────────────────────
+export interface CreateRecurringInvoiceInput {
+  appId: string;
+  ownerUid: string;
+  ownerName: string;
+  ownerPhone: string;
+  appName: string; // ilova/xizmat nomi
+  serviceLabel: string; // xizmat nomi (xabar uchun)
+  amountUsd: number;
+  rate: number | null;
+  amountUzs: number | null;
+  periodNo: number;
+  periodStart: Date;
+  periodEnd: Date;
+}
+
+function dmy(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
+// Davriy to'lov uchun hisob-faktura yaratadi (cron yoki admin chaqiradi).
+// Mijozga oddiy to'lov sifatida ko'rinadi — bitta "full" qism.
+export async function createRecurringInvoice(input: CreateRecurringInvoiceInput): Promise<string> {
+  const ref = adminDb.collection(REQUESTS).doc();
+  await ref.set({
+    appId: input.appId,
+    ownerUid: input.ownerUid,
+    ownerName: input.ownerName,
+    ownerPhone: input.ownerPhone,
+    serviceType: "custom" as ServiceType,
+    appName: input.appName,
+    type: "recurring" as RequestType,
+    data: {},
+    amountUsd: input.amountUsd,
+    rate: input.rate,
+    amountUzs: input.amountUzs,
+    discountId: null,
+    discountPercent: 0,
+    fromPackage: false,
+    status: "requested" as RequestStatus,
+    receiptSent: false,
+    note: "",
+    periodNo: input.periodNo,
+    periodStart: Timestamp.fromDate(input.periodStart),
+    periodEnd: Timestamp.fromDate(input.periodEnd),
+    payment: newRequestPayment(),
+    createdAt: FieldValue.serverTimestamp(),
+    statusUpdatedAt: FieldValue.serverTimestamp(),
+  });
+
+  const period = `${dmy(input.periodStart)} — ${dmy(input.periodEnd)}`;
+  await logActivity(
+    input.appId,
+    "recurring_invoice_created",
+    `Davriy hisob-faktura #${input.periodNo} yaratildi ($${Math.round(input.amountUsd)}, ${period})`,
+    SYSTEM_ACTOR
+  );
+  await notifyUser(
+    input.ownerUid,
+    `🧾 *${esc(input.appName)}* — davriy to'lov hisob\-fakturasi
+
+` +
+      `💵 $${esc(String(Math.round(input.amountUsd)))}
+` +
+      `🗓 Davr: ${esc(period)}
+
+` +
+      `To'lovni "To'lov" bo'limida amalga oshirishingiz mumkin 🙏${appLink(input.appId)}`
+  );
+  return ref.id;
+}
+
+// Ilovaning to'lanmagan davriy hisob-fakturalari (eng eskisi birinchi).
+export async function getOpenRecurringInvoices(appId: string): Promise<RequestView[]> {
+  const snap = await adminDb.collection(REQUESTS).where("appId", "==", appId).where("type", "==", "recurring").get();
+  const items = snap.docs
+    .map(mapRequest)
+    .filter((r) => r.status !== "completed" && r.status !== "rejected" && r.status !== "cancelled");
+  items.sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+  return items;
+}
+
 // Ilova uchun faol (tugallanmagan/rad etilmagan) shu turdagi so'rov bormi?
 export async function hasActiveRequest(appId: string, type: RequestType): Promise<boolean> {
   const snap = await adminDb.collection(REQUESTS).where("appId", "==", appId).where("type", "==", type).get();
@@ -264,6 +354,8 @@ export async function setRequestStatus(id: string, status: RequestStatus, actor?
       if (status === "completed") {
         if (type === "update") {
           msg = `✅ *${esc(name)}* uchun yangilanish chiqarildi — ilovangiz store'da yangilandi 🎉${appLink(appId)}`;
+        } else if (type === "recurring") {
+          msg = `✅ *${esc(name)}* — davriy to'lovingiz qabul qilindi, rahmat 🙌${appLink(appId)}`;
         } else if (type === "push_certificate") {
           msg = `✅ *${esc(name)}* uchun push-sertifikat tayyor bo'ldi 🎉\nEndi push-bildirishnomalarni yuborsangiz bo'ladi${appLink(appId)}`;
         } else {
@@ -296,6 +388,23 @@ export async function confirmRequestPayment(id: string): Promise<void> {
   if (!snap.exists) throw new Error("So'rov topilmadi");
   const status = snap.get("status") as RequestStatus;
   if (!isRequestPreWork(status)) return; // terminal yoki allaqachon jarayonda/yakunlangan
+
+  // Davriy to'lov: ish bosqichi yo'q — to'landi = yakunlandi.
+  if ((snap.get("type") as RequestType) === "recurring") {
+    const appId = snap.get("appId") as string;
+    await setRequestStatus(id, "completed");
+    await adminDb
+      .collection("apps")
+      .doc(appId)
+      .update({
+        "billing.recurring.paidCount": FieldValue.increment(1),
+        "billing.recurring.status": "active",
+        "billing.recurring.remindedOn": null,
+      })
+      .catch(() => {});
+    return;
+  }
+
   await setRequestStatus(id, "in_progress");
 }
 

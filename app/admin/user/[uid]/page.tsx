@@ -9,6 +9,7 @@ import { getUser } from "@/lib/firestore/users";
 import { getUserApps } from "@/lib/firestore/apps";
 import { getUserPayments } from "@/lib/firestore/payments";
 import { getUserReviews } from "@/lib/firestore/reviews";
+import { getActiveCatalog } from "@/lib/firestore/catalog";
 
 export const metadata: Metadata = { title: "Foydalanuvchi — Admin — UMD GROUP" };
 export const dynamic = "force-dynamic";
@@ -24,10 +25,11 @@ export default async function AdminUserPage({
   const user = await getUser(uid);
   if (!user) notFound();
 
-  const [apps, payments, reviews] = await Promise.all([
+  const [apps, payments, reviews, catalog] = await Promise.all([
     getUserApps(uid),
     getUserPayments(uid),
     getUserReviews(uid),
+    getActiveCatalog(),
   ]);
 
   return (
@@ -55,7 +57,7 @@ export default async function AdminUserPage({
         <h1 className="text-xl font-bold text-slate-900 mb-1">{user.fullName || user.email}</h1>
         <p className="text-sm text-slate-500 mb-5">{user.email}</p>
 
-        <AdminUserDetail user={user} apps={apps} payments={payments} reviews={reviews} />
+        <AdminUserDetail user={user} apps={apps} payments={payments} reviews={reviews} catalog={catalog} />
       </main>
     </div>
   );

@@ -12,6 +12,9 @@ import { AdminRequestRow } from "@/components/admin/AdminRequestRow";
 import { FinancePanel } from "@/components/admin/FinancePanel";
 import { StatsPanel } from "@/components/admin/StatsPanel";
 import { SubscriptionsPanel } from "@/components/admin/SubscriptionsPanel";
+import { RecurringPanel } from "@/components/admin/RecurringPanel";
+import { ServiceCatalogPanel } from "@/components/admin/ServiceCatalogPanel";
+import type { CatalogService } from "@/lib/service-def";
 import { DiscountsPanel } from "@/components/admin/DiscountsPanel";
 import { PendingInvoicesPanel, type PendingItem } from "@/components/admin/PendingInvoicesPanel";
 import type { DiscountView } from "@/lib/firestore/discounts";
@@ -21,7 +24,7 @@ import type { AdminUser } from "@/lib/firestore/users";
 import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isRequestActive, REQUEST_TYPE_LABEL } from "@/lib/request-status";
-import { STATUS_META, SERVICE_LABELS, SERVICE_SHORT, PLATFORM_LABEL, platformOf } from "@/lib/labels";
+import { STATUS_META, SERVICE_LABELS, SERVICE_SHORT, PLATFORM_LABEL, platformOf, appLabel, appShort, appTitle } from "@/lib/labels";
 import { getInstallment, isPayable } from "@/lib/payment-state";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { isTerminalError } from "@/lib/app-status";
@@ -30,9 +33,9 @@ import type { Pricing, PaymentInfo } from "@/lib/firestore/settings";
 import type { AppStatus } from "@/lib/app-status";
 
 // Arizalar = ilova arizalari (apps). So'rovlar = transfer/update/uzaytirish (requests).
-type TabKey = "users" | "live" | "subscriptions" | "payments" | "invoices" | "finance" | "stats" | "requests" | "reviews" | "discounts" | "settings";
+type TabKey = "users" | "live" | "subscriptions" | "payments" | "invoices" | "finance" | "stats" | "requests" | "reviews" | "discounts" | "services" | "settings";
 
-const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "invoices", "finance", "stats", "requests", "reviews", "discounts", "settings"];
+const TAB_KEYS: TabKey[] = ["users", "live", "subscriptions", "payments", "invoices", "finance", "stats", "requests", "reviews", "discounts", "services", "settings"];
 const TAB_STORAGE_KEY = "admin.activeTab";
 
 const ICONS: Record<TabKey, ReactNode> = {
@@ -65,6 +68,9 @@ const ICONS: Record<TabKey, ReactNode> = {
   ),
   discounts: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+  ),
+  services: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
   ),
   settings: (
     <>
@@ -220,6 +226,7 @@ export function AdminTabs({
   pricing,
   payment,
   discounts,
+  catalog = [],
 }: {
   apps: AppView[];
   users: AdminUser[];
@@ -229,6 +236,7 @@ export function AdminTabs({
   pricing: Pricing;
   payment: PaymentInfo;
   discounts: DiscountView[];
+  catalog?: CatalogService[];
 }) {
   const [tab, setTab] = useState<TabKey>("requests");
 
@@ -262,7 +270,7 @@ export function AdminTabs({
     // Ilova avans/yakuniy qismlari (due/rejected) — chegirma qo'llanadi
     for (const a of apps) {
       if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
-      const title = a.appName || SERVICE_SHORT[a.serviceType];
+      const title = a.appName || appShort(a);
       const owner = a.contact?.fullName || a.contact?.phone || "—";
       const pct = discPctOf(a);
       const adv = getInstallment(a.payment, "advance");
@@ -304,6 +312,8 @@ export function AdminTabs({
   const arizaApps = apps.filter((a) => !isLive(a));
   const liveApps = apps.filter(isLive);
   const subApps = apps.filter((a) => a.status === "published" && a.subscription?.endDate);
+  // Davriy (oylik) to'lovli xizmatlar
+  const recurringApps = apps.filter((a) => a.billing?.recurring);
 
   // Qidiruv / filter holatlari — default: faol / harakat talab qiladigan holat
   const [userQ, setUserQ] = useState("");
@@ -319,7 +329,7 @@ export function AdminTabs({
   const [revStatus, setRevStatus] = useState("pending"); // tasdiqlanmagan (faol) reviewlar
 
   const appText = (a: AppView) =>
-    `${a.appName ?? ""} ${a.contact?.fullName ?? ""} ${a.contact?.phone ?? ""} ${SERVICE_LABELS[a.serviceType]}`;
+    `${a.appName ?? ""} ${a.contact?.fullName ?? ""} ${a.contact?.phone ?? ""} ${appLabel(a)}`;
 
   // Birlashgan "So'rovlar" oqimi: chiqarish arizalari + transfer/update/uzaytirish
   const feed: FeedItem[] = [
@@ -377,6 +387,7 @@ export function AdminTabs({
     { key: "stats", label: "Statistika", count: 0 },
     { key: "discounts", label: "Chegirmalar", count: discounts.filter((d) => d.status === "active").length },
     { key: "users", label: "Userlar", count: users.length },
+    { key: "services", label: "Xizmatlar", count: catalog.length },
     { key: "settings", label: "Sozlamalar", count: 0 },
   ];
 
@@ -442,7 +453,22 @@ export function AdminTabs({
           </>
         )}
 
-        {tab === "subscriptions" && <SubscriptionsPanel apps={subApps} linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)} />}
+        {tab === "subscriptions" && (
+          <div className="flex flex-col gap-8">
+            {recurringApps.length > 0 && (
+              <section>
+                <h3 className="text-sm font-bold text-slate-900 mb-3">Davriy (oylik) to&apos;lovlar</h3>
+                <RecurringPanel apps={recurringApps} />
+              </section>
+            )}
+            <section>
+              {recurringApps.length > 0 && <h3 className="text-sm font-bold text-slate-900 mb-3">Store obunalari (9 oy)</h3>}
+              <SubscriptionsPanel apps={subApps} linkedUids={users.filter((u) => u.telegramChats.length > 0).map((u) => u.uid)} />
+            </section>
+          </div>
+        )}
+
+        {tab === "services" && <ServiceCatalogPanel items={catalog} />}
 
         {tab === "payments" && (
           <>

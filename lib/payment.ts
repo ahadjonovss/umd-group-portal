@@ -1,5 +1,6 @@
 import type { ServiceType } from "@/types";
 import type { Pricing } from "@/lib/firestore/settings";
+import { defOf, type ServiceDefSnapshot } from "@/lib/service-def";
 
 // Xizmatning to'liq narxi ($).
 export function fullUsd(serviceType: ServiceType, p: Pricing): number {
@@ -91,16 +92,32 @@ export function accountBaseUsd(platform: AccountPlatform, type: AccountType, p: 
 // ── App-aware to'lov hisob-kitobi ─────────────────────────
 // Akkaunt xizmatida narx platforma+turga bog'liq, shuning uchun ariza yaratilganda
 // hisoblangan narx `servicePrice` maydonida saqlanadi. Boshqa xizmatlarda fullUsd.
-type PricedApp = { serviceType: ServiceType; servicePrice?: number | null };
+type PricedApp = {
+  serviceType: ServiceType;
+  servicePrice?: number | null;
+  catalogSnapshot?: ServiceDefSnapshot | null;
+};
 
 export function serviceBaseUsd(app: PricedApp, p: Pricing): number {
+  // Maxsus xizmat: narx biriktirilganda saqlanadi (servicePrice), aks holda snapshot'dan.
+  const def = defOf(app);
+  if (def) return typeof app.servicePrice === "number" ? app.servicePrice : def.pricing.oneTime.amountUsd;
   if (app.serviceType === "account") return app.servicePrice ?? 0;
   return fullUsd(app.serviceType, p);
 }
 
 export function advancePercentForApp(app: PricedApp, p: Pricing): number {
+  const def = defOf(app);
+  if (def) return def.pricing.oneTime.enabled ? def.pricing.oneTime.advancePercent : 100;
   if (app.serviceType === "account") return p.accountAdvance;
   return advancePercentFor(app.serviceType, p);
+}
+
+// ── Maxsus xizmat: takrorlanuvchi (oylik) to'lov summasi ──
+export function recurringUsd(app: PricedApp & { billing?: { recurring?: { amountUsd?: number } | null } | null }): number {
+  const fromBilling = app.billing?.recurring?.amountUsd;
+  if (typeof fromBilling === "number" && fromBilling > 0) return fromBilling;
+  return defOf(app)?.pricing.recurring.amountUsd ?? 0;
 }
 
 export function advanceUsdApp(app: PricedApp, p: Pricing): number {

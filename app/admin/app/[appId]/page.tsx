@@ -10,7 +10,7 @@ import { getAppPayments } from "@/lib/firestore/payments";
 import { getAppActivity } from "@/lib/firestore/activity";
 import { getPricing } from "@/lib/firestore/settings";
 import { categoryForServiceType } from "@/lib/discount";
-import { SERVICE_LABELS } from "@/lib/labels";
+import { appTitle } from "@/lib/labels";
 
 export const metadata: Metadata = { title: "Ariza — Admin — UMD GROUP" };
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export default async function AdminAppPage({
   if (!detail) notFound();
 
   const [payments, activity, pricing] = await Promise.all([getAppPayments(appId), getAppActivity(appId), getPricing()]);
-  const title = detail.app.appName || SERVICE_LABELS[detail.app.serviceType];
+  const title = appTitle(detail.app);
 
   // To'lanган (confirmed) ilova to'lovlari + bekor qilish komissiya %
   const confirmedAppPays = payments.filter((p) => p.status === "confirmed" && !p.requestId);

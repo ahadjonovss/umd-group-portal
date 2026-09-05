@@ -1,5 +1,6 @@
 import type { ServiceType } from "@/types";
 import type { AppStatus } from "@/lib/app-status";
+import { defOf, type HasServiceDef } from "@/lib/service-def";
 
 export const SERVICE_LABELS: Record<ServiceType, string> = {
   "play-market": "Play Market — Joylashtirish",
@@ -8,6 +9,7 @@ export const SERVICE_LABELS: Record<ServiceType, string> = {
   "apple-transfer": "Apple App Store — Transfer",
   account: "Developer akkaunt ochish",
   duns: "DUNS raqami ochish",
+  custom: "Maxsus xizmat",
   other: "Qo'shimcha xizmat",
 };
 
@@ -48,6 +50,7 @@ export const SERVICE_SHORT: Record<ServiceType, string> = {
   "apple-transfer": "Apple Transfer",
   account: "Akkaunt ochish",
   duns: "DUNS raqami",
+  custom: "Maxsus xizmat",
   other: "Qo'shimcha",
 };
 
@@ -59,6 +62,7 @@ export const SERVICE_BADGE: Record<ServiceType, string> = {
   "apple-transfer": "bg-purple-50 text-purple-700 ring-purple-200",
   account: "bg-teal-50 text-teal-700 ring-teal-200",
   duns: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+  custom: "bg-purple-50 text-purple-700 ring-purple-200",
   other: "bg-slate-50 text-slate-700 ring-slate-200",
 };
 
@@ -150,6 +154,62 @@ export const STATUS_META: Record<
     text: "text-violet-600",
     desc: "Ilova boshqa akkauntga o'tkazildi.",
   },
+  stage1: {
+    label: "Bosqich 1",
+    badge: "bg-indigo-50 text-indigo-700 ring-indigo-200",
+    dot: "bg-indigo-500",
+    text: "text-indigo-600",
+    desc: "",
+  },
+  stage2: {
+    label: "Bosqich 2",
+    badge: "bg-violet-50 text-violet-700 ring-violet-200",
+    dot: "bg-violet-500",
+    text: "text-violet-600",
+    desc: "",
+  },
+  stage3: {
+    label: "Bosqich 3",
+    badge: "bg-sky-50 text-sky-700 ring-sky-200",
+    dot: "bg-sky-500",
+    text: "text-sky-600",
+    desc: "",
+  },
+  stage4: {
+    label: "Bosqich 4",
+    badge: "bg-teal-50 text-teal-700 ring-teal-200",
+    dot: "bg-teal-500",
+    text: "text-teal-600",
+    desc: "",
+  },
+  stage5: {
+    label: "Bosqich 5",
+    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+    dot: "bg-amber-500",
+    text: "text-amber-600",
+    desc: "",
+  },
+  stage6: {
+    label: "Bosqich 6",
+    badge: "bg-orange-50 text-orange-700 ring-orange-200",
+    dot: "bg-orange-500",
+    text: "text-orange-600",
+    desc: "",
+  },
+  stage7: {
+    label: "Bosqich 7",
+    badge: "bg-cyan-50 text-cyan-700 ring-cyan-200",
+    dot: "bg-cyan-500",
+    text: "text-cyan-600",
+    desc: "",
+  },
+  stage8: {
+    label: "Bosqich 8",
+    badge: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200",
+    dot: "bg-fuchsia-500",
+    text: "text-fuchsia-600",
+    desc: "",
+  },
   subscription_ended: {
     label: "Obuna to'xtatildi",
     badge: "bg-rose-50 text-rose-700 ring-rose-200",
@@ -158,6 +218,32 @@ export const STATUS_META: Record<
     desc: "Obuna to'xtatildi — ilova store'dan olib tashlandi.",
   },
 };
+
+// ── App-aware yorliqlar ────────────────────────
+// Custom xizmatlarda nom/qisqa nom/status yorliqlari katalog snapshot'idan olinadi.
+
+export function appLabel(app: HasServiceDef): string {
+  return defOf(app)?.name ?? SERVICE_LABELS[app.serviceType];
+}
+
+export function appShort(app: HasServiceDef): string {
+  return defOf(app)?.shortName ?? SERVICE_SHORT[app.serviceType];
+}
+
+// Ilova sarlavhasi: o'z nomi bo'lsa o'sha, aks holda xizmat nomi.
+export function appTitle(app: HasServiceDef & { appName?: string | null }): string {
+  return app.appName || appLabel(app);
+}
+
+export type StatusMeta = (typeof STATUS_META)[AppStatus];
+
+// Status meta — custom xizmatda yorliq/tavsif katalog oqimidan almashtiriladi.
+export function statusMetaFor(app: HasServiceDef, status: AppStatus): StatusMeta {
+  const base = STATUS_META[status] ?? STATUS_META.submitted;
+  const step = defOf(app)?.flow.find((s) => s.key === status);
+  if (!step) return base;
+  return { ...base, label: step.label, desc: step.desc || base.desc };
+}
 
 // ISO -> DD.MM.YYYY
 export function formatDate(iso: string | null): string {

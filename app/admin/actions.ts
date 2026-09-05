@@ -14,7 +14,7 @@ import { SITE_URL } from "@/lib/site";
 import type { ServiceType } from "@/types";
 import { confirmPayment, setPaymentNote, deletePayment, getPendingPaymentIdByRequest, createPayment, voidRequestPayments } from "@/lib/firestore/payments";
 import { confirmPaymentBatch, rejectPaymentBatch } from "@/lib/firestore/paymentBatches";
-import { setRequestStatus, setRequestNote, deleteRequest, createCustomInvoice } from "@/lib/firestore/requests";
+import { setRequestStatus, setRequestNote, deleteRequest, createCustomInvoice, confirmRequestPayment } from "@/lib/firestore/requests";
 import type { RequestStatus } from "@/lib/request-status";
 import { setPricing, setPaymentInfo, getPricing, type Pricing, type PaymentInfo } from "@/lib/firestore/settings";
 import { createDiscount, deleteDiscount, getActiveDiscount } from "@/lib/firestore/discounts";
@@ -22,6 +22,20 @@ import { categoryForServiceType, applyDiscount, type DiscountService } from "@/l
 import { advanceUsdApp, finalUsdApp, serviceBaseUsd, advancePercentForApp } from "@/lib/payment";
 import type { AppStatus } from "@/lib/app-status";
 import { getUsdRate } from "@/lib/cbu";
+import {
+  createCatalogService,
+  updateCatalogService,
+  deleteCatalogService,
+  setCatalogActive,
+  countCatalogUsage,
+  type CatalogInput,
+} from "@/lib/firestore/catalog";
+import { assignCustomService, type AssignInput } from "@/lib/firestore/assign";
+import { cancelRecurring, resumeRecurring, updateRecurringPlan } from "@/lib/firestore/apps";
+import { createRecurringInvoice, getOpenRecurringInvoices } from "@/lib/firestore/requests";
+import { addMonths } from "@/lib/billing";
+import { appLabel } from "@/lib/labels";
+import { Timestamp } from "@/lib/firebase/admin";
 
 // Joriy admin sessiyasidan "kim" (actor) ma'lumotini quradi.
 async function adminActor(): Promise<Actor> {
@@ -265,7 +279,9 @@ export async function actConfirmRequestPayment(requestId: string, taxReceiptUrl?
   if (paymentId) {
     await confirmPayment(paymentId, taxReceiptUrl?.trim() || undefined, actor, actualPaidUzs);
   } else {
-    await setRequestStatus(requestId, "in_progress", actor);
+    // To'lov yozuvi yo'q (chek yuborilmagan, admin qo'lda yopmoqda) — so'rov turiga
+    // mos yakunlash mantig'i confirmRequestPayment ichida (davriy to'lov ham shu yerda).
+    await confirmRequestPayment(requestId);
   }
   revalidatePath("/admin");
 }
@@ -446,6 +462,172 @@ export async function actMarkInstallmentPaidManually(appId: string, kind: "advan
     });
     await setPaymentNote(id, `Qo'lda yopildi (chek yo'q) — admin: ${actor.name}`);
     await confirmPayment(id, undefined, actor);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+
+// ══════════════════════════════════════════════
+// Maxsus xizmatlar katalogi (serviceCatalog)
+// ══════════════════════════════════════════════
+
+function validateCatalog(input: CatalogInput): string | null {
+  if (!input.name?.trim()) return "Xizmat nomini kiriting";
+  if (!Array.isArray(input.flow) || input.flow.length < 2) return "Kamida 2 ta bosqich bo'lishi kerak";
+  if (input.flow.some((f) => !f.label?.trim())) return "Har bir bosqichga nom bering";
+  const oneTime = input.pricing?.oneTime;
+  const rec = input.pricing?.recurring;
+  if (!oneTime?.enabled && !rec?.enabled) return "Kamida bitta to'lov turi yoqilgan bo'lsin";
+  if (oneTime?.enabled && (!oneTime.amountUsd || oneTime.amountUsd <= 0)) return "Bir martalik narxni kiriting";
+  if (rec?.enabled && (!rec.amountUsd || rec.amountUsd <= 0)) return "Davriy to'lov summasini kiriting";
+  return null;
+}
+
+export async function actSaveCatalogService(id: string | null, input: CatalogInput) {
+  await requireAdmin();
+  const err = validateCatalog(input);
+  if (err) return { ok: false, error: err };
+  try {
+    const newId = id ? (await updateCatalogService(id, input), id) : await createCatalogService(input);
+    revalidatePath("/admin");
+    revalidatePath("/xizmat-narxlari");
+    return { ok: true, id: newId };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+export async function actSetCatalogActive(id: string, active: boolean) {
+  await requireAdmin();
+  await setCatalogActive(id, active);
+  revalidatePath("/admin");
+  revalidatePath("/xizmat-narxlari");
+  return { ok: true };
+}
+
+export async function actDeleteCatalogService(id: string) {
+  await requireAdmin();
+  const used = await countCatalogUsage(id);
+  await deleteCatalogService(id);
+  revalidatePath("/admin");
+  revalidatePath("/xizmat-narxlari");
+  // Biriktirilgan arizalar o'chirilmaydi — ularda snapshot bor, ishlashda davom etadi.
+  return { ok: true, keptApps: used };
+}
+
+// ══════════════════════════════════════════════
+// Xizmatni foydalanuvchiga biriktirish
+// ══════════════════════════════════════════════
+
+export async function actAssignService(input: Omit<AssignInput, "actor">) {
+  const actor = await adminActor();
+  if (!input.catalogId) return { ok: false, error: "Xizmat tanlanmagan" };
+  if (!input.ownerUid) return { ok: false, error: "Foydalanuvchi tanlanmagan" };
+  if (!input.title?.trim()) return { ok: false, error: "Ariza nomini kiriting" };
+  try {
+    const appId = await assignCustomService({ ...input, actor });
+    revalidatePath("/admin");
+    revalidatePath("/panel");
+    return { ok: true, appId };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+// ══════════════════════════════════════════════
+// Davriy (oylik) to'lov boshqaruvi
+// ══════════════════════════════════════════════
+
+export async function actCancelRecurring(appId: string) {
+  const actor = await adminActor();
+  try {
+    await cancelRecurring(appId, actor);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+export async function actResumeRecurring(appId: string) {
+  const actor = await adminActor();
+  try {
+    await resumeRecurring(appId, actor);
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+export async function actUpdateRecurringPlan(
+  appId: string,
+  patch: { amountUsd?: number; periodMonths?: number; graceDays?: number; nextChargeAt?: string }
+) {
+  const actor = await adminActor();
+  try {
+    await updateRecurringPlan(
+      appId,
+      {
+        amountUsd: patch.amountUsd,
+        periodMonths: patch.periodMonths,
+        graceDays: patch.graceDays,
+        nextChargeAt: patch.nextChargeAt ? new Date(patch.nextChargeAt) : undefined,
+      },
+      actor
+    );
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
+  }
+}
+
+// Admin: muddatidan oldin davriy hisob-faktura chiqaradi (davr siljiydi).
+export async function actCreateRecurringInvoiceNow(appId: string) {
+  await requireAdmin();
+  const snap = await adminDb.collection("apps").doc(appId).get();
+  if (!snap.exists) return { ok: false, error: "Ariza topilmadi" };
+  const app = snap.data()!;
+  const rec = app.billing?.recurring;
+  if (!rec || !rec.amountUsd) return { ok: false, error: "Davriy to'lov sozlanmagan" };
+  if (rec.status === "cancelled") return { ok: false, error: "Davriy to'lov bekor qilingan" };
+
+  const open = await getOpenRecurringInvoices(appId);
+  if (open.length >= 3) return { ok: false, error: "To'lanmagan hisob-fakturalar juda ko'p (3+)" };
+
+  try {
+    const periodMonths: number = rec.periodMonths ?? 1;
+    const periodStart: Date = rec.nextChargeAt?.toDate?.() ?? new Date();
+    const periodEnd = addMonths(periodStart, periodMonths);
+    const periodNo = (rec.periodNo ?? 0) + 1;
+    const rate = await getUsdRate();
+    const amountUsd: number = rec.amountUsd;
+    const name = (app.appName as string | null) || appLabel({ serviceType: app.serviceType, catalogSnapshot: app.catalogSnapshot });
+
+    await createRecurringInvoice({
+      appId,
+      ownerUid: app.ownerUid,
+      ownerName: app.contact?.fullName || "Mijoz",
+      ownerPhone: app.contact?.phone || "-",
+      appName: name,
+      serviceLabel: name,
+      amountUsd,
+      rate,
+      amountUzs: rate ? Math.round(amountUsd * rate) : null,
+      periodNo,
+      periodStart,
+      periodEnd,
+    });
+    await snap.ref.update({
+      "billing.recurring.periodNo": periodNo,
+      "billing.recurring.invoicesCount": (rec.invoicesCount ?? 0) + 1,
+      "billing.recurring.lastInvoiceAt": Timestamp.fromDate(periodStart),
+      "billing.recurring.nextChargeAt": Timestamp.fromDate(periodEnd),
+    });
     revalidatePath("/admin");
     return { ok: true };
   } catch (e) {

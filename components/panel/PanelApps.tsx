@@ -8,6 +8,7 @@ import { AppCard } from "@/components/panel/AppCard";
 import { appCategory, appNeedsPayment, type AppCategory } from "@/lib/panel-status";
 
 type Reqs = Record<string, RequestView>;
+type ReqLists = Record<string, RequestView[]>;
 type FilterKey = "all" | "action" | AppCategory;
 
 const FILTER_LABEL: Record<FilterKey, string> = {
@@ -42,12 +43,14 @@ export function PanelApps({
   transfer,
   update,
   renewal,
+  other,
 }: {
   apps: AppView[];
   pricing?: Pricing;
   transfer: Reqs;
   update: Reqs;
   renewal: Reqs;
+  other?: ReqLists;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
 
@@ -166,6 +169,7 @@ export function PanelApps({
               transferRequest={transfer[m.app.id] ?? null}
               updateRequest={update[m.app.id] ?? null}
               renewalRequest={renewal[m.app.id] ?? null}
+              otherRequests={other?.[m.app.id] ?? []}
             />
           ))}
         </div>

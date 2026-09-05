@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AppView } from "@/lib/firestore/apps";
-import { getStatusFlow, isPreWork, type AppStatus } from "@/lib/app-status";
-import { STATUS_META, SERVICE_LABELS, accountLabel, formatDate } from "@/lib/labels";
-import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
+import { statusFlowFor, isPreWorkFor, type AppStatus } from "@/lib/app-status";
+import { accountLabel, formatDate, appLabel, appTitle, statusMetaFor } from "@/lib/labels";
+import { themeFor, ServiceLogo } from "@/components/serviceTheme";
 import { RENEWAL_FACTOR } from "@/lib/payment";
 import { actSetStatus, actPublish, actMarkTransferred, actEndSubscription, actRenewSubscription, actDeleteApp } from "@/app/admin/actions";
 import { RejectCompensationDialog } from "@/components/admin/RejectCompensationDialog";
@@ -21,9 +21,9 @@ export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }:
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
-  const theme = SERVICE_THEME[app.serviceType];
-  const status = STATUS_META[app.status];
-  const title = app.appName || SERVICE_LABELS[app.serviceType];
+  const theme = themeFor(app);
+  const status = statusMetaFor(app, app.status);
+  const title = appTitle(app);
 
   const [date, setDate] = useState("");
   const [url, setUrl] = useState(app.publication.storeUrl ?? "");
@@ -86,16 +86,16 @@ export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }:
   }
 
   // Faqat keyingi status ko'rsatiladi (barcha statuslar ishlatiladi).
-  const flow = getStatusFlow(app.serviceType);
+  const flow = statusFlowFor(app);
   const idx = flow.indexOf(app.status);
   const nextStatus: AppStatus | null = idx >= 0 && idx < flow.length - 1 ? flow[idx + 1] : null;
-  const nextMeta = nextStatus ? STATUS_META[nextStatus] : null;
+  const nextMeta = nextStatus ? statusMetaFor(app, nextStatus) : null;
   const inProgress = !["published", "completed", "rejected", "cancelled", "transferred", "subscription_ended"].includes(app.status);
   const nextIsPublish = nextStatus === "published";
 
   // Avans chek yuborilgan va hali ish bosqichiga o'tmagan bo'lsa — to'lov tasdiqlanishini
   // kutmoqda. Bu holatda "keyingi status" tugmasi emas, "tasdiqlang" ogohlantirishi chiqadi.
-  const preWork = isPreWork(app.serviceType, app.status);
+  const preWork = isPreWorkFor(app, app.status);
   const awaitingPaymentConfirm = app.receiptSent && preWork;
   const showPaymentNote = awaitingPaymentConfirm;
 
@@ -104,7 +104,7 @@ export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }:
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${theme.accent}`} />
 
       <div className="p-4 pl-5 flex gap-4">
-        <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} />
+        <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} app={app} />
 
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           {/* Sarlavha + joriy status */}
@@ -112,7 +112,7 @@ export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }:
             <div className="min-w-0">
               <p className="font-semibold text-slate-900 truncate">{title}</p>
               <p className={`text-xs font-medium truncate ${theme.text}`}>
-                {SERVICE_LABELS[app.serviceType]}
+                {appLabel(app)}
                 {app.serviceType === "account" && app.accountPlatform ? ` · ${accountLabel(app.accountPlatform, app.accountType)}` : ""}
               </p>
               <p className="text-xs text-slate-400 truncate mt-0.5">

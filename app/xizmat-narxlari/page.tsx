@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/Logo";
 import type { Metadata } from "next";
 import { getPricing } from "@/lib/firestore/settings";
+import { getPublicCatalog } from "@/lib/firestore/catalog";
 
 export const metadata: Metadata = { title: "Xizmat narxlari — UMD GROUP" };
 export const dynamic = "force-dynamic";
@@ -38,8 +39,16 @@ function PriceCard({ platform, icon, price, color, features }: PriceCardProps) {
   );
 }
 
+async function publicServices() {
+  try {
+    return await getPublicCatalog();
+  } catch {
+    return [];
+  }
+}
+
 export default async function XizmatNarxlariPage() {
-  const p = await getPricing();
+  const [p, custom] = await Promise.all([getPricing(), publicServices()]);
   return (
     <div className="min-h-screen bg-gradient-subtle">
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
@@ -279,6 +288,42 @@ export default async function XizmatNarxlariPage() {
             </ul>
           </div>
         </div>
+
+        {/* Maxsus xizmatlar (admin katalogi) */}
+        {custom.length > 0 && (
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-7 h-7 rounded-lg bg-purple-600 text-white text-xs font-bold flex items-center justify-center">★</span>
+              <h2 className="font-semibold text-slate-900">Maxsus xizmatlar</h2>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {custom.map((c) => (
+                <div key={c.id} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-lg leading-none">{c.icon}</span>
+                    <p className="font-semibold text-slate-900 text-sm">{c.name}</p>
+                  </div>
+                  {c.description && <p className="text-xs text-slate-500 mb-2 leading-relaxed">{c.description}</p>}
+                  <ul className="text-sm text-slate-700 space-y-0.5">
+                    {c.pricing.oneTime.enabled && c.pricing.oneTime.amountUsd > 0 && (
+                      <li>
+                        Bir martalik: <strong>${c.pricing.oneTime.amountUsd}</strong>
+                        <span className="text-slate-400 text-xs"> (avans {c.pricing.oneTime.advancePercent}%)</span>
+                      </li>
+                    )}
+                    {c.pricing.recurring.enabled && c.pricing.recurring.amountUsd > 0 && (
+                      <li>
+                        Davriy: <strong>${c.pricing.recurring.amountUsd}</strong>
+                        <span className="text-slate-400 text-xs"> / {c.pricing.recurring.periodMonths === 1 ? "oy" : `${c.pricing.recurring.periodMonths} oy`}</span>
+                      </li>
+                    )}
+                    {c.etaDays > 0 && <li className="text-xs text-slate-500">Muddat: {c.etaDays} ish kuni</li>}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* 9. Valyuta */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 animate-slide-up space-y-3">

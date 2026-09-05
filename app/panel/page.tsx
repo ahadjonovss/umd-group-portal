@@ -19,7 +19,7 @@ import { TelegramLinkAlert } from "@/components/panel/TelegramLinkAlert";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess, isTerminalError } from "@/lib/app-status";
-import { SERVICE_LABELS } from "@/lib/labels";
+import { SERVICE_LABELS, appTitle } from "@/lib/labels";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUserRequests } from "@/lib/firestore/requests";
 import { getUsdRate } from "@/lib/cbu";
@@ -63,15 +63,18 @@ export default async function PanelPage() {
   const transferByApp: Record<string, RequestView> = {};
   const updateByApp: Record<string, RequestView> = {};
   const renewalByApp: Record<string, RequestView> = {};
+  // Davriy / qo'shimcha hisob-fakturalar — ilova bo'yicha
+  const otherByApp: Record<string, RequestView[]> = {};
   for (const r of requests) {
     if (r.type === "transfer" && !transferByApp[r.appId]) transferByApp[r.appId] = r;
     if (r.type === "update" && !updateByApp[r.appId]) updateByApp[r.appId] = r;
     if (r.type === "subscription_renewal" && !renewalByApp[r.appId]) renewalByApp[r.appId] = r;
+    if (r.type === "recurring" || r.type === "custom") (otherByApp[r.appId] ??= []).push(r);
   }
 
   const reviewItems: ReviewItem[] = apps.map((a) => ({
     id: a.id,
-    label: a.appName || SERVICE_LABELS[a.serviceType],
+    label: appTitle(a),
     reviewed: a.reviewed,
     canReview: isTerminalSuccess(a.status),
   }));
@@ -85,7 +88,7 @@ export default async function PanelPage() {
   const payAlerts: PaymentAlertItem[] = [];
   for (const a of apps) {
     if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
-    const title = a.appName || SERVICE_LABELS[a.serviceType];
+    const title = appTitle(a);
     const pct = discPctFor(a.serviceType);
     const adv = getInstallment(a.payment, "advance");
     const fin = getInstallment(a.payment, "final");
@@ -102,7 +105,8 @@ export default async function PanelPage() {
     if (r.status === "rejected" || r.status === "cancelled") continue;
     if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
     const title = r.appName || SERVICE_LABELS[r.serviceType];
-    payAlerts.push({ appId: r.appId, title, label: `${REQUEST_TYPE_LABEL[r.type]} to'lovi`, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
+    const label = r.type === "recurring" ? "Davriy to'lov" : r.type === "custom" ? "Hisob-faktura" : `${REQUEST_TYPE_LABEL[r.type]} to'lovi`;
+    payAlerts.push({ appId: r.appId, title, label, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
   }
   // Obunasi tugagan ilovalar — hali faol uzaytirish so'rovi bo'lmasa ham, uzaytirish
   // to'lovi eslatma sifatida chiqadi. Bu ikki holatni qamrab oladi: (1) admin allaqachon
@@ -118,7 +122,7 @@ export default async function PanelPage() {
     // holati noaniq/eski migratsiyalanmagan yozuv) — eslatma baribir chiqadi.
     const lastFull = lastRenewal ? getInstallment(lastRenewal.payment, "full") : null;
     if (lastFull && (lastFull.state === "confirmed" || isPayable(lastFull))) continue;
-    const title = a.appName || SERVICE_LABELS[a.serviceType];
+    const title = appTitle(a);
     const disc = discounts.find((d) => d.service === "renewal" && (!d.boundAppId || d.boundAppId === a.id));
     const amt = Math.round(applyDiscount(renewalUsd(a, pricing), disc?.percent ?? 0));
     if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Obunani uzaytirish", usd: amt, key: { type: "renewal_pending", appId: a.id } });
@@ -129,7 +133,7 @@ export default async function PanelPage() {
     .filter((a) => isTerminalSuccess(a.status) && !a.reviewed)
     .map((a) => ({
       id: a.id,
-      label: a.appName || SERVICE_LABELS[a.serviceType],
+      label: appTitle(a),
       serviceType: a.serviceType,
     }));
 
@@ -217,6 +221,7 @@ export default async function PanelPage() {
               transfer={transferByApp}
               update={updateByApp}
               renewal={renewalByApp}
+              other={otherByApp}
             />
           </div>
         )}

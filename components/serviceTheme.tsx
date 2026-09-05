@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { ServiceType } from "@/types";
+import { defOf, type HasServiceDef, type ThemeKey } from "@/lib/service-def";
 
 export const PLAY_ICON = (
   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
@@ -76,6 +77,13 @@ export const SERVICE_THEME: Record<
     text: "text-cyan-600",
     icon: DUNS_ICON,
   },
+  custom: {
+    gradient: "from-purple-400 to-purple-600",
+    accent: "from-purple-400 to-purple-600",
+    soft: "bg-purple-50",
+    text: "text-purple-600",
+    icon: OTHER_ICON,
+  },
   other: {
     gradient: "from-slate-400 to-slate-600",
     accent: "from-slate-400 to-slate-600",
@@ -85,17 +93,43 @@ export const SERVICE_THEME: Record<
   },
 };
 
+// Custom xizmat temasi — katalogda tanlangan rang.
+type Theme = { gradient: string; accent: string; soft: string; text: string; icon: ReactNode };
+
+const THEME_BY_KEY: Record<ThemeKey, Omit<Theme, "icon">> = {
+  slate: { gradient: "from-slate-400 to-slate-600", accent: "from-slate-400 to-slate-600", soft: "bg-slate-50", text: "text-slate-600" },
+  blue: { gradient: "from-blue-400 to-blue-600", accent: "from-blue-400 to-blue-600", soft: "bg-blue-50", text: "text-blue-600" },
+  emerald: { gradient: "from-emerald-400 to-emerald-600", accent: "from-emerald-400 to-emerald-600", soft: "bg-emerald-50", text: "text-emerald-600" },
+  orange: { gradient: "from-orange-400 to-orange-600", accent: "from-orange-400 to-orange-600", soft: "bg-orange-50", text: "text-orange-600" },
+  purple: { gradient: "from-purple-400 to-purple-600", accent: "from-purple-400 to-purple-600", soft: "bg-purple-50", text: "text-purple-600" },
+  teal: { gradient: "from-teal-400 to-teal-600", accent: "from-teal-400 to-teal-600", soft: "bg-teal-50", text: "text-teal-600" },
+  cyan: { gradient: "from-cyan-400 to-cyan-600", accent: "from-cyan-400 to-cyan-600", soft: "bg-cyan-50", text: "text-cyan-600" },
+  indigo: { gradient: "from-indigo-400 to-indigo-600", accent: "from-indigo-400 to-indigo-600", soft: "bg-indigo-50", text: "text-indigo-600" },
+  rose: { gradient: "from-rose-400 to-rose-600", accent: "from-rose-400 to-rose-600", soft: "bg-rose-50", text: "text-rose-600" },
+  amber: { gradient: "from-amber-400 to-amber-600", accent: "from-amber-400 to-amber-600", soft: "bg-amber-50", text: "text-amber-600" },
+};
+
+// Ilova temasi — custom xizmatda katalogdagi rang + emoji ikona.
+export function themeFor(app: HasServiceDef): Theme {
+  const def = defOf(app);
+  if (!def) return SERVICE_THEME[app.serviceType];
+  const t = THEME_BY_KEY[def.theme] ?? THEME_BY_KEY.purple;
+  return { ...t, icon: <span className="text-2xl leading-none">{def.icon}</span> };
+}
+
 // Ilova logosi (Storage URL bo'lsa rasm, aks holda gradient placeholder).
 export function ServiceLogo({
   serviceType,
   iconUrl,
   appName,
+  app,
 }: {
   serviceType: ServiceType;
   iconUrl: string | null;
   appName: string | null;
+  app?: HasServiceDef;
 }) {
-  const theme = SERVICE_THEME[serviceType];
+  const theme = app ? themeFor(app) : SERVICE_THEME[serviceType];
   if (iconUrl) {
     // eslint-disable-next-line @next/next/no-img-element
     return (

@@ -1,7 +1,7 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type QueryDocumentSnapshot } from "@/lib/firebase/admin";
-import { getStatusFlow, workStartStatus, type AppStatus } from "@/lib/app-status";
-import { setAppStatus, setFinalPaid, activateUpdatePackage } from "@/lib/firestore/apps";
+import { statusFlowFor, workStartFor, type AppStatus } from "@/lib/app-status";
+import { setAppStatus, setFinalPaid, activateUpdatePackage, serviceDefOf, startRecurring } from "@/lib/firestore/apps";
 import { confirmRequestPayment } from "@/lib/firestore/requests";
 import { markDiscountUsed } from "@/lib/firestore/discounts";
 import { logActivity, type Actor } from "@/lib/firestore/activity";
@@ -37,7 +37,7 @@ async function setInstallment(
 
 const PAYMENTS = "payments";
 
-export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate" | "update_package" | "custom";
+export type PaymentKind = "advance" | "final" | "full" | "transfer" | "update" | "renewal" | "push_certificate" | "update_package" | "custom" | "recurring";
 
 const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   advance: "Avans",
@@ -49,6 +49,7 @@ const PAYMENT_KIND_LABEL: Record<PaymentKind, string> = {
   push_certificate: "Push sertifikat",
   update_package: "Update paketi",
   custom: "Qo'shimcha to'lov",
+  recurring: "Davriy to'lov",
 };
 
 export interface CreatePaymentInput {
@@ -241,15 +242,18 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
   if (p.status === "confirmed") return;
 
   const requestId = p.requestId as string | null | undefined;
-  const advanceStatusStep = async (appId: string, serviceType: ServiceType) => {
+  const advanceStatusStep = async (appId: string) => {
     const appSnap = await adminDb.collection("apps").doc(appId).get();
     if (!appSnap.exists) return;
+    const def = serviceDefOf(appSnap);
     const st = appSnap.get("status") as AppStatus;
-    const flow = getStatusFlow(serviceType);
+    const flow = statusFlowFor(def);
     const idx = flow.indexOf(st);
-    const work = workStartStatus(serviceType);
+    const work = workStartFor(def);
     const workIdx = flow.indexOf(work);
     if (idx >= 0 && workIdx >= 0 && idx < workIdx) await setAppStatus(appId, work);
+    // Avans to'langach boshlanadigan davriy to'lov rejasi
+    await startRecurring(appId, "on_advance_paid");
   };
 
   if (requestId) {
@@ -260,7 +264,7 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     await setFinalPaid(p.appId as string);
   } else if (p.kind === "full") {
     // To'liq to'lov: avans + yakuniy birga — status ilgarilaydi va yakuniy to'landi
-    await advanceStatusStep(p.appId as string, p.serviceType as ServiceType);
+    await advanceStatusStep(p.appId as string);
     await setFinalPaid(p.appId as string);
   } else if (p.kind === "update_package") {
     // Update paketi sotib olindi — faollashtiramiz
@@ -272,7 +276,7 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     });
   } else {
     // Ariza avans to'lovi: ilova statusini keyingi bosqichga
-    await advanceStatusStep(p.appId as string, p.serviceType as ServiceType);
+    await advanceStatusStep(p.appId as string);
   }
 
   // Hamyon: admin kiritgan haqiqiy summadan ortiqcha qismi hamyonga tushadi.

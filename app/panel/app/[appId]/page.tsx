@@ -17,13 +17,13 @@ import { getUserWalletUzs } from "@/lib/firestore/users";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
-import { estimatedDateIso, etaDaysForService } from "@/lib/eta";
+import { estimatedDateIso, etaDaysFor } from "@/lib/eta";
 import { appAdvanceStage, showFinalPayment, appPaymentDone } from "@/lib/panel-status";
-import { getInstallment, isPayable, appInstallmentKeys, type PayState } from "@/lib/payment-state";
+import { getInstallment, isPayable, installmentKeysFor, type PayState } from "@/lib/payment-state";
 import { InvoicePayment } from "@/components/panel/InvoicePayment";
-import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate, platformOf } from "@/lib/labels";
+import { SERVICE_LABELS, accountLabel, formatDate, platformOf, appLabel, appTitle, statusMetaFor } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
-import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
+import { themeFor, ServiceLogo } from "@/components/serviceTheme";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { ReviewButton } from "@/components/panel/ReviewButton";
 import { ReceiptButton } from "@/components/panel/ReceiptButton";
@@ -36,6 +36,7 @@ import {
   RenewalSection,
   PushCertSection,
   CustomInvoiceSection,
+  RecurringSection,
   ClockIcon,
 } from "@/components/panel/AppSections";
 
@@ -102,6 +103,7 @@ const PAYMENT_KIND_LABEL: Record<string, string> = {
   push_certificate: "Push sertifikat",
   update_package: "Update paketi",
   custom: "Qo'shimcha to'lov",
+  recurring: "Davriy to'lov",
 };
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -165,13 +167,13 @@ export default async function AppDetailPage({
     getUserWalletUzs(user.uid),
   ]);
 
-  const theme = SERVICE_THEME[app.serviceType];
-  const status = STATUS_META[app.status];
-  const title = app.appName || SERVICE_LABELS[app.serviceType];
+  const theme = themeFor(app);
+  const status = statusMetaFor(app, app.status);
+  const title = appTitle(app);
   const transferred = app.status === "transferred";
   const subStarted = Boolean(app.subscription?.startDate);
   const canReview = isTerminalSuccess(app.status);
-  const etaIso = estimatedDateIso(app.createdAt, etaDaysForService(app.serviceType, pricing));
+  const etaIso = estimatedDateIso(app.createdAt, etaDaysFor(app, pricing));
 
   // Chegirma (bo'lsa) — avans va yakuniyга qo'llanadi
   const discCategory = categoryForServiceType(app.serviceType);
@@ -191,14 +193,17 @@ export default async function AppDetailPage({
   const advInst = getInstallment(app.payment, "advance");
   const finInst = getInstallment(app.payment, "final");
   const customReqs = requests.filter((r) => r.type === "custom");
-  const customPaymentNeeded = customReqs.some((r) => isPayable(getInstallment(r.payment, "full")));
+  const recurringReqs = requests.filter((r) => r.type === "recurring");
+  const customPaymentNeeded =
+    customReqs.some((r) => isPayable(getInstallment(r.payment, "full"))) ||
+    recurringReqs.some((r) => isPayable(getInstallment(r.payment, "full")));
   const paymentNeeded =
     (showAdvance && (advInst ? isPayable(advInst) : !app.receiptSent)) ||
     (showFinal && (finInst ? isPayable(finInst) : !app.finalReceiptSent)) ||
     customPaymentNeeded;
 
   // Hisob-fakturalar (invoice) ro'yxati
-  const hasFinal = appInstallmentKeys(app.serviceType).includes("final");
+  const hasFinal = installmentKeysFor(app).includes("final");
   const invoiceList: { key: "advance" | "final"; label: string; usd: number; uzs: number | null; state: PayState }[] = [];
   if (advanceAmount > 0) {
     invoiceList.push({
@@ -237,8 +242,8 @@ export default async function AppDetailPage({
   generalRows.push([
     "Xizmat turi",
     app.serviceType === "account" && app.accountPlatform
-      ? `${SERVICE_LABELS[app.serviceType]} · ${accountLabel(app.accountPlatform, app.accountType)}`
-      : SERVICE_LABELS[app.serviceType],
+      ? `${appLabel(app)} · ${accountLabel(app.accountPlatform, app.accountType)}`
+      : appLabel(app),
   ]);
   generalRows.push(["Holati", status.label]);
   generalRows.push(["Yuborilgan sana", formatDate(app.createdAt)]);
@@ -290,12 +295,12 @@ export default async function AppDetailPage({
         <div className="relative overflow-hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
           <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${theme.accent}`} />
           <div className="flex gap-4 items-start pl-2">
-            <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} />
+            <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} app={app} />
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h1 className="text-lg font-bold text-slate-900 truncate">{title}</h1>
-                  <p className={`text-sm font-medium ${theme.text}`}>{SERVICE_LABELS[app.serviceType]}</p>
+                  <p className={`text-sm font-medium ${theme.text}`}>{appLabel(app)}</p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${status.badge}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
@@ -347,6 +352,13 @@ export default async function AppDetailPage({
           defaultPayment={paymentNeeded}
           info={
             <>
+              {/* Davriy (oylik) to'lov — maxsus xizmatlar */}
+              {(app.billing?.recurring || recurringReqs.length > 0) && (
+                <SectionCard title="Davriy to'lov">
+                  <RecurringSection app={app} reqs={recurringReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
+                </SectionCard>
+              )}
+
               {/* Qo'shimcha hisob-fakturalar (admin biriktirgan) */}
               {customReqs.length > 0 && (
                 <SectionCard title="Qo'shimcha hisob-fakturalar">

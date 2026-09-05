@@ -5,10 +5,12 @@ import { isTerminalSuccess, type AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
 import { getPricing } from "@/lib/firestore/settings";
 import { fullUsd, finalUsd } from "@/lib/payment";
-import { logActivity, type Actor } from "@/lib/firestore/activity";
-import { STATUS_META, SERVICE_LABELS } from "@/lib/labels";
+import { logActivity, SYSTEM_ACTOR, type Actor } from "@/lib/firestore/activity";
+import { STATUS_META, SERVICE_LABELS, appLabel, statusMetaFor } from "@/lib/labels";
+import { normalizeSnapshot, type ServiceDefSnapshot } from "@/lib/service-def";
+import { addMonths, type BillingView, type RecurringStatus, type RecurringView } from "@/lib/billing";
 import { notifyUser, esc, appLink } from "@/lib/notify";
-import { estimatedDateIso, etaDaysForService } from "@/lib/eta";
+import { estimatedDateIso, etaDaysFor } from "@/lib/eta";
 
 // ISO -> "DD.MM.YYYY" (Telegram xabarlari uchun)
 function etaDate(iso: string): string {
@@ -16,7 +18,7 @@ function etaDate(iso: string): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
-import { newAppPayment, appInstallmentKeys, type PaymentState } from "@/lib/payment-state";
+import { newAppPayment, installmentKeysFor, type PaymentState } from "@/lib/payment-state";
 
 export type { AppStatus };
 
@@ -58,9 +60,29 @@ export interface CreateAppInput {
   servicePrice?: number | null; // narx platforma/turga bog'liq xizmatlar uchun (akkaunt ochish)
   accountPlatform?: string | null; // "google" | "apple" (akkaunt ochish)
   accountType?: string | null; // "personal" | "corporate" (akkaunt ochish)
+  catalogId?: string | null; // maxsus xizmat (serviceCatalog) hujjat id'si
+  catalogSnapshot?: ServiceDefSnapshot | null; // biriktirilgan paytdagi ta'rif nusxasi
+  recurring?: RecurringInit | null; // takrorlanuvchi to'lov rejasi (maxsus xizmat)
+  origin?: "user" | "admin"; // admin biriktirgan bo'lsa xabar matni boshqacha
+  actor?: Actor; // kim yaratdi (admin biriktirishida)
+}
+
+// Biriktirishda beriladigan takrorlanuvchi to'lov sozlamasi.
+export interface RecurringInit {
+  amountUsd: number;
+  periodMonths: number;
+  startsWhen: "on_complete" | "on_advance_paid" | "on_assign";
+  firstPeriodFree: boolean;
+  graceDays: number;
 }
 
 const APPS = "apps";
+
+// Birinchi hisob-faktura sanasi: davr BOSHIDA to'lanadi.
+// firstPeriodFree — birinchi davr bepul, demak birinchi hisob keyingi davr boshida.
+function firstChargeDate(start: Date, rec: RecurringInit): Date {
+  return rec.firstPeriodFree ? addMonths(start, rec.periodMonths) : start;
+}
 
 // Yangi ariza hujjatini yaratadi. appId qaytaradi.
 export async function createAppSubmission(input: CreateAppInput): Promise<string> {
@@ -86,10 +108,39 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
       }
     : null;
 
+  // Maxsus xizmat: takrorlanuvchi to'lov bloki. "on_assign" bo'lsa darhol boshlanadi,
+  // aks holda tegishli hodisada (avans to'landi / ish topshirildi) faollashadi.
+  const rec = input.recurring;
+  const startNow = rec ? rec.startsWhen === "on_assign" : false;
+  const billing = rec
+    ? {
+        recurring: {
+          active: startNow,
+          status: (startNow ? "active" : "pending") satisfies RecurringStatus as RecurringStatus,
+          amountUsd: rec.amountUsd,
+          periodMonths: rec.periodMonths,
+          startsWhen: rec.startsWhen,
+          firstPeriodFree: rec.firstPeriodFree,
+          graceDays: rec.graceDays,
+          startDate: startNow ? Timestamp.now() : null,
+          nextChargeAt: startNow ? Timestamp.fromDate(firstChargeDate(new Date(), rec)) : null,
+          lastInvoiceAt: null,
+          invoicesCount: 0,
+          paidCount: 0,
+          periodNo: 0,
+          cancelledAt: null,
+          remindedOn: null,
+        },
+      }
+    : null;
+
   await ref.set({
     ownerUid: input.ownerUid,
     ownerEmail: input.ownerEmail,
     serviceType: input.serviceType,
+    catalogId: input.catalogId ?? null,
+    catalogSnapshot: input.catalogSnapshot ?? null,
+    billing,
     appName: input.appName,
     contact: input.contact,
     submission: input.submission,
@@ -104,20 +155,28 @@ export async function createAppSubmission(input: CreateAppInput): Promise<string
     telegramSent: false,
     finalReceiptSent: false,
     finalPaid: false,
-    payment: newAppPayment(input.serviceType),
+    payment: newAppPayment(input),
     createdAt: FieldValue.serverTimestamp(),
   });
-  await logActivity(ref.id, "created", "Ariza yaratildi", {
-    type: "user",
-    name: input.contact?.fullName || input.ownerEmail || "Foydalanuvchi",
-    uid: input.ownerUid,
-  });
-  const subName = input.appName || SERVICE_LABELS[input.serviceType];
-  const etaIso = estimatedDateIso(new Date().toISOString(), etaDaysForService(input.serviceType, await getPricing()));
+  const byAdmin = input.origin === "admin";
+  await logActivity(
+    ref.id,
+    "created",
+    byAdmin ? "Xizmat biriktirildi" : "Ariza yaratildi",
+    input.actor ?? {
+      type: "user",
+      name: input.contact?.fullName || input.ownerEmail || "Foydalanuvchi",
+      uid: input.ownerUid,
+    }
+  );
+  const subName = input.appName || appLabel(input);
+  const etaIso = estimatedDateIso(new Date().toISOString(), etaDaysFor(input, await getPricing()));
   const etaLine = etaIso ? `\n\n🗓 Taxminan *${esc(etaDate(etaIso))}* da tayyor bo'ladi` : "";
   await notifyUser(
     input.ownerUid,
-    `🎉 Arizangizni oldik, rahmat 🙌\n📱 ${esc(subName)}${etaLine}\n\nYangiliklarni shu yerda kuzatib boring 👍${appLink(ref.id)}`
+    byAdmin
+      ? `📌 Sizga yangi xizmat biriktirildi\n📦 ${esc(subName)}${etaLine}\n\nTafsilotlar va to'lovni kabinetdan ko'rishingiz mumkin 👇${appLink(ref.id)}`
+      : `🎉 Arizangizni oldik, rahmat 🙌\n📱 ${esc(subName)}${etaLine}\n\nYangiliklarni shu yerda kuzatib boring 👍${appLink(ref.id)}`
   );
   return ref.id;
 }
@@ -158,6 +217,104 @@ export async function setAppTaxPhone(appId: string, phone: string): Promise<void
   await adminDb.collection(APPS).doc(appId).update({ taxPhone: phone });
 }
 
+// Firestore hujjatidan xizmat ta'rifi konteksti (label/oqim/narx resolverlari uchun).
+export function serviceDefOf(snap: DocumentSnapshot): { serviceType: ServiceType; catalogSnapshot: ServiceDefSnapshot | null } {
+  const raw = snap.get("catalogSnapshot");
+  return {
+    serviceType: snap.get("serviceType") as ServiceType,
+    catalogSnapshot: raw ? normalizeSnapshot(raw) : null,
+  };
+}
+
+// ── Takrorlanuvchi (oylik) to'lov hayot-sikli ──────────────
+
+// Hodisa yuz berganda (avans to'landi / ish topshirildi) rejani ishga tushiradi.
+// Reja boshqa hodisaga sozlangan bo'lsa yoki allaqachon faol bo'lsa — hech nima qilmaydi.
+export async function startRecurring(
+  appId: string,
+  trigger: "on_complete" | "on_advance_paid" | "on_assign",
+  startedAt: Date = new Date()
+): Promise<void> {
+  const ref = adminDb.collection(APPS).doc(appId);
+  const snap = await ref.get();
+  if (!snap.exists) return;
+  const rec = snap.get("billing")?.recurring as
+    | (RecurringInit & { active?: boolean; status?: RecurringStatus })
+    | undefined;
+  if (!rec) return;
+  if (rec.active || rec.status === "cancelled") return;
+  if (rec.startsWhen !== trigger) return;
+  if (!rec.amountUsd || rec.amountUsd <= 0) return;
+
+  const next = firstChargeDate(startedAt, rec);
+  await ref.update({
+    "billing.recurring.active": true,
+    "billing.recurring.status": "active" satisfies RecurringStatus,
+    "billing.recurring.startDate": Timestamp.fromDate(startedAt),
+    "billing.recurring.nextChargeAt": Timestamp.fromDate(next),
+  });
+
+  const defRef = serviceDefOf(snap);
+  const name = snap.get("appName") || appLabel(defRef);
+  const per = rec.periodMonths === 1 ? "oylik" : `${rec.periodMonths} oyda bir`;
+  await logActivity(
+    appId,
+    "recurring_started",
+    `Takrorlanuvchi to'lov boshlandi ($${rec.amountUsd} · ${per}) — birinchi hisob: ${next.toISOString().slice(0, 10)}`,
+    SYSTEM_ACTOR
+  );
+  await notifyUser(
+    snap.get("ownerUid"),
+    `🔁 *${esc(name)}* uchun ${esc(per)} to'lov boshlandi\n\n💵 $${esc(String(rec.amountUsd))}\n🗓 Birinchi hisob\-faktura: ${esc(next.toISOString().slice(0, 10))}${appLink(appId)}`
+  );
+}
+
+// Admin: takrorlanuvchi to'lovni bekor qiladi (joriy davr oxirigacha xizmat davom etadi).
+export async function cancelRecurring(appId: string, actor?: Actor): Promise<void> {
+  const ref = adminDb.collection(APPS).doc(appId);
+  await ref.update({
+    "billing.recurring.active": false,
+    "billing.recurring.status": "cancelled" satisfies RecurringStatus,
+    "billing.recurring.cancelledAt": FieldValue.serverTimestamp(),
+  });
+  if (actor) await logActivity(appId, "recurring_cancelled", "Takrorlanuvchi to'lov bekor qilindi", actor);
+  const snap = await ref.get();
+  const name = snap.get("appName") || appLabel(serviceDefOf(snap));
+  await notifyUser(snap.get("ownerUid"), `⏹ *${esc(name)}* uchun davriy to'lov to'xtatildi\n\nYangi hisob\-fakturalar chiqmaydi${appLink(appId)}`);
+}
+
+// Admin: bekor qilingan/kutilayotgan rejani qo'lda faollashtiradi.
+export async function resumeRecurring(appId: string, actor?: Actor, from: Date = new Date()): Promise<void> {
+  const ref = adminDb.collection(APPS).doc(appId);
+  const snap = await ref.get();
+  const rec = snap.get("billing")?.recurring as RecurringInit | undefined;
+  if (!rec) throw new Error("Bu xizmatda davriy to'lov sozlanmagan");
+  await ref.update({
+    "billing.recurring.active": true,
+    "billing.recurring.status": "active" satisfies RecurringStatus,
+    "billing.recurring.startDate": snap.get("billing.recurring.startDate") ?? Timestamp.fromDate(from),
+    "billing.recurring.nextChargeAt": Timestamp.fromDate(from),
+    "billing.recurring.cancelledAt": null,
+  });
+  if (actor) await logActivity(appId, "recurring_resumed", "Davriy to'lov qayta faollashtirildi", actor);
+}
+
+// Admin: davriy to'lov shartlarini o'zgartiradi (summa / davr / muhlat).
+export async function updateRecurringPlan(
+  appId: string,
+  patch: { amountUsd?: number; periodMonths?: number; graceDays?: number; nextChargeAt?: Date },
+  actor?: Actor
+): Promise<void> {
+  const update: Record<string, unknown> = {};
+  if (typeof patch.amountUsd === "number") update["billing.recurring.amountUsd"] = Math.max(0, patch.amountUsd);
+  if (typeof patch.periodMonths === "number") update["billing.recurring.periodMonths"] = Math.max(1, Math.round(patch.periodMonths));
+  if (typeof patch.graceDays === "number") update["billing.recurring.graceDays"] = Math.max(0, Math.round(patch.graceDays));
+  if (patch.nextChargeAt) update["billing.recurring.nextChargeAt"] = Timestamp.fromDate(patch.nextChargeAt);
+  if (!Object.keys(update).length) return;
+  await adminDb.collection(APPS).doc(appId).update(update);
+  if (actor) await logActivity(appId, "recurring_updated", "Davriy to'lov shartlari yangilandi", actor);
+}
+
 // Admin: arizani o'chiradi + unga bog'liq to'lov va sharhlarni.
 export async function deleteApp(appId: string): Promise<void> {
   const [pays, revs] = await Promise.all([
@@ -190,28 +347,32 @@ function finalDueLine(snap: DocumentSnapshot, serviceType: ServiceType, pricing:
 export async function setAppStatus(appId: string, status: AppStatus, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(APPS).doc(appId);
   const snap = await ref.get();
+  const defRef = serviceDefOf(snap);
   const update: Record<string, unknown> = { status, statusUpdatedAt: FieldValue.serverTimestamp() };
   // Yakuniy bosqichga (published/completed) yetganda — yakuniy to'lov qismini "ochamiz".
   if (isTerminalSuccess(status)) {
-    const st = snap.get("serviceType") as ServiceType;
-    if (appInstallmentKeys(st).includes("final")) {
+    if (installmentKeysFor(defRef).includes("final")) {
       const finalState = snap.get("payment")?.installments?.final?.state;
       if (finalState === "locked" || finalState === undefined) update["payment.installments.final.state"] = "due";
     }
   }
   await ref.update(update);
-  if (actor) await logActivity(appId, "status_changed", `Holat "${STATUS_META[status]?.label ?? status}" ga o'zgartirildi`, actor);
+  if (actor) {
+    await logActivity(appId, "status_changed", `Holat "${statusMetaFor(defRef, status).label}" ga o'zgartirildi`, actor);
+  }
+
+  // Ish topshirilgach — "on_complete" rejasidagi takrorlanuvchi to'lov boshlanadi.
+  if (isTerminalSuccess(status)) await startRecurring(appId, "on_complete");
 
   // Foydalanuvchiga xabar (published bundan mustasno — u markPublished orqali alohida xabar beradi)
   if (status !== "published") {
-    const serviceType = snap.get("serviceType") as ServiceType;
-    const name = snap.get("appName") || SERVICE_LABELS[serviceType];
-    const meta = STATUS_META[status];
+    const name = snap.get("appName") || appLabel(defRef);
+    const meta = statusMetaFor(defRef, status);
     const label = meta?.label ?? status;
     let msg = `📱 *${esc(name)}* — ilovangizda yangilik bor 👇\n\n📍 Bosqich: *${esc(label)}*`;
     if (meta?.desc) msg += `\n${esc(meta.desc)}`;
     const pricing = await getPricing();
-    msg += finalDueLine(snap, serviceType, pricing);
+    msg += finalDueLine(snap, snap.get("serviceType") as ServiceType, pricing);
     msg += appLink(appId);
     await notifyUser(snap.get("ownerUid"), msg);
   }
@@ -276,6 +437,11 @@ export interface AppView {
     renewedCount: number;
   };
   payment: PaymentState | null;
+  // Maxsus xizmat (serviceCatalog) — ta'rif nusxasi
+  catalogId: string | null;
+  catalogSnapshot: ServiceDefSnapshot | null;
+  // Takrorlanuvchi (oylik) to'lov
+  billing: BillingView | null;
   // Oylik update paketi (obuna) — kvotali
   updatePackage: null | {
     active: boolean;
@@ -290,6 +456,27 @@ export interface AppView {
 
 function tsToIso(v: unknown): string | null {
   return v instanceof Timestamp ? v.toDate().toISOString() : null;
+}
+
+function mapBilling(v: unknown): BillingView | null {
+  const b = (v ?? null) as { recurring?: Record<string, unknown> } | null;
+  if (!b?.recurring) return null;
+  const r = b.recurring;
+  const rec: RecurringView = {
+    active: Boolean(r.active),
+    status: ((r.status as RecurringStatus) ?? "pending"),
+    amountUsd: typeof r.amountUsd === "number" ? r.amountUsd : 0,
+    periodMonths: typeof r.periodMonths === "number" ? r.periodMonths : 1,
+    graceDays: typeof r.graceDays === "number" ? r.graceDays : 7,
+    startDate: tsToIso(r.startDate),
+    nextChargeAt: tsToIso(r.nextChargeAt),
+    lastInvoiceAt: tsToIso(r.lastInvoiceAt),
+    invoicesCount: typeof r.invoicesCount === "number" ? r.invoicesCount : 0,
+    paidCount: typeof r.paidCount === "number" ? r.paidCount : 0,
+    periodNo: typeof r.periodNo === "number" ? r.periodNo : 0,
+    cancelledAt: tsToIso(r.cancelledAt),
+  };
+  return { recurring: rec };
 }
 
 function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
@@ -332,6 +519,9 @@ function mapApp(d: DocumentSnapshot, reviewed: boolean): AppView {
         }
       : null,
     payment: (x.payment as PaymentState) ?? null,
+    catalogId: x.catalogId ?? null,
+    catalogSnapshot: x.catalogSnapshot ? normalizeSnapshot(x.catalogSnapshot) : null,
+    billing: mapBilling(x.billing),
     updatePackage: x.updatePackage
       ? {
           active: Boolean(x.updatePackage.active),
@@ -451,7 +641,7 @@ export async function markPublished(
   }
 
   // Yakuniy to'lov qismini "ochamiz" (locked -> due), agar hali qulflangan bo'lsa.
-  if (appInstallmentKeys(serviceType).includes("final")) {
+  if (installmentKeysFor({ serviceType }).includes("final")) {
     const finalState = snap.get("payment")?.installments?.final?.state;
     if (finalState === "locked" || finalState === undefined) {
       update["payment.installments.final.state"] = "due";

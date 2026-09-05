@@ -7,6 +7,21 @@ import { AppsShowcase } from "@/components/AppsShowcase";
 import { AuthButtons } from "@/components/auth/AuthButtons";
 import { getApprovedReviews } from "@/lib/firestore/reviews";
 import { getShowcaseApps } from "@/lib/firestore/apps";
+import { getPublicCatalog } from "@/lib/firestore/catalog";
+
+// Katalog rangini ServiceCard palitrasiga moslash
+const CATALOG_BADGE: Record<string, "green" | "blue" | "orange" | "purple" | "teal" | "cyan"> = {
+  emerald: "green",
+  blue: "blue",
+  orange: "orange",
+  purple: "purple",
+  teal: "teal",
+  cyan: "cyan",
+  indigo: "blue",
+  rose: "purple",
+  amber: "orange",
+  slate: "blue",
+};
 
 // Reviewlar Firestore'dan (admin tasdiqlagani) request vaqtida o'qiladi.
 export const dynamic = "force-dynamic";
@@ -14,6 +29,14 @@ export const dynamic = "force-dynamic";
 async function getReviews() {
   try {
     return await getApprovedReviews();
+  } catch {
+    return [];
+  }
+}
+
+async function getCustomServices() {
+  try {
+    return await getPublicCatalog();
   } catch {
     return [];
   }
@@ -28,7 +51,7 @@ async function getShowcase() {
 }
 
 export default async function Home() {
-  const [reviews, showcaseApps] = await Promise.all([getReviews(), getShowcase()]);
+  const [reviews, showcaseApps, customServices] = await Promise.all([getReviews(), getShowcase(), getCustomServices()]);
   return (
     <div className="min-h-screen bg-gradient-subtle overflow-x-hidden">
       {/* Header */}
@@ -164,6 +187,20 @@ export default async function Home() {
               </svg>
             }
           />
+
+          {/* Admin katalogidagi ochiq maxsus xizmatlar */}
+          {customServices.map((c, i) => (
+            <ServiceCard
+              key={c.id}
+              title={c.name}
+              description={c.description || "Batafsil ma'lumot uchun ariza qoldiring"}
+              href={`/submit/xizmat/${c.key}`}
+              badge={c.pricing.recurring.enabled ? "Obunali" : "Yangi"}
+              badgeColor={CATALOG_BADGE[c.theme] ?? "purple"}
+              delay={450 + i * 75}
+              icon={<span className="text-xl leading-none">{c.icon}</span>}
+            />
+          ))}
         </div>
 
         {/* Chiqarilgan ilovalar karuseli */}

@@ -23,6 +23,7 @@ const KIND_LABEL: Record<PaymentView["kind"], string> = {
   push_certificate: "Push sertifikat",
   update_package: "Update paketi",
   custom: "Qo'shimcha to'lov",
+  recurring: "Davriy to'lov",
 };
 
 const KIND_COLOR: Record<PaymentView["kind"], string> = {
@@ -35,9 +36,11 @@ const KIND_COLOR: Record<PaymentView["kind"], string> = {
   push_certificate: "bg-sky-500",
   update_package: "bg-cyan-500",
   custom: "bg-slate-500",
+  recurring: "bg-purple-500",
 };
 
 const SERVICE_COLOR: Record<ServiceType, string> = {
+  custom: "bg-purple-500",
   "play-market": "bg-emerald-500",
   "app-store": "bg-blue-500",
   "google-transfer": "bg-orange-500",
@@ -276,6 +279,24 @@ export function FinancePanel({
     return { owedUsd, owedCount, renewalUsd: renUsd, renewalCount: renCount, totalUsd: owedUsd + renUsd };
   }, [apps, pricing]);
 
+  // Davriy (oylik) to'lovlar — MRR va qarzdorlar
+  const recurring = useMemo(() => {
+    let mrrUsd = 0;
+    let active = 0;
+    let pastDue = 0;
+    let pendingStart = 0;
+    for (const a of apps) {
+      const r = a.billing?.recurring;
+      if (!r || r.status === "cancelled") continue;
+      if (r.status === "pending") { pendingStart++; continue; }
+      if (!r.active) continue;
+      active++;
+      if (r.status === "past_due") pastDue++;
+      mrrUsd += r.amountUsd / Math.max(1, r.periodMonths);
+    }
+    return { mrrUsd: Math.round(mrrUsd), active, pastDue, pendingStart };
+  }, [apps]);
+
   // Hamyon statistikasi (davrdan mustaqil — joriy holat)
   const wallet = useMemo(() => {
     const totalBalance = users.reduce((s, u) => s + (u.walletUzs || 0), 0);
@@ -455,6 +476,17 @@ export function FinancePanel({
             {expected.owedCount === 0 && expected.renewalCount === 0 && "yo'q"}
           </p>
         </div>
+        {(recurring.active > 0 || recurring.pendingStart > 0) && (
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
+            <p className="text-xs text-slate-400">Oylik takrorlanuvchi (MRR)</p>
+            <p className="text-2xl font-bold mt-1 text-purple-600">{usd(recurring.mrrUsd)}</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              🔁 {recurring.active} faol
+              {recurring.pastDue > 0 && <span className="text-red-500"> · ⚠️ {recurring.pastDue} qarzdor</span>}
+              {recurring.pendingStart > 0 && <> · ⏳ {recurring.pendingStart} kutmoqda</>}
+            </p>
+          </div>
+        )}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4">
           <p className="text-xs text-slate-400">Eng daromadli</p>
           <p className="text-base font-bold mt-1 text-slate-900 leading-tight">{data.topService ? data.topService.label : "—"}</p>

@@ -11,13 +11,14 @@ import { getAllPayments } from "@/lib/firestore/payments";
 import { getAllRequests } from "@/lib/firestore/requests";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getAllDiscounts } from "@/lib/firestore/discounts";
+import { getCatalog } from "@/lib/firestore/catalog";
 
 export const metadata: Metadata = { title: "Admin panel — UMD GROUP" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   await requireAdmin();
-  const [apps, reviews, users, payments, requests, pricing, payment, discounts] = await Promise.all([
+  const [apps, reviews, users, payments, requests, pricing, payment, discounts, catalog] = await Promise.all([
     getAllApps(),
     getAllReviews(),
     getAllUsers(),
@@ -26,6 +27,7 @@ export default async function AdminPage() {
     getPricing(),
     getPaymentInfo(),
     getAllDiscounts(),
+    getCatalog(),
   ]);
 
   // Har bir userga ariza sonini biriktirish (email bo'yicha)
@@ -62,6 +64,7 @@ export default async function AdminPage() {
           pricing={pricing}
           payment={payment}
           discounts={discounts}
+          catalog={catalog}
         />
       </main>
     </div>

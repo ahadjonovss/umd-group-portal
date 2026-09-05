@@ -74,7 +74,8 @@ export function appNeedsPayment(
   transferReq?: RequestView | null,
   updateReq?: RequestView | null,
   renewalReq?: RequestView | null,
-  pushReq?: RequestView | null
+  pushReq?: RequestView | null,
+  otherReqs?: RequestView[] // davriy / qo'shimcha hisob-fakturalar
 ): boolean {
   if (isTerminalError(app.status)) return false; // rad etilgan / bekor qilingan — to'lov kerak emas
   const adv = getInstallment(app.payment, "advance");
@@ -98,7 +99,12 @@ export function appNeedsPayment(
     if (full) return isPayable(full);
     return requestAwaitingPayment(req) && !req.receiptSent; // fallback
   };
-  const needsRequestPay = reqNeeds(transferReq) || reqNeeds(updateReq) || reqNeeds(renewalReq) || reqNeeds(pushReq);
+  const needsRequestPay =
+    reqNeeds(transferReq) ||
+    reqNeeds(updateReq) ||
+    reqNeeds(renewalReq) ||
+    reqNeeds(pushReq) ||
+    (otherReqs ?? []).some((r) => reqNeeds(r));
 
   return Boolean(needsAdvance || needsFinal || needsRequestPay);
 }

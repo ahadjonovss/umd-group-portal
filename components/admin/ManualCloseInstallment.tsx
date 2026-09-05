@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { AppView } from "@/lib/firestore/apps";
-import { getInstallment, appInstallmentKeys, isPayable } from "@/lib/payment-state";
+import { getInstallment, installmentKeysFor, isPayable } from "@/lib/payment-state";
 import { actMarkInstallmentPaidManually } from "@/app/admin/actions";
 
 const LABEL: Record<"advance" | "final", string> = { advance: "Avans", final: "Yakuniy" };
@@ -15,7 +15,7 @@ export function ManualCloseInstallment({ app }: { app: AppView }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const keys = appInstallmentKeys(app.serviceType).filter(
+  const keys = installmentKeysFor(app).filter(
     (k): k is "advance" | "final" => k === "advance" || k === "final"
   );
   const due = keys.filter((k) => isPayable(getInstallment(app.payment, k)));

@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isTerminalError } from "@/lib/app-status";
-import { SERVICE_LABELS, STATUS_META, accountLabel, formatDate } from "@/lib/labels";
-import { SERVICE_THEME, ServiceLogo } from "@/components/serviceTheme";
+import { accountLabel, formatDate, appLabel, appTitle, statusMetaFor } from "@/lib/labels";
+import { themeFor, ServiceLogo } from "@/components/serviceTheme";
 import { StatusProgress, SubscriptionProgress, ClockIcon } from "@/components/panel/AppSections";
 import { appNeedsPayment } from "@/lib/panel-status";
 import type { Pricing } from "@/lib/firestore/settings";
@@ -27,21 +27,23 @@ export function AppCard({
   transferRequest,
   updateRequest,
   renewalRequest,
+  otherRequests,
 }: {
   app: AppView;
   pricing?: Pricing;
   transferRequest?: RequestView | null;
   updateRequest?: RequestView | null;
   renewalRequest?: RequestView | null;
+  otherRequests?: RequestView[];
 }) {
-  const theme = SERVICE_THEME[app.serviceType];
-  const status = STATUS_META[app.status];
-  const title = app.appName || SERVICE_LABELS[app.serviceType];
+  const theme = themeFor(app);
+  const status = statusMetaFor(app, app.status);
+  const title = appTitle(app);
   const subStarted = Boolean(app.subscription?.startDate);
   const transferred = app.status === "transferred";
 
   // Amal talab qiladigan holat (kartochkada ogohlantirish uchun)
-  const actionLabel = appNeedsPayment(app, pricing, transferRequest, updateRequest, renewalRequest)
+  const actionLabel = appNeedsPayment(app, pricing, transferRequest, updateRequest, renewalRequest, null, otherRequests)
     ? "To'lov kutilmoqda"
     : null;
 
@@ -56,7 +58,7 @@ export function AppCard({
       <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${theme.accent}`} />
 
       <div className="p-4 pl-5 flex gap-4">
-        <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} />
+        <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} app={app} />
 
         <div className="flex-1 min-w-0 flex flex-col gap-3">
           {/* Sarlavha + status */}
@@ -64,7 +66,7 @@ export function AppCard({
             <div className="min-w-0">
               <p className="font-semibold text-slate-900 truncate group-hover:text-blue-700 transition-colors">{title}</p>
               <p className={`text-xs font-medium truncate ${theme.text}`}>
-                {SERVICE_LABELS[app.serviceType]}
+                {appLabel(app)}
                 {app.serviceType === "account" && app.accountPlatform ? ` · ${accountLabel(app.accountPlatform, app.accountType)}` : ""}
               </p>
             </div>

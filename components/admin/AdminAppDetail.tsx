@@ -5,6 +5,7 @@ import { AdminAppRow } from "@/components/admin/AdminAppRow";
 import { AdminPaymentRow } from "@/components/admin/AdminPaymentRow";
 import { CustomInvoiceForm } from "@/components/admin/CustomInvoiceForm";
 import { ManualCloseInstallment } from "@/components/admin/ManualCloseInstallment";
+import { RecurringPanel } from "@/components/admin/RecurringPanel";
 import { ActivityTimeline } from "@/components/panel/ActivityTimeline";
 import type { AppView } from "@/lib/firestore/apps";
 import type { PaymentView } from "@/lib/firestore/payments";
@@ -158,6 +159,12 @@ export function AdminAppDetail({
       {tab === "payment" && (
         <div className="flex flex-col gap-4">
           <ManualCloseInstallment app={app} />
+          {app.billing?.recurring && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-5">
+              <h3 className="font-semibold text-slate-900 text-sm mb-3">Davriy to&apos;lov</h3>
+              <RecurringPanel apps={[app]} />
+            </div>
+          )}
           <CustomInvoiceForm app={app} />
           {payments.length ? (
             <div className="flex flex-col gap-3">

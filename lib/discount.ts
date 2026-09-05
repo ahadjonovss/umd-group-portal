@@ -17,11 +17,12 @@ export const DISCOUNT_SERVICE_LABEL: Record<DiscountService, string> = {
 export function categoryForServiceType(s: ServiceType): DiscountService | null {
   if (s === "play-market" || s === "app-store") return "publish";
   if (s === "account") return "account";
+  // maxsus (custom) xizmatlarda chegirma kategoriyasi yo'q — narx biriktirishda kelishiladi
   return null; // transfer/apple-transfer ilova serviceType'lari chegirma bermaydi (so'rov orqali)
 }
 
 // So'rov turi -> chegirma kategoriyasi ("custom" hisob-fakturalarda chegirma yo'q)
-export function categoryForRequest(t: Exclude<RequestType, "custom">): DiscountService {
+export function categoryForRequest(t: Exclude<RequestType, "custom" | "recurring">): DiscountService {
   if (t === "subscription_renewal") return "renewal";
   return t; // "transfer" | "update" | "push_certificate"
 }

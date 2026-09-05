@@ -22,6 +22,11 @@ function esc(t: string) {
   return t.replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, "\\$&");
 }
 
+function dmy(d: Date): string {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
+}
+
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ success: false, error: "Avval tizimga kiring" }, { status: 401 });
@@ -73,8 +78,15 @@ export async function POST(req: NextRequest) {
           ? "push_certificate"
           : reqType === "custom"
             ? "custom"
-            : "transfer";
+            : reqType === "recurring"
+              ? "recurring"
+              : "transfer";
   const appName = (r.appName as string | null) || SERVICE_LABELS[serviceType];
+  // Davriy hisob-fakturada davr oralig'i chekda ko'rsatiladi
+  const periodLine =
+    reqType === "recurring" && r.periodStart?.toDate && r.periodEnd?.toDate
+      ? `\n🗓 Davr: ${esc(dmy(r.periodStart.toDate()))} — ${esc(dmy(r.periodEnd.toDate()))}`
+      : "";
   const usd = r.amountUsd ?? 0;
   // To'lov PAYTIDAGI kurs (so'rov yaratilgan paytdagi emas) — chek uchun aniq summa
   const rate = await getUsdRate();
@@ -88,6 +100,7 @@ export async function POST(req: NextRequest) {
     `📞 ${esc(r.ownerPhone || "-")}\n` +
     `💵 ${esc(String(usd))}$` +
     (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
+    periodLine +
     (taxPhone ? `\n📇 Soliq cheki tel: ${esc(taxPhone)}` : "") +
     tgAdminLink(r.appId as string);
 

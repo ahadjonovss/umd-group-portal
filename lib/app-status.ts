@@ -1,4 +1,5 @@
 import type { ServiceType } from "@/types";
+import { defOf, type HasServiceDef } from "@/lib/service-def";
 
 // Barcha mumkin bo'lgan holatlar.
 export type AppStatus =
@@ -20,7 +21,17 @@ export type AppStatus =
   // obuna to'xtatildi — ilova store'dan olib tashlandi (terminal)
   | "subscription_ended"
   // DUNS raqami ochish — rasmiylashtirish jarayoni
-  | "processing";
+  | "processing"
+  // Maxsus (custom) xizmatlarning o'rta bosqichlari — yorliq/tavsifi
+  // katalogdagi oqimdan (catalogSnapshot.flow) olinadi.
+  | "stage1"
+  | "stage2"
+  | "stage3"
+  | "stage4"
+  | "stage5"
+  | "stage6"
+  | "stage7"
+  | "stage8";
 
 // Chiqarish xizmatlari oqimi. To'lov birinchi bosqichlarda amalga oshadi,
 // tasdiqlangach "preparing" (ish) bosqichiga o'tiladi — alohida "to'lov kutilmoqda" yo'q.
@@ -54,22 +65,41 @@ export const DUNS_FLOW: AppStatus[] = [
   "completed",
 ];
 
+// Maxsus xizmat uchun standart oqim (katalogda oqim berilmagan bo'lsa).
+export const CUSTOM_FLOW: AppStatus[] = ["submitted", "stage1", "completed"];
+
 // Oqimdan tashqari maxsus (terminal) holatlar.
 export const TERMINAL_ERROR: AppStatus[] = ["rejected", "cancelled"];
 
 const TRANSFER_SERVICES: ServiceType[] = ["google-transfer", "apple-transfer"];
 
 export function getStatusFlow(serviceType: ServiceType): AppStatus[] {
+  if (serviceType === "custom") return CUSTOM_FLOW;
   if (serviceType === "account") return ACCOUNT_FLOW;
   if (serviceType === "duns") return DUNS_FLOW;
   return TRANSFER_SERVICES.includes(serviceType) ? TRANSFER_FLOW : PUBLISH_FLOW;
 }
 
+// App-aware variant: custom xizmatda oqim katalog snapshot'idan olinadi.
+export function statusFlowFor(app: HasServiceDef): AppStatus[] {
+  const def = defOf(app);
+  if (def) return def.flow.map((s) => s.key as AppStatus);
+  return getStatusFlow(app.serviceType);
+}
+
 // Avans to'lovi tasdiqlangach o'tiladigan birinchi "ish" bosqichi.
 // To'lov shu bosqichdan OLDINGI holatlarda (submitted / review) amalga oshadi.
 export function workStartStatus(serviceType: ServiceType): AppStatus {
+  if (serviceType === "custom") return "stage1";
   if (serviceType === "duns") return "processing";
   return TRANSFER_SERVICES.includes(serviceType) ? "transferring" : "preparing";
+}
+
+// App-aware variant.
+export function workStartFor(app: HasServiceDef): AppStatus {
+  const def = defOf(app);
+  if (def) return def.workStartKey as AppStatus;
+  return workStartStatus(app.serviceType);
 }
 
 // Ilova hali to'lov-oldi (ish boshlanmagan) bosqichdami — avans shu yerda to'lanadi.
@@ -77,6 +107,14 @@ export function isPreWork(serviceType: ServiceType, status: AppStatus): boolean 
   const flow = getStatusFlow(serviceType);
   const cur = flow.indexOf(status);
   const work = flow.indexOf(workStartStatus(serviceType));
+  return cur >= 0 && work >= 0 && cur < work;
+}
+
+// App-aware variant.
+export function isPreWorkFor(app: HasServiceDef, status: AppStatus): boolean {
+  const flow = statusFlowFor(app);
+  const cur = flow.indexOf(status);
+  const work = flow.indexOf(workStartFor(app));
   return cur >= 0 && work >= 0 && cur < work;
 }
 
