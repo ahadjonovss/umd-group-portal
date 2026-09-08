@@ -116,7 +116,7 @@ export function AdminAppDetail({
       {tab === "info" && (
         <div className="flex flex-col gap-4">
           {/* Boshqaruv (status, chiqarish, obuna) */}
-          <AdminAppRow app={app} paidUsd={paidUsd} paidUzs={paidUzs} cancelFeePct={cancelFeePct} />
+          <AdminAppRow app={app} paidUsd={paidUsd} paidUzs={paidUzs} cancelFeePct={cancelFeePct} pendingPayCount={pendingPay} />
 
           {/* Update paketi holati */}
           {app.updatePackage && (

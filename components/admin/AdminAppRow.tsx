@@ -17,13 +17,25 @@ function storeName(serviceType: AppView["serviceType"]): string {
   return serviceType === "app-store" || serviceType === "apple-transfer" ? "App Store" : "Play Market";
 }
 
-export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }: { app: AppView; paidUsd?: number; paidUzs?: number; cancelFeePct?: number }) {
+export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0, pendingPayCount = 0 }: { app: AppView; paidUsd?: number; paidUzs?: number; cancelFeePct?: number; pendingPayCount?: number }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
   const theme = themeFor(app);
   const status = statusMetaFor(app, app.status);
   const title = appTitle(app);
+
+  // Mijoz chek yuborgan, lekin hali tasdiqlanmagan to'lov bo'lsa — arizani yopish
+  // o'sha chekni ham bekor qiladi. Admin buni bilib turib bosishi kerak.
+  function confirmVoidPending(action: string): boolean {
+    if (pendingPayCount <= 0) return true;
+    return confirm(
+      `Diqqat: ${pendingPayCount} ta tasdiqlanmagan to'lov (mijoz chek yuborgan) bor.\n\n` +
+        `${action} bilan o'sha chek(lar) ham bekor qilinadi.\n\n` +
+        `Agar pul haqiqatda kelgan bo'lsa — avval to'lovni TASDIQLANG, keyin arizani rad etib pul qaytarish oqimidan foydalaning.\n\n` +
+        `Davom etamizmi?`
+    );
+  }
 
   const [date, setDate] = useState("");
   const [url, setUrl] = useState(app.publication.storeUrl ?? "");
@@ -279,8 +291,9 @@ export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }:
                   <button
                     disabled={pending}
                     onClick={() => {
-                      if (paidUsd > 0) setRejectOpen(true);
-                      else start(() => actSetStatus(app.id, "rejected"));
+                      if (paidUsd > 0) return setRejectOpen(true);
+                      if (!confirmVoidPending("Rad etish")) return;
+                      start(() => actSetStatus(app.id, "rejected"));
                     }}
                     className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50"
                   >
@@ -289,7 +302,10 @@ export function AdminAppRow({ app, paidUsd = 0, paidUzs = 0, cancelFeePct = 0 }:
                   {paidUsd <= 0 && (
                     <button
                       disabled={pending}
-                      onClick={() => start(() => actSetStatus(app.id, "cancelled"))}
+                      onClick={() => {
+                        if (!confirmVoidPending("Bekor qilish")) return;
+                        start(() => actSetStatus(app.id, "cancelled"));
+                      }}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-500 hover:bg-slate-200 disabled:opacity-50"
                     >
                       Bekor qilish

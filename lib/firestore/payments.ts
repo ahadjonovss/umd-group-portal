@@ -501,6 +501,8 @@ export async function voidAppPayments(
       const applied = typeof p.walletAppliedUzs === "number" ? p.walletAppliedUzs : 0;
       if (applied > 0) { await adjustWallet(p.ownerUid as string, applied); refunded += applied; }
       await doc.ref.update({ status: "rejected", rejectedAt: FieldValue.serverTimestamp() });
+      // Ariza hujjatidagi qism "yuborildi" holatida qolib ketmasligi uchun
+      await setInstallment(appId, null, String(p.kind ?? "advance"), { state: "rejected" });
       continue;
     }
 

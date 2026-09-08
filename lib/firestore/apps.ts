@@ -1,7 +1,7 @@
 import "server-only";
 import { adminDb, FieldValue, Timestamp, type DocumentSnapshot } from "@/lib/firebase/admin";
 import type { ServiceType } from "@/types";
-import { isTerminalSuccess, type AppStatus } from "@/lib/app-status";
+import { isTerminalSuccess, isTerminalError, type AppStatus } from "@/lib/app-status";
 import { getReviewedAppIds } from "@/lib/firestore/reviews";
 import { getPricing } from "@/lib/firestore/settings";
 import { fullUsd, finalUsd } from "@/lib/payment";
@@ -18,7 +18,8 @@ function etaDate(iso: string): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
-import { newAppPayment, installmentKeysFor, type PaymentState } from "@/lib/payment-state";
+import { newAppPayment, installmentKeysFor, kindToInstallment, type PaymentState } from "@/lib/payment-state";
+import { adjustWallet } from "@/lib/firestore/users";
 
 export type { AppStatus };
 
@@ -344,6 +345,52 @@ function finalDueLine(snap: DocumentSnapshot, serviceType: ServiceType, pricing:
   return "";
 }
 
+// Ariza rad etilganda/bekor qilinganda tasdiqlanmagan (pending) to'lovlarni yopadi.
+// Aks holda mijoz yuborgan chek "tekshiruvda" holatida abadiy qolib ketadi va
+// admin "To'lovlar" ro'yxatida yopilmagan yozuv sifatida turadi.
+//
+// MUHIM: bu faqat TASDIQLANMAGAN to'lovlarga tegishli — tasdiqlangan (confirmed)
+// to'lovlar pul qaytarish oqimi orqali (voidAppPayments + kompensatsiya) yopiladi.
+export async function voidPendingAppPayments(appId: string, actor?: Actor): Promise<number> {
+  const snap = await adminDb
+    .collection("payments")
+    .where("appId", "==", appId)
+    .where("requestId", "==", null)
+    .where("status", "==", "pending")
+    .get();
+  if (snap.empty) return 0;
+
+  const appRef = adminDb.collection(APPS).doc(appId);
+  for (const d of snap.docs) {
+    const p = d.data();
+    await d.ref.update({ status: "rejected", rejectedAt: FieldValue.serverTimestamp() });
+
+    // Hamyondan band qilingan summa qaytariladi
+    const applied = typeof p.walletAppliedUzs === "number" ? p.walletAppliedUzs : 0;
+    if (applied > 0) await adjustWallet(p.ownerUid as string, applied);
+
+    // Ariza hujjatidagi qism holati va chek belgisi tozalanadi
+    const key = kindToInstallment(String(p.kind ?? "advance"));
+    const receiptReset =
+      p.kind === "final"
+        ? { finalReceiptSent: false }
+        : p.kind === "full"
+          ? { receiptSent: false, finalReceiptSent: false }
+          : { receiptSent: false };
+    await appRef.update({ [`payment.installments.${key}.state`]: "rejected", ...receiptReset });
+  }
+
+  if (actor) {
+    await logActivity(
+      appId,
+      "payment_rejected",
+      `Ariza yopilgani uchun ${snap.size} ta tasdiqlanmagan to'lov bekor qilindi`,
+      actor
+    );
+  }
+  return snap.size;
+}
+
 export async function setAppStatus(appId: string, status: AppStatus, actor?: Actor): Promise<void> {
   const ref = adminDb.collection(APPS).doc(appId);
   const snap = await ref.get();
@@ -363,6 +410,9 @@ export async function setAppStatus(appId: string, status: AppStatus, actor?: Act
 
   // Ish topshirilgach — "on_complete" rejasidagi takrorlanuvchi to'lov boshlanadi.
   if (isTerminalSuccess(status)) await startRecurring(appId, "on_complete");
+
+  // Rad etilgan / bekor qilingan arizada tasdiqlanmagan to'lovlar ochiq qolmaydi.
+  if (isTerminalError(status)) await voidPendingAppPayments(appId, actor);
 
   // Foydalanuvchiga xabar (published bundan mustasno — u markPublished orqali alohida xabar beradi)
   if (status !== "published") {
