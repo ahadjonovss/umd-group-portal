@@ -23,11 +23,3 @@ export const LOCALE_SHORT: Record<Locale, string> = {
 export function isLocale(value: string | undefined | null): value is Locale {
   return !!value && (LOCALES as readonly string[]).includes(value);
 }
-
-// Brauzer Accept-Language'idan taxminiy til (faqat birinchi tashrif uchun).
-export function localeFromAcceptLanguage(header: string | null | undefined): Locale {
-  if (!header) return DEFAULT_LOCALE;
-  const first = header.toLowerCase().split(",")[0]?.trim() ?? "";
-  if (first.startsWith("ru")) return "ru";
-  return DEFAULT_LOCALE;
-}

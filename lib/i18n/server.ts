@@ -1,15 +1,16 @@
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { getDictionary, type Dict } from ".";
-import { LOCALE_COOKIE, isLocale, localeFromAcceptLanguage, type Locale } from "./config";
+import { DEFAULT_LOCALE, LOCALE_COOKIE, isLocale, type Locale } from "./config";
 
-// Server component'lar uchun joriy til: cookie ustun, bo'lmasa Accept-Language.
+// Server component'lar uchun joriy til.
+// Platformaning asosiy tili — o'zbekcha. Brauzerning Accept-Language'i ataylab
+// hisobga olinmaydi: O'zbekistonda telefonlar ko'pincha ruscha sozlangan bo'ladi
+// va mijoz o'zi tanlamagan holda ruscha kabinetga tushib qolardi.
+// Til faqat foydalanuvchi UZ/RU tugmasini bosganda (cookie orqali) o'zgaradi.
 export async function getLocale(): Promise<Locale> {
   const cookieStore = await cookies();
   const fromCookie = cookieStore.get(LOCALE_COOKIE)?.value;
-  if (isLocale(fromCookie)) return fromCookie;
-
-  const headerStore = await headers();
-  return localeFromAcceptLanguage(headerStore.get("accept-language"));
+  return isLocale(fromCookie) ? fromCookie : DEFAULT_LOCALE;
 }
 
 // Server component'larda: const t = await getT();
