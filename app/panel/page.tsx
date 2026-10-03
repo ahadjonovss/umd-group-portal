@@ -118,14 +118,16 @@ export default async function PanelPage() {
           : t.panel.requestPayLabel(t.requestType[r.type]);
     payAlerts.push({ appId: r.appId, title, label, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
   }
-  // Obunasi tugagan ilovalar — hali faol uzaytirish so'rovi bo'lmasa ham, uzaytirish
-  // to'lovi eslatma sifatida chiqadi. Bu ikki holatni qamrab oladi: (1) admin allaqachon
-  // "olib tashlagan" (status = subscription_ended), (2) muddati (endDate) o'tib ketgan,
-  // lekin admin hali qo'lda pullamagan — status hamon "published" bo'lib qolaveradi
-  // (faqat eslatma yuboriladi, avtomatik o'zgartirilmaydi — subscription-reminder cron'ga qarang).
+  // Muddati (endDate) o'tib ketgan, lekin admin hali qo'lda to'xtatmagan ilovalar —
+  // status hamon "published" bo'lib turadi (subscription-reminder cron faqat eslatma
+  // yuboradi, statusni o'zgartirmaydi). Shularga uzaytirish to'lovi eslatma sifatida chiqadi.
   // "renewal_pending" key — bosilganda so'rov shu yerning o'zida yaratilib, to'lov darhol ochiladi.
+  //
+  // Admin obunani ataylab to'xtatgan bo'lsa (status = subscription_ended) — eslatma CHIQMAYDI:
+  // bu qaror biznes tomonidan qabul qilingan, mijozni to'lovga chorlash noto'g'ri bo'lardi.
+  // Mijoz baribir ilova sahifasidagi "Obunani tiklash" bo'limi orqali o'zi uzaytira oladi.
   for (const a of apps) {
-    if (a.status !== "subscription_ended" && !isDatedExpired(a)) continue;
+    if (!isDatedExpired(a)) continue;
     const lastRenewal = renewalByApp[a.id];
     // Eski so'rov to'lanishi mumkin bo'lsa (yuqoridagi loop allaqachon ko'rsatadi) yoki
     // to'langan bo'lsa — qo'shimcha eslatma shart emas. Aks holda (so'rov yo'q, yoki
