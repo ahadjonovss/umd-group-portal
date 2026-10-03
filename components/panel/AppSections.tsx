@@ -13,6 +13,7 @@ import { pkgActive, pkgDaysLeft, getInstallment, isPayable, type PayState } from
 import { useT } from "@/components/i18n/LanguageProvider";
 import { Rich } from "@/components/i18n/Rich";
 import { requestStatusLabelOf } from "@/lib/i18n/format";
+import { TELEGRAM_MANAGER_AT } from "@/lib/site";
 
 export function ClockIcon() {
   return (
@@ -418,7 +419,7 @@ export function UpdateSection({
       )}
       {req.status === "in_progress" && req.receiptSent && (
         <div className="rounded-lg bg-white ring-1 ring-slate-100 p-3 text-xs text-slate-600 leading-snug">
-          <Rich text={app.serviceType === "app-store" ? t.sections.updateHintIos : t.sections.updateHintAndroid} />
+          <Rich text={app.serviceType === "app-store" ? t.sections.updateHintIos : t.sections.updateHintAndroid(TELEGRAM_MANAGER_AT)} />
         </div>
       )}
     </div>

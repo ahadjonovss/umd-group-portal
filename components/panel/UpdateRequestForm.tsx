@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { ServiceType } from "@/types";
 import { useT } from "@/components/i18n/LanguageProvider";
+import { TELEGRAM_MANAGER_AT } from "@/lib/site";
 import { Rich } from "@/components/i18n/Rich";
 
 export function UpdateRequestForm({
@@ -66,7 +67,7 @@ export function UpdateRequestForm({
             <p className="text-sm font-semibold text-emerald-800 mb-1">{t.requestPage.updateDoneAndroidTitle}</p>
             <p className="text-sm text-emerald-700"><Rich text={t.requestPage.updateDoneAndroidBody} /></p>
             <div className="mt-2 inline-block bg-white rounded-lg px-3 py-1.5 text-sm font-mono font-bold text-emerald-700 border border-emerald-200">
-              @umdgroupadmin
+              {TELEGRAM_MANAGER_AT}
             </div>
           </div>
         ) : (

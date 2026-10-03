@@ -6,6 +6,7 @@ import { TermsTabs } from "@/components/TermsTabs";
 import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 import { Rich } from "@/components/i18n/Rich";
 import { getT } from "@/lib/i18n/server";
+import { TELEGRAM_MANAGER_URL } from "@/lib/site";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getT();
@@ -62,7 +63,7 @@ export default async function FoydalanishShartlariPage() {
             <p className="text-xs text-slate-500 mt-0.5">{t.termsPage.questionsSub}</p>
           </div>
           <a
-            href="https://t.me/umdgroupadmin"
+            href={TELEGRAM_MANAGER_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 flex items-center gap-2 h-9 px-4 bg-[#2AABEE] text-white text-sm font-medium rounded-xl hover:bg-[#1a9bde] transition-colors"

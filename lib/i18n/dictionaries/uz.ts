@@ -1126,7 +1126,8 @@ export const uz = {
     updateTitle: "Update so'rovi",
     updateHintIos:
       "Yangi kodni **GitHub** repozitoriyangizga **push** qiling — jamoamiz App Store'ga yuklaydi.",
-    updateHintAndroid: "Yangi **.aab** faylni Telegram **@umdgroupadmin** ga yuboring.",
+    updateHintAndroid: (handle: string) =>
+      `Yangi **.aab** faylni Telegram **${handle}** ga yuboring.`,
 
     pkgActive: "Update paketi faol",
     pkgDaysLeft: (days: number) => `${days} kun qoldi`,

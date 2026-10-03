@@ -25,6 +25,7 @@ import {
   type PlayMarketStep5,
 } from "@/lib/validations/play-market";
 import { useT } from "@/components/i18n/LanguageProvider";
+import { TELEGRAM_MANAGER_AT } from "@/lib/site";
 
 const STORAGE_KEY = "pm_draft";
 
@@ -381,7 +382,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
                 {t.playMarketForm.aabBodyPre} <strong>{t.playMarketForm.aabBodyFile}</strong> {t.playMarketForm.aabBodyPost}
               </p>
               <div className="bg-white rounded-lg px-3 py-2 text-sm font-mono font-bold text-blue-700 border border-blue-200 inline-block">
-                @umdgroupadmin
+                {TELEGRAM_MANAGER_AT}
               </div>
             </div>
 

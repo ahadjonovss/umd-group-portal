@@ -1112,8 +1112,8 @@ export const ru: typeof uz = {
     updateTitle: "Заявка на обновление",
     updateHintIos:
       "Сделайте **push** нового кода в ваш репозиторий **GitHub** — наша команда загрузит его в App Store.",
-    updateHintAndroid:
-      "Отправьте новый файл **.aab** в Telegram на **@umdgroupadmin**.",
+    updateHintAndroid: (handle: string) =>
+      `Отправьте новый файл **.aab** в Telegram на **${handle}**.`,
 
     pkgActive: "Пакет обновлений активен",
     pkgDaysLeft: (days: number) => `осталось ${days} дн.`,

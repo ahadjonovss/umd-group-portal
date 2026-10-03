@@ -10,6 +10,7 @@ import { advanceUsdApp } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { getT } from "@/lib/i18n/server";
+import { TELEGRAM_MANAGER_URL } from "@/lib/site";
 import type { Dict } from "@/lib/i18n";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -107,7 +108,7 @@ function SuccessContent({ service, payment, t }: { service: string | null; payme
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800 text-center">
               <span className="font-semibold">.aab</span> {t.success.aabTelegram}
               <a
-                href="https://t.me/umdgroupadmin"
+                href={TELEGRAM_MANAGER_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 flex items-center justify-center gap-2 h-10 bg-[#2AABEE] text-white text-sm font-medium rounded-xl hover:bg-[#1a9bde] active:scale-95 transition-all"
