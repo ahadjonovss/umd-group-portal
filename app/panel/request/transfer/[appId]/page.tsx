@@ -10,10 +10,14 @@ import { getUsdRate } from "@/lib/cbu";
 import { transferUsd, finalUsd } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { categoryForRequest, applyDiscount } from "@/lib/discount";
-import { SERVICE_LABELS } from "@/lib/labels";
+import { getT } from "@/lib/i18n/server";
+import { appTitleOf } from "@/lib/i18n/format";
 import { TransferRequestForm } from "@/components/panel/TransferRequestForm";
 
-export const metadata: Metadata = { title: "Transfer so'rovi — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.requestPage.transferMeta };
+}
 export const dynamic = "force-dynamic";
 
 export default async function TransferRequestPage({
@@ -40,7 +44,8 @@ export default async function TransferRequestPage({
   const discPct = disc?.percent ?? 0;
   const usd = Math.round(applyDiscount(transferUsd(app.serviceType, pricing), discPct));
   const uzs = rate ? Math.round(usd * rate) : null;
-  const appName = app.appName || SERVICE_LABELS[app.serviceType];
+  const t = await getT();
+  const appName = appTitleOf(t, app.appName, app.serviceType);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -49,14 +54,14 @@ export default async function TransferRequestPage({
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Kabinetga qaytish
+          {t.requestPage.backToPanel}
         </Link>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6">
         <div className="flex items-center gap-2 mb-5">
           <Logo size={30} color="#3a3733" />
-          <h1 className="text-xl font-bold text-slate-900">Transferga so&apos;rov</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t.requestPage.transferTitle}</h1>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
           <TransferRequestForm

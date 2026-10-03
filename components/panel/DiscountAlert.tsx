@@ -1,5 +1,9 @@
-import { DISCOUNT_SERVICE_LABEL, type DiscountService } from "@/lib/discount";
+"use client";
+
+import { type DiscountService } from "@/lib/discount";
 import { formatDate } from "@/lib/labels";
+import { useT } from "@/components/i18n/LanguageProvider";
+import { Rich } from "@/components/i18n/Rich";
 
 export interface DiscountAlertItem {
   id: string;
@@ -10,6 +14,7 @@ export interface DiscountAlertItem {
 
 // Foydalanuvchining amaldagi chegirmalari haqida eslatma.
 export function DiscountAlert({ discounts }: { discounts: DiscountAlertItem[] }) {
+  const t = useT();
   if (!discounts.length) return null;
 
   return (
@@ -22,12 +27,11 @@ export function DiscountAlert({ discounts }: { discounts: DiscountAlertItem[] })
           <span className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-xl flex-shrink-0">🎁</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-amber-800">
-              Sizga <span className="font-bold">{DISCOUNT_SERVICE_LABEL[d.service]}</span> xizmatiga{" "}
-              <span className="font-bold">−{d.percent}%</span> chegirma berilgan!
+              <Rich text={t.panel.discountMessage(t.discountService[d.service], d.percent)} />
             </p>
             <p className="text-xs text-amber-700">
-              To&apos;lov qilganingizda avtomatik qo&apos;llanadi
-              {d.expiresAt ? ` · ${formatDate(d.expiresAt)} gacha amal qiladi` : ""}
+              {t.panel.discountAuto}
+              {d.expiresAt ? t.panel.discountUntil(formatDate(d.expiresAt)) : ""}
             </p>
           </div>
         </div>

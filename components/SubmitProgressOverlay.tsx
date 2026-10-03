@@ -1,14 +1,16 @@
 "use client";
 
-const STAGES = [
-  { label: "Ma'lumotlar yuklanmoqda...", until: 20 },
-  { label: "Server ga yuborilmoqda...",  until: 80 },
-  { label: "Telegram-ga yuborilmoqda...", until: 95 },
-  { label: "Yakunlanmoqda...",            until: 100 },
-];
+import { useT } from "@/components/i18n/LanguageProvider";
+import type { Dict } from "@/lib/i18n";
 
-function getLabel(p: number) {
-  return STAGES.find((s) => p <= s.until)?.label ?? "Yakunlanmoqda...";
+function getLabel(p: number, t: Dict) {
+  const stages = [
+    { label: t.submitOverlay.stage1, until: 20 },
+    { label: t.submitOverlay.stage2, until: 80 },
+    { label: t.submitOverlay.stage3, until: 95 },
+    { label: t.submitOverlay.stage4, until: 100 },
+  ];
+  return stages.find((s) => p <= s.until)?.label ?? t.submitOverlay.stage4;
 }
 
 interface Props {
@@ -18,7 +20,8 @@ interface Props {
 }
 
 export function SubmitProgressOverlay({ progress, error, onRetry }: Props) {
-  const label = getLabel(progress);
+  const t = useT();
+  const label = getLabel(progress, t);
   const isDone = progress >= 100;
 
   const r = 54;
@@ -39,7 +42,7 @@ export function SubmitProgressOverlay({ progress, error, onRetry }: Props) {
               </svg>
             </div>
             <div className="text-center">
-              <p className="font-semibold text-slate-900 mb-1.5">Xato yuz berdi</p>
+              <p className="font-semibold text-slate-900 mb-1.5">{t.submitOverlay.errorTitle}</p>
               <p className="text-sm text-red-600 leading-relaxed">{error}</p>
             </div>
             {onRetry && (
@@ -47,7 +50,7 @@ export function SubmitProgressOverlay({ progress, error, onRetry }: Props) {
                 onClick={onRetry}
                 className="h-10 px-6 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 active:scale-95 transition-all"
               >
-                Qayta urinib ko&apos;ring
+                {t.submitOverlay.retry}
               </button>
             )}
           </>
@@ -60,8 +63,8 @@ export function SubmitProgressOverlay({ progress, error, onRetry }: Props) {
               </svg>
             </div>
             <div className="text-center">
-              <p className="font-semibold text-slate-900">Muvaffaqiyatli yuborildi!</p>
-              <p className="text-sm text-slate-500 mt-1">Sahifa yuklanmoqda...</p>
+              <p className="font-semibold text-slate-900">{t.submitOverlay.doneTitle}</p>
+              <p className="text-sm text-slate-500 mt-1">{t.submitOverlay.doneSubtitle}</p>
             </div>
           </>
 
@@ -101,7 +104,7 @@ export function SubmitProgressOverlay({ progress, error, onRetry }: Props) {
             {/* Label */}
             <div className="text-center">
               <p className="text-sm font-medium text-slate-700">{label}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Iltimos, sahifani yopmang</p>
+              <p className="text-xs text-slate-400 mt-0.5">{t.submitOverlay.dontClose}</p>
             </div>
 
             {/* Linear bar */}

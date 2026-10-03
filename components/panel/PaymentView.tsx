@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export interface PaymentViewProps {
   usd: number;
@@ -36,11 +37,13 @@ export function PaymentView({
   receiptSent,
   endpoint = "/api/payment/receipt",
   idPayload = {},
-  amountLabel = "Avans (oldindan)",
+  amountLabel,
   askTaxPhone = false,
   discountPercent = 0,
   walletUzs = 0,
 }: PaymentViewProps) {
+  const t = useT();
+  const label = amountLabel ?? t.panel.payDefaultLabel;
   const router = useRouter();
   // Tartib: xizmat narxi -> chegirma -> hamyon (chegirma hamyondan OLDIN)
   const grossUzs = discountPercent > 0 && uzs != null ? Math.round(uzs / (1 - Math.min(discountPercent, 100) / 100)) : uzs;
@@ -72,9 +75,9 @@ export function PaymentView({
   }
 
   async function send() {
-    if (!file) { setError("Chek rasmini yuklang"); return; }
+    if (!file) { setError(t.panel.payErrNoReceipt); return; }
     if (askTaxPhone && !UZ_PHONE_RE.test(fullPhone)) {
-      setError("Telefon raqamini to'liq kiriting: +998 va 9 ta raqam");
+      setError(t.panel.payErrPhone);
       return;
     }
     setStatus("loading");
@@ -86,12 +89,12 @@ export function PaymentView({
       fd.append("receipt", file);
       const res = await fetch(endpoint, { method: "POST", body: fd });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Xato yuz berdi");
+      if (!json.success) throw new Error(json.error || t.common.error);
       setStatus("done");
       router.refresh();
     } catch (err) {
       setStatus("error");
-      setError(err instanceof Error ? err.message : "Xato yuz berdi");
+      setError(err instanceof Error ? err.message : t.common.error);
     }
   }
 
@@ -104,8 +107,8 @@ export function PaymentView({
           </svg>
         </span>
         <div>
-          <p className="text-sm font-semibold text-emerald-800">Chek yuborildi</p>
-          <p className="text-xs text-emerald-600">Admin tasdiqlashini kuting.</p>
+          <p className="text-sm font-semibold text-emerald-800">{t.panel.paySent}</p>
+          <p className="text-xs text-emerald-600">{t.panel.paySentSub}</p>
         </div>
       </div>
     );
@@ -120,36 +123,36 @@ export function PaymentView({
     <div className="rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm overflow-hidden">
       {/* To'lanadigan summa + breakdown */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-700 p-4 text-white">
-        <p className="text-xs text-slate-300">{amountLabel}</p>
+        <p className="text-xs text-slate-300">{label}</p>
 
         {/* Hisob-kitob: narx → chegirma → hamyon → to'lash */}
         {showBreakdown && (
           <div className="mt-2 mb-2.5 rounded-xl bg-white/10 p-2.5 text-xs flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-slate-300">Xizmat narxi</span>
-              <span className="font-medium text-slate-100">{(grossUzs ?? 0).toLocaleString("en-US")} so&apos;m</span>
+              <span className="text-slate-300">{t.panel.payServicePrice}</span>
+              <span className="font-medium text-slate-100">{(grossUzs ?? 0).toLocaleString("en-US")} {t.common.sum}</span>
             </div>
             {discountUzs > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-emerald-300">Chegirma (−{discountPercent}%)</span>
-                <span className="font-semibold text-emerald-300">−{discountUzs.toLocaleString("en-US")} so&apos;m</span>
+                <span className="text-emerald-300">{t.panel.payDiscount(discountPercent)}</span>
+                <span className="font-semibold text-emerald-300">−{discountUzs.toLocaleString("en-US")} {t.common.sum}</span>
               </div>
             )}
             {walletApplied > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-emerald-300">🪙 Hamyondan</span>
-                <span className="font-semibold text-emerald-300">−{walletApplied.toLocaleString("en-US")} so&apos;m</span>
+                <span className="text-emerald-300">{t.panel.payFromWallet}</span>
+                <span className="font-semibold text-emerald-300">−{walletApplied.toLocaleString("en-US")} {t.common.sum}</span>
               </div>
             )}
           </div>
         )}
 
-        <p className="text-[11px] text-slate-400">To&apos;lash kerak</p>
+        <p className="text-[11px] text-slate-400">{t.panel.payToPay}</p>
         <p className="text-3xl font-bold tracking-tight">
-          {payAmount != null ? `${payAmount.toLocaleString("en-US")} so'm` : `$${usd}`}
+          {payAmount != null ? `${payAmount.toLocaleString("en-US")} ${t.common.sum}` : `$${usd}`}
         </p>
         <p className="text-xs text-slate-300 mt-0.5">
-          ${usd}{rate ? ` · 1$=${rate.toLocaleString("en-US")} so'm` : ""}
+          ${usd}{rate ? t.panel.payRate(rate.toLocaleString("en-US")) : ""}
         </p>
       </div>
 
@@ -158,7 +161,7 @@ export function PaymentView({
         <div className="flex gap-2.5">
           {step(1)}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-800 mb-1.5">Ushbu kartaga o&apos;tkazing</p>
+            <p className="text-sm font-medium text-slate-800 mb-1.5">{t.panel.payStep1}</p>
             {cardNumber ? (
               <div className="rounded-xl bg-slate-50 ring-1 ring-slate-200 px-3 py-2.5 flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -169,11 +172,11 @@ export function PaymentView({
                   onClick={copyCard}
                   className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition-colors"
                 >
-                  {copied ? "✓" : "Nusxa"}
+                  {copied ? "✓" : t.panel.payCopy}
                 </button>
               </div>
             ) : (
-              <p className="text-xs text-slate-500">Karta raqami hali sozlanmagan. Admin bilan bog&apos;laning.</p>
+              <p className="text-xs text-slate-500">{t.panel.payNoCard}</p>
             )}
           </div>
         </div>
@@ -183,8 +186,8 @@ export function PaymentView({
           <div className="flex gap-2.5">
             {step(2)}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-800">Telefon raqami</p>
-              <p className="text-[11px] text-slate-400 mb-1.5">Soliqdan elektron chekni SMS orqali yuborish uchun</p>
+              <p className="text-sm font-medium text-slate-800">{t.panel.payPhone}</p>
+              <p className="text-[11px] text-slate-400 mb-1.5">{t.panel.payPhoneHint}</p>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -205,15 +208,15 @@ export function PaymentView({
         <div className="flex gap-2.5">
           {step(askTaxPhone ? 3 : 2)}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-slate-800 mb-1.5">To&apos;lov chekini (skrinshot) yuklang</p>
+            <p className="text-sm font-medium text-slate-800 mb-1.5">{t.panel.payUploadReceipt}</p>
             {preview ? (
               <div className="flex items-center gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-200 p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={preview} alt="chek" className="w-16 h-16 rounded-lg object-cover ring-1 ring-slate-200" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-emerald-600">✓ Rasm tanlandi</p>
+                  <p className="text-xs font-medium text-emerald-600">{t.panel.payImageSelected}</p>
                   <button onClick={() => onPick(null)} className="text-xs text-red-600 hover:underline mt-0.5">
-                    O&apos;chirish
+                    {t.panel.payRemove}
                   </button>
                 </div>
               </div>
@@ -222,7 +225,7 @@ export function PaymentView({
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="text-xs font-medium">Rasm tanlash</span>
+                <span className="text-xs font-medium">{t.panel.payPickImage}</span>
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => onPick(e.target.files?.[0] ?? null)} />
               </label>
             )}
@@ -236,7 +239,7 @@ export function PaymentView({
           disabled={status === "loading"}
           className="h-11 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 active:scale-[0.99] transition-all disabled:opacity-50 shadow-sm shadow-emerald-600/20"
         >
-          {status === "loading" ? "Yuborilmoqda…" : "Chekni jo'natish"}
+          {status === "loading" ? t.panel.paySending : t.panel.paySubmit}
         </button>
       </div>
     </div>

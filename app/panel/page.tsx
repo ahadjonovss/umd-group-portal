@@ -19,16 +19,20 @@ import { TelegramLinkAlert } from "@/components/panel/TelegramLinkAlert";
 import { requireUser, isAdmin } from "@/lib/auth/dal";
 import { getUserApps } from "@/lib/firestore/apps";
 import { isTerminalSuccess, isTerminalError } from "@/lib/app-status";
-import { SERVICE_LABELS, appTitle } from "@/lib/labels";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { getT } from "@/lib/i18n/server";
+import { appTitleFor } from "@/lib/i18n/format";
 import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUserRequests } from "@/lib/firestore/requests";
 import { getUsdRate } from "@/lib/cbu";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
 import { getInstallment, isPayable } from "@/lib/payment-state";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
-import { REQUEST_TYPE_LABEL } from "@/lib/request-status";
 
-export const metadata: Metadata = { title: "Kabinet — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.panel.meta };
+}
 
 // Har doim yangi ma'lumot (cache'lanmasin).
 export const dynamic = "force-dynamic";
@@ -44,7 +48,8 @@ function isDatedExpired(a: { status: string; subscription: { active: boolean; en
 
 export default async function PanelPage() {
   const user = await requireUser();
-  const [apps, admin, pricing, requests, discounts, walletUzs, telegram, paymentInfo, usdRate] = await Promise.all([
+  const [t, apps, admin, pricing, requests, discounts, walletUzs, telegram, paymentInfo, usdRate] = await Promise.all([
+    getT(),
     getUserApps(user.uid),
     isAdmin(),
     getPricing(),
@@ -74,7 +79,7 @@ export default async function PanelPage() {
 
   const reviewItems: ReviewItem[] = apps.map((a) => ({
     id: a.id,
-    label: appTitle(a),
+    label: appTitleFor(t, a),
     reviewed: a.reviewed,
     canReview: isTerminalSuccess(a.status),
   }));
@@ -88,24 +93,29 @@ export default async function PanelPage() {
   const payAlerts: PaymentAlertItem[] = [];
   for (const a of apps) {
     if (isTerminalError(a.status) || a.status === "transferred" || a.status === "subscription_ended") continue;
-    const title = appTitle(a);
+    const title = appTitleFor(t, a);
     const pct = discPctFor(a.serviceType);
     const adv = getInstallment(a.payment, "advance");
     const fin = getInstallment(a.payment, "final");
     if (isPayable(adv)) {
       const amt = Math.round(applyDiscount(advanceUsdApp(a, pricing), pct));
-      if (amt > 0) payAlerts.push({ appId: a.id, title, label: fin ? "Avans to'lovi" : "To'lov", usd: amt, key: { type: "app", appId: a.id, kind: "advance" } });
+      if (amt > 0) payAlerts.push({ appId: a.id, title, label: fin ? t.panel.advanceLabel : t.panel.paymentLabel, usd: amt, key: { type: "app", appId: a.id, kind: "advance" } });
     }
     if (isPayable(fin)) {
       const amt = Math.round(applyDiscount(finalUsdApp(a, pricing), pct));
-      if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Yakuniy to'lov", usd: amt, key: { type: "app", appId: a.id, kind: "final" } });
+      if (amt > 0) payAlerts.push({ appId: a.id, title, label: t.panel.finalLabel, usd: amt, key: { type: "app", appId: a.id, kind: "final" } });
     }
   }
   for (const r of requests) {
     if (r.status === "rejected" || r.status === "cancelled") continue;
     if (!isPayable(getInstallment(r.payment, "full")) || r.amountUsd <= 0) continue;
-    const title = r.appName || SERVICE_LABELS[r.serviceType];
-    const label = r.type === "recurring" ? "Davriy to'lov" : r.type === "custom" ? "Hisob-faktura" : `${REQUEST_TYPE_LABEL[r.type]} to'lovi`;
+    const title = r.appName || t.service.full[r.serviceType];
+    const label =
+      r.type === "recurring"
+        ? t.panel.recurringPayLabel
+        : r.type === "custom"
+          ? t.panel.invoiceLabel
+          : t.panel.requestPayLabel(t.requestType[r.type]);
     payAlerts.push({ appId: r.appId, title, label, usd: r.amountUsd, key: { type: "request", requestId: r.id } });
   }
   // Obunasi tugagan ilovalar — hali faol uzaytirish so'rovi bo'lmasa ham, uzaytirish
@@ -122,10 +132,10 @@ export default async function PanelPage() {
     // holati noaniq/eski migratsiyalanmagan yozuv) — eslatma baribir chiqadi.
     const lastFull = lastRenewal ? getInstallment(lastRenewal.payment, "full") : null;
     if (lastFull && (lastFull.state === "confirmed" || isPayable(lastFull))) continue;
-    const title = appTitle(a);
+    const title = appTitleFor(t, a);
     const disc = discounts.find((d) => d.service === "renewal" && (!d.boundAppId || d.boundAppId === a.id));
     const amt = Math.round(applyDiscount(renewalUsd(a, pricing), disc?.percent ?? 0));
-    if (amt > 0) payAlerts.push({ appId: a.id, title, label: "Obunani uzaytirish", usd: amt, key: { type: "renewal_pending", appId: a.id } });
+    if (amt > 0) payAlerts.push({ appId: a.id, title, label: t.panel.renewalLabel, usd: amt, key: { type: "renewal_pending", appId: a.id } });
   }
 
   // Yakunlangan (chiqarilgan / transfer / akkaunt), lekin hali baholanmagan xizmatlar — eslatma banneri
@@ -133,7 +143,7 @@ export default async function PanelPage() {
     .filter((a) => isTerminalSuccess(a.status) && !a.reviewed)
     .map((a) => ({
       id: a.id,
-      label: appTitle(a),
+      label: appTitleFor(t, a),
       serviceType: a.serviceType,
     }));
 
@@ -150,12 +160,13 @@ export default async function PanelPage() {
             <span className="text-sm font-bold text-slate-900">UMD GROUP</span>
           </Link>
           <div className="flex-1" />
+          <LanguageSwitcher className="mr-1" />
           {admin && (
             <Link
               href="/admin"
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors"
             >
-              Admin
+              {t.panel.admin}
             </Link>
           )}
           <AuthButtons />
@@ -178,9 +189,9 @@ export default async function PanelPage() {
                 </div>
                 <div className="min-w-0">
                   <h1 className="text-lg sm:text-2xl font-bold text-white truncate">
-                    Salom, {user.name || user.email} 👋
+                    {t.panel.greeting(user.name || user.email || "")}
                   </h1>
-                  <p className="text-slate-300 mt-0.5 text-xs sm:text-sm truncate">Ilovalaringiz, holati va obuna muddati</p>
+                  <p className="text-slate-300 mt-0.5 text-xs sm:text-sm truncate">{t.panel.greetingSub}</p>
                 </div>
               </div>
               <div className="flex-shrink-0 flex items-center gap-2">
@@ -204,17 +215,17 @@ export default async function PanelPage() {
         {/* Ilovalar */}
         {apps.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
-            <p className="text-slate-500 text-sm">Hali ariza yubormagansiz.</p>
+<p className="text-slate-500 text-sm">{t.panel.emptyTitle}</p>
             <Link
               href="/"
               className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
             >
-              Birinchi arizani yuborish
+              {t.panel.emptyCta}
             </Link>
           </div>
         ) : (
           <div>
-            <h2 className="text-sm font-bold text-slate-900 mb-3 px-0.5">Ilovalarim <span className="text-slate-400 font-normal">· {apps.length} ta</span></h2>
+            <h2 className="text-sm font-bold text-slate-900 mb-3 px-0.5">{t.panel.myApps} <span className="text-slate-400 font-normal">{t.panel.appsCount(apps.length)}</span></h2>
             <PanelApps
               apps={apps}
               pricing={pricing}

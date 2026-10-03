@@ -4,19 +4,24 @@ import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { MiniAppAutoLogin } from "@/components/auth/MiniAppAutoLogin";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Kirish — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.auth.loginMeta };
+}
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const t = await getT();
   return (
     <AuthShell
-      title="Xush kelibsiz"
-      subtitle="Hisobingizga kiring"
+      title={t.auth.loginTitle}
+      subtitle={t.auth.loginSubtitle}
       footer={
         <>
-          Hisobingiz yo&apos;qmi?{" "}
+          {t.auth.noAccount}{" "}
           <Link href="/register" className="font-semibold text-blue-600 hover:text-blue-700">
-            Ro&apos;yxatdan o&apos;tish
+            {t.auth.registerLink}
           </Link>
         </>
       }

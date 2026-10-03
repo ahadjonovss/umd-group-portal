@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { loginWithEmail, authErrorMessage } from "@/lib/auth/client";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export function LoginForm() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/panel";
@@ -27,8 +29,8 @@ export function LoginForm() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      if (err instanceof FirebaseError) setError(authErrorMessage(err.code));
-      else setError(err instanceof Error ? err.message : "Xatolik yuz berdi");
+      if (err instanceof FirebaseError) setError(authErrorMessage(err.code, t));
+      else setError(err instanceof Error ? err.message : t.auth.errors.generic);
       setLoading(false);
     }
   }
@@ -36,7 +38,7 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <Input
-        label="Email"
+        label={t.auth.email}
         type="email"
         required
         autoComplete="email"
@@ -45,16 +47,16 @@ export function LoginForm() {
         onChange={(e) => setEmail(e.target.value)}
       />
       <PasswordInput
-        label="Parol"
+        label={t.auth.password}
         required
         autoComplete="current-password"
-        placeholder="••••••••"
+        placeholder={t.auth.passwordPlaceholder}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       {error && <p className="text-sm text-red-600">❌ {error}</p>}
       <Button type="submit" size="lg" loading={loading} className="w-full">
-        Kirish
+        {t.auth.submitLogin}
       </Button>
     </form>
   );

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { Logo } from "@/components/Logo";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { getT } from "@/lib/i18n/server";
 
 interface FormPageLayoutProps {
   title: string;
@@ -8,7 +10,8 @@ interface FormPageLayoutProps {
   children: ReactNode;
 }
 
-export function FormPageLayout({ title, subtitle, children }: FormPageLayoutProps) {
+export async function FormPageLayout({ title, subtitle, children }: FormPageLayoutProps) {
+  const t = await getT();
   return (
     <div className="min-h-screen bg-gradient-subtle">
       {/* Header */}
@@ -23,12 +26,13 @@ export function FormPageLayout({ title, subtitle, children }: FormPageLayoutProp
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </span>
-            Orqaga
+            {t.common.back}
           </Link>
 
           <div className="flex-1" />
 
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <Logo size={28} color="#3a3733" />
             <span className="text-sm font-bold text-slate-900 hidden sm:block">UMD GROUP</span>
           </div>

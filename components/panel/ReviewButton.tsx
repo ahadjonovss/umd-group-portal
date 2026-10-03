@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ReviewModal } from "@/components/ReviewModal";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export function ReviewButton({
   appId,
@@ -11,6 +12,7 @@ export function ReviewButton({
   appId: string;
   reviewed: boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [done, setDone] = useState(reviewed);
@@ -21,7 +23,7 @@ export function ReviewButton({
         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
-        Baholangan
+        {t.panel.rated}
       </span>
     );
   }
@@ -35,7 +37,7 @@ export function ReviewButton({
         <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
         </svg>
-        Baholash
+        {t.panel.rateCta}
       </button>
 
       {open && (
@@ -48,8 +50,8 @@ export function ReviewButton({
           }}
           endpoint="/api/reviews/app"
           extraPayload={{ appId }}
-          title="Xizmatni baholang"
-          subtitle="Tajribangiz haqida fikr bildiring"
+          title={t.panel.reviewModalTitle}
+          subtitle={t.panel.reviewModalSub}
           hideName
         />
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -17,18 +17,18 @@ import { TermsConfirmModal } from "@/components/TermsConfirmModal";
 import type { Pricing } from "@/lib/firestore/settings";
 
 import {
-  appStoreStep1Schema,
-  appStoreStep2Schema,
-  appStoreStep3Schema,
+  makeAppStoreStep1Schema,
+  makeAppStoreStep2Schema,
+  makeAppStoreStep3Schema,
   appStoreStep5Schema,
   type AppStoreStep1,
   type AppStoreStep2,
   type AppStoreStep3,
   type AppStoreStep5,
 } from "@/lib/validations/app-store";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 const STORAGE_KEY = "as_draft";
-const STEPS = ["Mijoz", "Ilova", "GitHub", "Grafika", "Qo'shimcha"];
 
 interface FormState {
   step1?: AppStoreStep1;
@@ -38,6 +38,14 @@ interface FormState {
 }
 
 export function AppStoreForm({ pricing }: { pricing: Pricing }) {
+  const t = useT();
+  const STEPS = [
+    t.form.stepClient,
+    t.form.stepApp,
+    t.form.stepGithub,
+    t.form.stepGraphics,
+    t.form.stepExtra,
+  ];
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formState, setFormState] = useState<FormState>({});
@@ -86,18 +94,18 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
   }
 
   const form1 = useForm<AppStoreStep1>({
-    resolver: zodResolver(appStoreStep1Schema),
+    resolver: zodResolver(useMemo(() => makeAppStoreStep1Schema(t), [t])),
     defaultValues: formState.step1 || { fullName: "", phone: "", email: "", telegram: "" },
   });
 
   const form2 = useForm<AppStoreStep2>({
-    resolver: zodResolver(appStoreStep2Schema),
+    resolver: zodResolver(useMemo(() => makeAppStoreStep2Schema(t), [t])),
     defaultValues: formState.step2 || { appName: "", subtitle: "", fullDescription: "", privacyPolicyUrl: "", supportUrl: "" },
   });
   const fullDescValue = form2.watch("fullDescription") || "";
 
   const form3 = useForm<AppStoreStep3>({
-    resolver: zodResolver(appStoreStep3Schema),
+    resolver: zodResolver(useMemo(() => makeAppStoreStep3Schema(t), [t])),
     defaultValues: formState.step3 || { githubRepoUrl: "" },
   });
 
@@ -128,7 +136,7 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
   }
 
   function onStep4Next() {
-    if (iphoneScreenshots.length < 3) { setIphoneError("Kamida 3 ta iPhone skrinshot talab qilinadi"); return; }
+    if (iphoneScreenshots.length < 3) { setIphoneError(t.appStoreForm.iphoneRequired); return; }
     setIphoneError("");
     saveDraft(formState, 5);
     setStep(5);
@@ -190,14 +198,14 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
       );
       stopServerAnim();
       await animateProgress(progressRef.current, 100, 500);
-      if (!json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
+      if (!json.success) throw new Error(json.error || json.message || t.common.error);
       localStorage.removeItem(STORAGE_KEY);
       await new Promise((r) => setTimeout(r, 500));
       router.push(`/success?service=app-store&appId=${json.id}`);
     } catch (err: unknown) {
       stopServerAnim();
       setSubmitStatus("error");
-      setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
+      setSubmitError(err instanceof Error ? err.message : t.form.unexpectedError);
     }
   }
 
@@ -219,11 +227,11 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
           resolve(JSON.parse(xhr.responseText));
         } catch {
           console.error("[Submit] Status:", xhr.status, "Response:", xhr.responseText.slice(0, 300));
-          reject(new Error(`Server xatosi (${xhr.status}). Qayta urinib ko'ring.`));
+          reject(new Error(t.form.serverError(xhr.status)));
         }
       };
-      xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
-      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi (3 daqiqa)"));
+      xhr.onerror = () => reject(new Error(t.form.networkError));
+      xhr.ontimeout = () => reject(new Error(t.form.timeoutError));
       xhr.timeout = 180000;
       xhr.send(data);
     });
@@ -262,52 +270,52 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
       <div className="mt-8">
         {step === 1 && (
           <form onSubmit={form1.handleSubmit(onStep1Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Mijoz ma&apos;lumotlari</h2>
-            <Input label="To'liq ism" required placeholder="Sardor Abdullayev" {...form1.register("fullName")} error={form1.formState.errors.fullName?.message} />
-            <Input label="Telefon raqami" required placeholder="+998901234567" {...form1.register("phone")} error={form1.formState.errors.phone?.message} />
-            <Input label="Email" type="email" required placeholder="email@example.com" {...form1.register("email")} error={form1.formState.errors.email?.message} />
-            <Input label="Telegram username" placeholder="@username" {...form1.register("telegram")} hint="Ixtiyoriy — tezkor bog'lanish uchun" />
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionClient}</h2>
+            <Input label={t.form.fullName} required placeholder={t.form.fullNamePlaceholder} {...form1.register("fullName")} error={form1.formState.errors.fullName?.message} />
+            <Input label={t.form.phoneNumber} required placeholder={t.form.phonePlaceholder} {...form1.register("phone")} error={form1.formState.errors.phone?.message} />
+            <Input label={t.form.email} type="email" required placeholder={t.form.emailPlaceholder} {...form1.register("email")} error={form1.formState.errors.email?.message} />
+            <Input label={t.form.telegram} placeholder={t.form.telegramPlaceholder} {...form1.register("telegram")} hint={t.form.telegramHint} />
             <div className="flex justify-end">
-              <Button type="submit" size="lg">Davom etish →</Button>
+              <Button type="submit" size="lg">{t.form.continue}</Button>
             </div>
           </form>
         )}
 
         {step === 2 && (
           <form onSubmit={form2.handleSubmit(onStep2Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Ilova tafsilotlari</h2>
-            <Input label="Ilova nomi" required placeholder="MyApp" maxLength={30} {...form2.register("appName")} error={form2.formState.errors.appName?.message} hint="Max 30 belgi" />
-            <Input label="Subtitle (qisqa tavsif)" required placeholder="Best app for..." maxLength={30} {...form2.register("subtitle")} error={form2.formState.errors.subtitle?.message} hint="Max 30 belgi" />
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionApp}</h2>
+            <Input label={t.appStoreForm.appName} required placeholder={t.appStoreForm.appNamePlaceholder} maxLength={30} {...form2.register("appName")} error={form2.formState.errors.appName?.message} hint={t.appStoreForm.max30} />
+            <Input label={t.appStoreForm.subtitle} required placeholder={t.appStoreForm.subtitlePlaceholder} maxLength={30} {...form2.register("subtitle")} error={form2.formState.errors.subtitle?.message} hint={t.appStoreForm.max30} />
             <Textarea
-              label="To'liq tavsif"
+              label={t.appStoreForm.fullDesc}
               required
-              placeholder="Ilovangiz haqida batafsil..."
+              placeholder={t.appStoreForm.fullDescPlaceholder}
               rows={6}
               charCount={fullDescValue.length}
               maxChars={4000}
               {...form2.register("fullDescription")}
               error={form2.formState.errors.fullDescription?.message}
             />
-            <Input label="Privacy Policy URL" type="url" required placeholder="https://yourapp.com/privacy" {...form2.register("privacyPolicyUrl")} error={form2.formState.errors.privacyPolicyUrl?.message} hint="HTTPS bilan boshlanishi shart" />
-            <Input label="Support URL" type="url" required placeholder="https://yourapp.com/support" {...form2.register("supportUrl")} error={form2.formState.errors.supportUrl?.message} hint="Foydalanuvchilar murojaat qiladigan sahifa (HTTPS)" />
+            <Input label={t.appStoreForm.privacyUrl} type="url" required placeholder={t.appStoreForm.privacyUrlPlaceholder} {...form2.register("privacyPolicyUrl")} error={form2.formState.errors.privacyPolicyUrl?.message} hint={t.appStoreForm.httpsHint} />
+            <Input label={t.appStoreForm.supportUrl} type="url" required placeholder={t.appStoreForm.supportUrlPlaceholder} {...form2.register("supportUrl")} error={form2.formState.errors.supportUrl?.message} hint={t.appStoreForm.supportUrlHint} />
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => {
                 const ns = { ...formState, step2: form2.getValues() };
                 setFormState(ns); saveDraft(ns, 1); setStep(1);
-              }}>← Orqaga</Button>
-              <Button type="submit" size="lg">Davom etish →</Button>
+              }}>{t.form.backArrow}</Button>
+              <Button type="submit" size="lg">{t.form.continue}</Button>
             </div>
           </form>
         )}
 
         {step === 3 && (
           <form onSubmit={form3.handleSubmit(onStep3Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">GitHub Repository</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t.appStoreForm.githubTitle}</h2>
 
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
-              <p className="font-semibold mb-1">Muhim: Collaborator qo&apos;shing</p>
+              <p className="font-semibold mb-1">{t.appStoreForm.collaboratorTitle}</p>
               <p>
-                Repo-ga{" "}
+                {t.appStoreForm.collaboratorPre}{" "}
                 <a
                   href="https://github.com/ahadjonovss"
                   target="_blank"
@@ -316,18 +324,18 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
                 >
                   @ahadjonovss
                 </a>{" "}
-                ni collaborator sifatida qo&apos;shing:
+                {t.appStoreForm.collaboratorPost}
               </p>
               <p className="mt-1 text-xs text-blue-600 font-mono">
-                Settings → Collaborators → Add people → ahadjonovss
+                {t.appStoreForm.collaboratorPath}
               </p>
             </div>
 
             <Input
-              label="GitHub repo URL"
+              label={t.appStoreForm.repoUrl}
               type="url"
               required
-              placeholder="https://github.com/username/repo"
+              placeholder={t.appStoreForm.repoUrlPlaceholder}
               {...form3.register("githubRepoUrl")}
               error={form3.formState.errors.githubRepoUrl?.message}
             />
@@ -336,21 +344,21 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
               <Button type="button" variant="outline" size="lg" onClick={() => {
                 const ns = { ...formState, step3: form3.getValues() };
                 setFormState(ns); saveDraft(ns, 2); setStep(2);
-              }}>← Orqaga</Button>
-              <Button type="submit" size="lg">Davom etish →</Button>
+              }}>{t.form.backArrow}</Button>
+              <Button type="submit" size="lg">{t.form.continue}</Button>
             </div>
           </form>
         )}
 
         {step === 4 && (
           <div className="flex flex-col gap-6">
-            <h2 className="text-xl font-semibold text-gray-900">Grafik materiallar</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionGraphics}</h2>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-1">iPhone skrinshotlari</p>
-              <p className="text-xs text-gray-500 mb-3">Kamida 3 ta • iPhone 6.9&quot;: 1320×2868 px yoki 6.5&quot;: 1242×2688 px</p>
+              <p className="text-sm font-medium text-gray-700 mb-1">{t.appStoreForm.iphoneTitle}</p>
+              <p className="text-xs text-gray-500 mb-3">{t.appStoreForm.iphoneHint}</p>
               <ImageUpload
-                label="iPhone skrinshotlari (kamida 3 ta, max 10 ta)"
+                label={t.appStoreForm.iphoneLabel}
                 required
                 value={iphoneScreenshots}
                 onChange={setIphoneScreenshots}
@@ -363,10 +371,10 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
             </div>
 
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-1">iPad skrinshotlari (ixtiyoriy)</p>
-              <p className="text-xs text-gray-500 mb-3">iPad 12.9&quot;: 2048×2732 px yoki 11&quot;: 1668×2388 px</p>
+              <p className="text-sm font-medium text-gray-700 mb-1">{t.appStoreForm.ipadTitle}</p>
+              <p className="text-xs text-gray-500 mb-3">{t.appStoreForm.ipadHint}</p>
               <ImageUpload
-                label="iPad skrinshotlari"
+                label={t.appStoreForm.ipadLabel}
                 value={ipadScreenshots}
                 onChange={setIpadScreenshots}
                 validation={{ width: 2048, height: 2732, maxSizeMB: 8, strict: false }}
@@ -376,35 +384,31 @@ export function AppStoreForm({ pricing }: { pricing: Pricing }) {
             </div>
 
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 3); setStep(3); }}>← Orqaga</Button>
-              <Button type="button" size="lg" onClick={onStep4Next}>Davom etish →</Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 3); setStep(3); }}>{t.form.backArrow}</Button>
+              <Button type="button" size="lg" onClick={onStep4Next}>{t.form.continue}</Button>
             </div>
           </div>
         )}
 
         {step === 5 && (
           <form onSubmit={form5.handleSubmit(onStep5Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Qo&apos;shimcha ma&apos;lumotlar</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionExtra}</h2>
 
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-              <p className="font-semibold mb-1">⚠️ Test akkaunt majburiy</p>
-              <p>
-                Ilovangizda login yoki ro&apos;yxatdan o&apos;tish talab qilinsa, App Store
-                ko&apos;rib chiquvchilari ilovani tekshirish uchun test akkaunt
-                ma&apos;lumotlarini talab qiladi. Aks holda ariza rad etilishi mumkin.
-              </p>
+              <p className="font-semibold mb-1">{t.form.testAccountTitle}</p>
+              <p>{t.appStoreForm.testAccountBody}</p>
             </div>
 
-            <Input label="Test login" placeholder="test@example.com" {...form5.register("testLogin")} hint="Ixtiyoriy — login talab qilinmasa bo'sh qoldiring" />
-            <PasswordInput label="Test parol" placeholder="••••••••" {...form5.register("testPassword")} />
-            <Textarea label="Izoh" placeholder="Qo'shimcha ma'lumot..." rows={4} {...form5.register("note")} />
+            <Input label={t.form.testLogin} placeholder={t.form.testLoginPlaceholder} {...form5.register("testLogin")} hint={t.form.testLoginHint} />
+            <PasswordInput label={t.form.testPassword} placeholder="••••••••" {...form5.register("testPassword")} />
+            <Textarea label={t.form.note} placeholder={t.form.notePlaceholder} rows={4} {...form5.register("note")} />
 
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => {
                 const ns = { ...formState, step5: form5.getValues() };
                 setFormState(ns); saveDraft(ns, 4); setStep(4);
-              }}>← Orqaga</Button>
-              <Button type="submit" size="lg">Yuborish ✓</Button>
+              }}>{t.form.backArrow}</Button>
+              <Button type="submit" size="lg">{t.form.submitCheck}</Button>
             </div>
           </form>
         )}

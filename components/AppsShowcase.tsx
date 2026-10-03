@@ -1,7 +1,8 @@
 import type { ShowcaseApp } from "@/lib/firestore/apps";
+import type { Dict } from "@/lib/i18n";
 
 // Chiqarilgan ilovalar logolari — uzluksiz aylanadigan karusel (marquee).
-export function AppsShowcase({ apps }: { apps: ShowcaseApp[] }) {
+export function AppsShowcase({ apps, t }: { apps: ShowcaseApp[]; t: Dict }) {
   if (!apps.length) return null;
 
   // Uzluksiz aylanish uchun ro'yxatni yetarlicha takrorlaymiz.
@@ -16,10 +17,10 @@ export function AppsShowcase({ apps }: { apps: ShowcaseApp[] }) {
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M3.18 23.76c.3.17.64.24.99.2l.1-.04 11.35-6.55-2.47-2.47-9.97 8.86zM.13 1.55C.05 1.8 0 2.06 0 2.35v19.3c0 .29.05.56.13.8l.07.07 10.82-10.82v-.26L.2 1.48l-.07.07zM19.82 9.65l-2.56-1.48-2.78 2.78 2.78 2.78 2.58-1.49c.74-.43.74-1.13-.02-1.59zm-16.64 14.1l.1-.06 12.06-6.96-2.47-2.47-9.69 9.49z" />
           </svg>
-          Portfolio
+          {t.showcase.badge}
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Biz chiqargan ilovalar</h2>
-        <p className="text-slate-500 text-sm mt-1.5">Google Play&apos;da faol {apps.length}+ ilovamiz</p>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t.showcase.title}</h2>
+        <p className="text-slate-500 text-sm mt-1.5">{t.showcase.subtitle(apps.length)}</p>
       </div>
 
       <div

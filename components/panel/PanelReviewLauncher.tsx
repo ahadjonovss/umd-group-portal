@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ReviewModal } from "@/components/ReviewModal";
+import { useT } from "@/components/i18n/LanguageProvider";
+import type { Dict } from "@/lib/i18n";
 
 export interface ReviewItem {
   id: string;
@@ -17,11 +19,13 @@ function InfoDialog({
   icon,
   title,
   desc,
+  closeLabel,
   onClose,
 }: {
   icon: string;
   title: string;
   desc: string;
+  closeLabel: string;
   onClose: () => void;
 }) {
   return (
@@ -38,7 +42,7 @@ function InfoDialog({
           onClick={onClose}
           className="mt-5 h-11 w-full rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 active:scale-[0.98] transition-all"
         >
-          Yopish
+          {closeLabel}
         </button>
       </div>
     </div>
@@ -47,6 +51,7 @@ function InfoDialog({
 
 // Deeplink (/panel?review=<appId>) — mos ilova uchun dialogni panel ustida ochadi.
 export function PanelReviewLauncher({ apps }: { apps: ReviewItem[] }) {
+  const t: Dict = useT();
   const router = useRouter();
   const params = useSearchParams();
   const reviewId = params.get("review");
@@ -82,7 +87,7 @@ export function PanelReviewLauncher({ apps }: { apps: ReviewItem[] }) {
         onSuccess={() => { close(); router.refresh(); }}
         endpoint="/api/reviews/app"
         extraPayload={{ appId: target.id }}
-        title="Xizmatni baholang"
+        title={t.panel.reviewModalTitle}
         subtitle={target.label}
         hideName
       />
@@ -92,8 +97,9 @@ export function PanelReviewLauncher({ apps }: { apps: ReviewItem[] }) {
     return (
       <InfoDialog
         icon="✓"
-        title="Allaqachon baholangan"
-        desc={`"${target.label}" xizmati allaqachon baholangan. Rahmat!`}
+        title={t.panel.alreadyRatedTitle}
+        desc={t.panel.alreadyRatedDesc(target.label)}
+        closeLabel={t.common.close}
         onClose={close}
       />
     );
@@ -102,8 +108,9 @@ export function PanelReviewLauncher({ apps }: { apps: ReviewItem[] }) {
     return (
       <InfoDialog
         icon="🔍"
-        title="Baholab bo'lmaydi"
-        desc="Bu ariza topilmadi yoki hali baholashga tayyor emas."
+        title={t.panel.cannotRateTitle}
+        desc={t.panel.cannotRateDesc}
+        closeLabel={t.common.close}
         onClose={close}
       />
     );

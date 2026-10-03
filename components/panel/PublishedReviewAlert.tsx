@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { ServiceType } from "@/types";
+import { useT } from "@/components/i18n/LanguageProvider";
+import type { Dict } from "@/lib/i18n";
 
 export interface PublishedItem {
   id: string;
@@ -10,15 +12,16 @@ export interface PublishedItem {
   serviceType: ServiceType;
 }
 
-function doneText(serviceType: ServiceType): string {
-  if (serviceType === "account") return "developer akkauntingiz tayyor bo'ldi";
-  if (serviceType === "google-transfer" || serviceType === "apple-transfer") return "transferi yakunlandi";
-  return "store'ga chiqdi";
+function doneText(t: Dict, serviceType: ServiceType): string {
+  if (serviceType === "account") return t.panel.doneAccount;
+  if (serviceType === "google-transfer" || serviceType === "apple-transfer") return t.panel.doneTransfer;
+  return t.panel.donePublish;
 }
 
 // Yakunlangan, lekin hali baholanmagan xizmatlar — yig'ilgan holda (jami son),
 // bosilganda har biri alohida "Baholash" kartochkasi sifatida ochiladi.
 export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   if (!apps.length) return null;
 
@@ -31,8 +34,8 @@ export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
         <div className="flex items-center gap-3.5 min-w-0">
           <span className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-xl flex-shrink-0">🎉</span>
           <div className="min-w-0 text-left">
-            <p className="text-sm font-bold text-emerald-800">Xizmatni baholang</p>
-            <p className="text-xs text-emerald-700">{apps.length} ta baholanmagan xizmat</p>
+            <p className="text-sm font-bold text-emerald-800">{t.panel.rateServiceTitle}</p>
+            <p className="text-xs text-emerald-700">{t.panel.rateUnreviewed(apps.length)}</p>
           </div>
         </div>
         <svg
@@ -55,9 +58,9 @@ export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
               <span className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center text-lg flex-shrink-0">🎉</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-emerald-800">
-                  <span className="font-bold">{a.label}</span> {doneText(a.serviceType)}!
+                  <span className="font-bold">{a.label}</span> {doneText(t, a.serviceType)}!
                 </p>
-                <p className="text-xs text-emerald-700">Xizmatimizni baholab, fikringizni qoldiring.</p>
+                <p className="text-xs text-emerald-700">{t.panel.rateSub}</p>
               </div>
               <Link
                 href={`/panel?review=${a.id}`}
@@ -66,7 +69,7 @@ export function PublishedReviewAlert({ apps }: { apps: PublishedItem[] }) {
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
-                Baholash
+                {t.panel.rateCta}
               </Link>
             </div>
           ))}

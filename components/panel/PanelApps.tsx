@@ -6,18 +6,11 @@ import type { RequestView } from "@/lib/firestore/requests";
 import type { Pricing } from "@/lib/firestore/settings";
 import { AppCard } from "@/components/panel/AppCard";
 import { appCategory, appNeedsPayment, type AppCategory } from "@/lib/panel-status";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 type Reqs = Record<string, RequestView>;
 type ReqLists = Record<string, RequestView[]>;
 type FilterKey = "all" | "action" | AppCategory;
-
-const FILTER_LABEL: Record<FilterKey, string> = {
-  all: "Barchasi",
-  action: "Amal kerak",
-  active: "Faol",
-  progress: "Jarayonda",
-  closed: "Yopilgan",
-};
 
 function StatCard({ label, value, tone, icon }: { label: string; value: number; tone: "slate" | "emerald" | "blue" | "amber"; icon: React.ReactNode }) {
   const tones = {
@@ -52,6 +45,7 @@ export function PanelApps({
   renewal: Reqs;
   other?: ReqLists;
 }) {
+  const t = useT();
   const [filter, setFilter] = useState<FilterKey>("all");
 
   const meta = useMemo(() => {
@@ -91,7 +85,7 @@ export function PanelApps({
       {/* Statistika */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
-          label="Jami ilovalar"
+          label={t.panel.statAll}
           value={counts.all}
           tone="slate"
           icon={
@@ -101,7 +95,7 @@ export function PanelApps({
           }
         />
         <StatCard
-          label="Faol"
+          label={t.panel.statActive}
           value={counts.active}
           tone="emerald"
           icon={
@@ -111,7 +105,7 @@ export function PanelApps({
           }
         />
         <StatCard
-          label="Jarayonda"
+          label={t.panel.statProgress}
           value={counts.progress}
           tone="blue"
           icon={
@@ -121,7 +115,7 @@ export function PanelApps({
           }
         />
         <StatCard
-          label="Amal kerak"
+          label={t.panel.statAction}
           value={counts.action}
           tone="amber"
           icon={
@@ -151,7 +145,7 @@ export function PanelApps({
               }`}
             >
               {isAction && !active && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
-              {FILTER_LABEL[k]}
+              {t.panel.filter[k]}
               <span className={`text-xs ${active ? "text-white/70" : "text-slate-400"}`}>{counts[k]}</span>
             </button>
           );
@@ -175,9 +169,9 @@ export function PanelApps({
         </div>
       ) : (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white/50 p-10 text-center">
-          <p className="text-slate-500 text-sm">Bu bo&apos;limda ilova yo&apos;q.</p>
+          <p className="text-slate-500 text-sm">{t.panel.emptyFilter}</p>
           <button onClick={() => setFilter("all")} className="mt-3 text-sm font-semibold text-blue-600 hover:underline">
-            Barchasini ko&apos;rsatish
+            {t.panel.showAll}
           </button>
         </div>
       )}

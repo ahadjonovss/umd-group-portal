@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/i18n/LanguageProvider";
+import { Rich } from "@/components/i18n/Rich";
 
 export function RenewalRequestForm({
   appId,
@@ -22,6 +24,7 @@ export function RenewalRequestForm({
   currentEnd: string;
   discountPercent?: number;
 }) {
+  const t = useT();
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,10 +40,10 @@ export function RenewalRequestForm({
         body: JSON.stringify({ appId }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Xato yuz berdi");
+      if (!json.success) throw new Error(json.error || t.common.error);
       setDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Xato yuz berdi");
+      setError(err instanceof Error ? err.message : t.common.error);
       setLoading(false);
     }
   }
@@ -49,16 +52,13 @@ export function RenewalRequestForm({
     return (
       <div className="flex flex-col gap-4 text-center">
         <div className="text-4xl">✅</div>
-        <h2 className="text-lg font-bold text-slate-900">So&apos;rov qabul qilindi!</h2>
-        <p className="text-sm text-slate-500">
-          Admin so&apos;rovni ko&apos;rib chiqib, to&apos;lov uchun taqdim etadi. To&apos;lovdan so&apos;ng obuna
-          muddati <strong>+9 oyga</strong> uzaytiriladi.
-        </p>
+        <h2 className="text-lg font-bold text-slate-900">{t.requestPage.accepted}</h2>
+        <p className="text-sm text-slate-500"><Rich text={t.requestPage.renewalDoneText} /></p>
         <Link
           href={`/panel/app/${appId}`}
           className="inline-flex items-center justify-center gap-1.5 h-11 px-5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors"
         >
-          Ilovaga qaytish
+          {t.requestPage.backToAppCta}
         </Link>
       </div>
     );
@@ -67,25 +67,22 @@ export function RenewalRequestForm({
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-        <p className="text-sm font-semibold text-emerald-800">{appName} — obunani uzaytirish</p>
-        <p className="text-sm text-emerald-700 mt-1">
-          Obuna muddati <strong>+9 oy (270 kun)</strong> ga uzaytiriladi.
-        </p>
-        <p className="text-xs text-emerald-600 mt-1">Joriy tugash sanasi: {currentEnd}</p>
+        <p className="text-sm font-semibold text-emerald-800">{t.requestPage.renewalHeading(appName)}</p>
+        <p className="text-sm text-emerald-700 mt-1"><Rich text={t.requestPage.renewalSub} /></p>
+        <p className="text-xs text-emerald-600 mt-1">{t.requestPage.renewalCurrentEnd(currentEnd)}</p>
       </div>
 
       <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
         <p className="text-sm font-bold text-slate-900">
-          Narx: ${usd}
+          {t.requestPage.priceLabel(usd)}
           {uzs ? (
             <span className="font-normal text-slate-500">
-              {" "}
-              (~{uzs.toLocaleString("en-US")} so&apos;m{rate ? `, 1$=${rate.toLocaleString("en-US")}` : ""})
+              {t.requestPage.priceUzs(uzs.toLocaleString("en-US"), rate ? rate.toLocaleString("en-US") : null)}
             </span>
           ) : null}
         </p>
         {discountPercent > 0 && (
-          <p className="text-xs font-semibold text-emerald-600 mt-1">🎉 Chegirma qo&apos;llandi: −{discountPercent}%</p>
+          <p className="text-xs font-semibold text-emerald-600 mt-1">{t.requestPage.discountApplied(discountPercent)}</p>
         )}
       </div>
 
@@ -93,10 +90,10 @@ export function RenewalRequestForm({
 
       <div className="flex gap-3 justify-end">
         <Button type="button" variant="outline" size="lg" onClick={() => router.push(`/panel/app/${appId}`)}>
-          Bekor
+          {t.common.cancelShort}
         </Button>
         <Button type="button" size="lg" loading={loading} onClick={submit}>
-          So&apos;rov yuborish
+          {t.requestPage.submit}
         </Button>
       </div>
     </div>

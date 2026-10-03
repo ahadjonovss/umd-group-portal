@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -17,16 +17,16 @@ import { TermsConfirmModal } from "@/components/TermsConfirmModal";
 import type { Pricing } from "@/lib/firestore/settings";
 
 import {
-  playMarketStep1Schema,
-  playMarketStep2Schema,
+  makePlayMarketStep1Schema,
+  makePlayMarketStep2Schema,
   playMarketStep5Schema,
   type PlayMarketStep1,
   type PlayMarketStep2,
   type PlayMarketStep5,
 } from "@/lib/validations/play-market";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 const STORAGE_KEY = "pm_draft";
-const STEPS = ["Mijoz", "Ilova", "Grafika", "Qo'shimcha", "Fayl"];
 
 interface FormState {
   step1?: PlayMarketStep1;
@@ -35,6 +35,14 @@ interface FormState {
 }
 
 export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
+  const t = useT();
+  const STEPS = [
+    t.form.stepClient,
+    t.form.stepApp,
+    t.form.stepGraphics,
+    t.form.stepExtra,
+    t.form.stepFile,
+  ];
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [formState, setFormState] = useState<FormState>({});
@@ -85,12 +93,12 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
   }
 
   const form1 = useForm<PlayMarketStep1>({
-    resolver: zodResolver(playMarketStep1Schema),
+    resolver: zodResolver(useMemo(() => makePlayMarketStep1Schema(t), [t])),
     defaultValues: formState.step1 || { fullName: "", phone: "", email: "" },
   });
 
   const form2 = useForm<PlayMarketStep2>({
-    resolver: zodResolver(playMarketStep2Schema),
+    resolver: zodResolver(useMemo(() => makePlayMarketStep2Schema(t), [t])),
     defaultValues: formState.step2 || { appName: "", packageName: "", shortDescription: "", fullDescription: "", privacyPolicyUrl: "" },
   });
   const fullDescValue = form2.watch("fullDescription") || "";
@@ -116,9 +124,9 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
 
   function onStep3Next() {
     let valid = true;
-    if (!icon) { setIconError("Ilova ikonasi majburiy"); valid = false; } else { setIconError(""); }
-    if (!banner) { setBannerError("Feature Graphic majburiy"); valid = false; } else { setBannerError(""); }
-    if (screenshots.length < 2) { setScreenshotError("Kamida 2 ta skrinshot talab qilinadi"); valid = false; } else { setScreenshotError(""); }
+    if (!icon) { setIconError(t.playMarketForm.iconRequired); valid = false; } else { setIconError(""); }
+    if (!banner) { setBannerError(t.playMarketForm.bannerRequired); valid = false; } else { setBannerError(""); }
+    if (screenshots.length < 2) { setScreenshotError(t.playMarketForm.screenshotsRequired); valid = false; } else { setScreenshotError(""); }
     if (!valid) return;
     saveDraft(formState, 4);
     setStep(4);
@@ -181,7 +189,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
       stopServerAnim();
       await animateProgress(progressRef.current, 100, 500);
 
-      if (!json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
+      if (!json.success) throw new Error(json.error || json.message || t.common.error);
 
       localStorage.removeItem(STORAGE_KEY);
       await new Promise((r) => setTimeout(r, 500));
@@ -189,7 +197,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
     } catch (err: unknown) {
       stopServerAnim();
       setSubmitStatus("error");
-      setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
+      setSubmitError(err instanceof Error ? err.message : t.form.unexpectedError);
     }
   }
 
@@ -211,11 +219,11 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
           resolve(JSON.parse(xhr.responseText));
         } catch {
           console.error("[Submit] Status:", xhr.status, "Response:", xhr.responseText.slice(0, 300));
-          reject(new Error(`Server xatosi (${xhr.status}). Qayta urinib ko'ring.`));
+          reject(new Error(t.form.serverError(xhr.status)));
         }
       };
-      xhr.onerror = () => reject(new Error("Tarmoq xatosi yuz berdi"));
-      xhr.ontimeout = () => reject(new Error("So'rov vaqti tugadi (3 daqiqa)"));
+      xhr.onerror = () => reject(new Error(t.form.networkError));
+      xhr.ontimeout = () => reject(new Error(t.form.timeoutError));
       xhr.timeout = 180000;
       xhr.send(data);
     });
@@ -257,12 +265,12 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
         {/* Step 1 — Mijoz */}
         {step === 1 && (
           <form onSubmit={form1.handleSubmit(onStep1Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Mijoz ma&apos;lumotlari</h2>
-            <Input label="To'liq ism" required placeholder="Sardor Abdullayev" {...form1.register("fullName")} error={form1.formState.errors.fullName?.message} />
-            <Input label="Telefon raqami" required placeholder="+998901234567" {...form1.register("phone")} error={form1.formState.errors.phone?.message} />
-            <Input label="Email" type="email" required placeholder="email@example.com" {...form1.register("email")} error={form1.formState.errors.email?.message} />
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionClient}</h2>
+            <Input label={t.form.fullName} required placeholder={t.form.fullNamePlaceholder} {...form1.register("fullName")} error={form1.formState.errors.fullName?.message} />
+            <Input label={t.form.phoneNumber} required placeholder={t.form.phonePlaceholder} {...form1.register("phone")} error={form1.formState.errors.phone?.message} />
+            <Input label={t.form.email} type="email" required placeholder={t.form.emailPlaceholder} {...form1.register("email")} error={form1.formState.errors.email?.message} />
             <div className="flex justify-end">
-              <Button type="submit" size="lg">Davom etish →</Button>
+              <Button type="submit" size="lg">{t.form.continue}</Button>
             </div>
           </form>
         )}
@@ -270,27 +278,27 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
         {/* Step 2 — Ilova */}
         {step === 2 && (
           <form onSubmit={form2.handleSubmit(onStep2Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Ilova tafsilotlari</h2>
-            <Input label="Ilova nomi" required placeholder="MyApp" maxLength={30} {...form2.register("appName")} error={form2.formState.errors.appName?.message} hint="Max 30 belgi" />
-            <Input label="Package name" required placeholder="com.company.appname" {...form2.register("packageName")} error={form2.formState.errors.packageName?.message} hint="Misol: com.umdgroup.myapp" />
-            <Input label="Qisqa tavsif" required placeholder="Eng zo'r ilova" maxLength={80} {...form2.register("shortDescription")} error={form2.formState.errors.shortDescription?.message} hint="Max 80 belgi" />
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionApp}</h2>
+            <Input label={t.playMarketForm.appName} required placeholder={t.playMarketForm.appNamePlaceholder} maxLength={30} {...form2.register("appName")} error={form2.formState.errors.appName?.message} hint={t.playMarketForm.max30} />
+            <Input label={t.playMarketForm.packageName} required placeholder={t.playMarketForm.packageNamePlaceholder} {...form2.register("packageName")} error={form2.formState.errors.packageName?.message} hint={t.playMarketForm.packageNameHint} />
+            <Input label={t.playMarketForm.shortDesc} required placeholder={t.playMarketForm.shortDescPlaceholder} maxLength={80} {...form2.register("shortDescription")} error={form2.formState.errors.shortDescription?.message} hint={t.playMarketForm.max80} />
             <Textarea
-              label="To'liq tavsif"
+              label={t.playMarketForm.fullDesc}
               required
-              placeholder="Ilovangiz haqida batafsil ma'lumot..."
+              placeholder={t.playMarketForm.fullDescPlaceholder}
               rows={6}
               charCount={fullDescValue.length}
               maxChars={4000}
               {...form2.register("fullDescription")}
               error={form2.formState.errors.fullDescription?.message}
             />
-            <Input label="Privacy Policy URL" type="url" required placeholder="https://yourapp.com/privacy" {...form2.register("privacyPolicyUrl")} error={form2.formState.errors.privacyPolicyUrl?.message} hint="HTTPS bilan boshlanishi shart" />
+            <Input label={t.playMarketForm.privacyUrl} type="url" required placeholder={t.playMarketForm.privacyUrlPlaceholder} {...form2.register("privacyPolicyUrl")} error={form2.formState.errors.privacyPolicyUrl?.message} hint={t.playMarketForm.httpsHint} />
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => {
                 const ns = { ...formState, step2: form2.getValues() };
                 setFormState(ns); saveDraft(ns, 1); setStep(1);
-              }}>← Orqaga</Button>
-              <Button type="submit" size="lg">Davom etish →</Button>
+              }}>{t.form.backArrow}</Button>
+              <Button type="submit" size="lg">{t.form.continue}</Button>
             </div>
           </form>
         )}
@@ -298,9 +306,9 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
         {/* Step 3 — Grafika */}
         {step === 3 && (
           <div className="flex flex-col gap-6">
-            <h2 className="text-xl font-semibold text-gray-900">Grafik materiallar</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionGraphics}</h2>
             <ImageUpload
-              label="Ilova ikonasi"
+              label={t.playMarketForm.icon}
               required
               value={icon}
               onChange={setIcon}
@@ -308,7 +316,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
               validation={{ width: 512, height: 512, maxSizeMB: 1, strict: true }}
             />
             <ImageUpload
-              label="Feature Graphic / Banner"
+              label={t.playMarketForm.banner}
               required
               value={banner}
               onChange={setBanner}
@@ -316,7 +324,7 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
               validation={{ width: 1024, height: 500, maxSizeMB: 1, strict: true }}
             />
             <ImageUpload
-              label="Skrinshotlar (kamida 2 ta, max 8 ta)"
+              label={t.playMarketForm.screenshots}
               required
               value={screenshots}
               onChange={setScreenshots}
@@ -328,8 +336,8 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
             />
             {screenshotError && <p className="text-xs text-red-600">❌ {screenshotError}</p>}
             <div className="flex gap-3 justify-end">
-              <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 2); setStep(2); }}>← Orqaga</Button>
-              <Button type="button" size="lg" onClick={onStep3Next}>Davom etish →</Button>
+              <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 2); setStep(2); }}>{t.form.backArrow}</Button>
+              <Button type="button" size="lg" onClick={onStep3Next}>{t.form.continue}</Button>
             </div>
           </div>
         )}
@@ -337,26 +345,22 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
         {/* Step 4 — Qo'shimcha */}
         {step === 4 && (
           <form onSubmit={form4.handleSubmit(onStep4Submit)} className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Qo&apos;shimcha ma&apos;lumotlar</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t.form.sectionExtra}</h2>
 
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-              <p className="font-semibold mb-1">⚠️ Test akkaunt majburiy</p>
-              <p>
-                Ilovangizda login yoki ro&apos;yxatdan o&apos;tish talab qilinsa, Google Play moderatorlari
-                ilovani tekshirish uchun test akkaunt ma&apos;lumotlarini talab qiladi.
-                Aks holda ariza rad etilishi mumkin.
-              </p>
+              <p className="font-semibold mb-1">{t.form.testAccountTitle}</p>
+              <p>{t.playMarketForm.testAccountBody}</p>
             </div>
 
-            <Input label="Test login" placeholder="test@example.com" {...form4.register("testLogin")} hint="Ixtiyoriy — login talab qilinmasa bo'sh qoldiring" />
-            <PasswordInput label="Test parol" placeholder="••••••••" {...form4.register("testPassword")} />
-            <Textarea label="Izoh / Qo'shimcha ma'lumot" placeholder="Qo'shimcha malumot..." rows={4} {...form4.register("note")} />
+            <Input label={t.form.testLogin} placeholder={t.form.testLoginPlaceholder} {...form4.register("testLogin")} hint={t.form.testLoginHint} />
+            <PasswordInput label={t.form.testPassword} placeholder="••••••••" {...form4.register("testPassword")} />
+            <Textarea label={t.form.noteWithExtra} placeholder={t.form.notePlaceholder} rows={4} {...form4.register("note")} />
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => {
                 const ns = { ...formState, step4: form4.getValues() };
                 setFormState(ns); saveDraft(ns, 3); setStep(3);
-              }}>← Orqaga</Button>
-              <Button type="submit" size="lg">Davom etish →</Button>
+              }}>{t.form.backArrow}</Button>
+              <Button type="submit" size="lg">{t.form.continue}</Button>
             </div>
           </form>
         )}
@@ -364,17 +368,17 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
         {/* Step 5 — Tasdiqlash va yuborish */}
         {step === 5 && (
           <div className="flex flex-col gap-5">
-            <h2 className="text-xl font-semibold text-gray-900">Yuborishga tayyor</h2>
+            <h2 className="text-xl font-semibold text-gray-900">{t.playMarketForm.readyTitle}</h2>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <p className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
                 <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L8.32 13.617l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.496.969z"/>
                 </svg>
-                AAB faylni Telegram orqali yuboring
+                {t.playMarketForm.aabTitle}
               </p>
               <p className="text-sm text-blue-700 mb-3">
-                Ariza yuborilgandan keyin <strong>.aab</strong> faylni quyidagi Telegram akkauntga yuboring:
+                {t.playMarketForm.aabBodyPre} <strong>{t.playMarketForm.aabBodyFile}</strong> {t.playMarketForm.aabBodyPost}
               </p>
               <div className="bg-white rounded-lg px-3 py-2 text-sm font-mono font-bold text-blue-700 border border-blue-200 inline-block">
                 @umdgroupadmin
@@ -383,10 +387,10 @@ export function PlayMarketForm({ pricing }: { pricing: Pricing }) {
 
             <div className="flex gap-3 justify-end">
               <Button type="button" variant="outline" size="lg" onClick={() => { saveDraft(formState, 4); setStep(4); }}>
-                ← Orqaga
+                {t.form.backArrow}
               </Button>
               <Button type="button" size="lg" onClick={onStep5Submit}>
-                Yuborish ✓
+                {t.form.submitCheck}
               </Button>
             </div>
           </div>

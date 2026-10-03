@@ -1,14 +1,19 @@
 import { DunsForm } from "@/components/forms/DunsForm";
 import { FormPageLayout } from "@/components/FormPageLayout";
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "DUNS Raqami Ochish — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.submitPage.duns.meta };
+}
 
-export default function DunsPage() {
+export default async function DunsPage() {
+  const t = await getT();
   return (
     <FormPageLayout
-      title="DUNS Raqami Ochish"
-      subtitle="Biznesingiz uchun DUNS raqamini rasmiylashtirish"
+      title={t.submitPage.duns.title}
+      subtitle={t.submitPage.duns.subtitle}
     >
       <DunsForm />
     </FormPageLayout>

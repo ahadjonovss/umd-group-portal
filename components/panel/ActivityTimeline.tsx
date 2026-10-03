@@ -1,4 +1,7 @@
+"use client";
+
 import type { ActivityView } from "@/lib/firestore/activity";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 const ACTOR_STYLE: Record<string, { dot: string; label: string }> = {
   admin: { dot: "bg-blue-500", label: "Admin" },
@@ -14,8 +17,9 @@ function fmt(iso: string | null): string {
 }
 
 export function ActivityTimeline({ items, forUser = false }: { items: ActivityView[]; forUser?: boolean }) {
+  const t = useT();
   if (!items.length) {
-    return <p className="text-sm text-slate-400">Hali amaliyotlar yo&apos;q.</p>;
+    return <p className="text-sm text-slate-400">{t.panel.activityEmpty}</p>;
   }
   return (
     <ol className="flex flex-col">
@@ -28,10 +32,10 @@ export function ActivityTimeline({ items, forUser = false }: { items: ActivityVi
         let actorText: string;
         if (forUser) {
           if (a.actorType === "user") {
-            actorText = "Siz";
+            actorText = t.panel.activityYou;
             dot = "bg-emerald-500";
           } else {
-            actorText = "UMD GROUP";
+            actorText = t.panel.activityUs;
             dot = "bg-blue-500";
           }
         } else {

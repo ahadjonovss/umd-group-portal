@@ -123,11 +123,14 @@ export function ServiceLogo({
   iconUrl,
   appName,
   app,
+  fallbackAlt = "Ilova",
 }: {
   serviceType: ServiceType;
   iconUrl: string | null;
   appName: string | null;
   app?: HasServiceDef;
+  /** Ilova nomi bo'lmaganda alt matni (tilga bog'liq; admin tomonda o'zbekcha qoladi). */
+  fallbackAlt?: string;
 }) {
   const theme = app ? themeFor(app) : SERVICE_THEME[serviceType];
   if (iconUrl) {
@@ -135,7 +138,7 @@ export function ServiceLogo({
     return (
       <img
         src={iconUrl}
-        alt={appName ?? "Ilova"}
+        alt={appName ?? fallbackAlt}
         className="w-14 h-14 rounded-2xl object-cover border border-slate-200 flex-shrink-0 shadow-sm"
       />
     );

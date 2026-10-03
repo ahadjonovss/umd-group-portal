@@ -7,26 +7,28 @@ import {
   signOut as fbSignOut,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
+import type { Dict } from "@/lib/i18n";
 
-// Firebase xato kodlarini o'zbekcha matnga aylantiradi.
-export function authErrorMessage(code: string): string {
+// Firebase xato kodlarini joriy tildagi matnga aylantiradi.
+export function authErrorMessage(code: string, t: Dict): string {
+  const e = t.auth.errors;
   switch (code) {
     case "auth/email-already-in-use":
-      return "Bu email allaqachon ro'yxatdan o'tgan";
+      return e.emailInUse;
     case "auth/invalid-email":
-      return "Email format noto'g'ri";
+      return e.invalidEmail;
     case "auth/weak-password":
-      return "Parol juda oddiy (kamida 6 belgi)";
+      return e.weakPassword;
     case "auth/user-not-found":
     case "auth/wrong-password":
     case "auth/invalid-credential":
-      return "Email yoki parol noto'g'ri";
+      return e.invalidCredential;
     case "auth/too-many-requests":
-      return "Juda ko'p urinish. Birozdan keyin qayta urining";
+      return e.tooManyRequests;
     case "auth/network-request-failed":
-      return "Tarmoq xatosi. Internetni tekshiring";
+      return e.networkFailed;
     default:
-      return "Xatolik yuz berdi. Qayta urining";
+      return e.generic;
   }
 }
 

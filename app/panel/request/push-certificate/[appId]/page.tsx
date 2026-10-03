@@ -11,10 +11,15 @@ import { pushCertUsd, finalUsdApp } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { categoryForRequest, applyDiscount } from "@/lib/discount";
 import { isTerminalSuccess } from "@/lib/app-status";
-import { SERVICE_LABELS, platformOf } from "@/lib/labels";
+import { platformOf } from "@/lib/labels";
+import { getT } from "@/lib/i18n/server";
+import { appTitleOf } from "@/lib/i18n/format";
 import { PushCertRequestForm } from "@/components/panel/PushCertRequestForm";
 
-export const metadata: Metadata = { title: "Push sertifikat — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.requestPage.pushMeta };
+}
 export const dynamic = "force-dynamic";
 
 export default async function PushCertRequestPage({
@@ -41,7 +46,8 @@ export default async function PushCertRequestPage({
   const discPct = disc?.percent ?? 0;
   const usd = Math.round(applyDiscount(pushCertUsd(pricing), discPct));
   const uzs = rate ? Math.round(usd * rate) : null;
-  const appName = app.appName || SERVICE_LABELS[app.serviceType];
+  const t = await getT();
+  const appName = appTitleOf(t, app.appName, app.serviceType);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -50,14 +56,14 @@ export default async function PushCertRequestPage({
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Ilovaga qaytish
+          {t.requestPage.backToApp}
         </Link>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6">
         <div className="flex items-center gap-2 mb-5">
           <Logo size={30} color="#3a3733" />
-          <h1 className="text-xl font-bold text-slate-900">Push sertifikat</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t.requestPage.pushTitle}</h1>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
           <PushCertRequestForm

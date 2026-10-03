@@ -11,10 +11,14 @@ import { updateUsd, finalUsd } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { categoryForRequest, applyDiscount } from "@/lib/discount";
 import { pkgActive } from "@/lib/payment-state";
-import { SERVICE_LABELS } from "@/lib/labels";
+import { getT } from "@/lib/i18n/server";
+import { appTitleOf } from "@/lib/i18n/format";
 import { UpdateRequestForm } from "@/components/panel/UpdateRequestForm";
 
-export const metadata: Metadata = { title: "Update so'rovi — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.requestPage.updateMeta };
+}
 export const dynamic = "force-dynamic";
 
 export default async function UpdateRequestPage({
@@ -41,7 +45,8 @@ export default async function UpdateRequestPage({
   const discPct = disc?.percent ?? 0;
   const usd = freeByPackage ? 0 : Math.round(applyDiscount(updateUsd(app.serviceType, pricing), discPct));
   const uzs = rate ? Math.round(usd * rate) : null;
-  const appName = app.appName || SERVICE_LABELS[app.serviceType];
+  const t = await getT();
+  const appName = appTitleOf(t, app.appName, app.serviceType);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -50,14 +55,14 @@ export default async function UpdateRequestPage({
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Kabinetga qaytish
+          {t.requestPage.backToPanel}
         </Link>
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6">
         <div className="flex items-center gap-2 mb-5">
           <Logo size={30} color="#3a3733" />
-          <h1 className="text-xl font-bold text-slate-900">Update so&apos;rovi</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t.requestPage.updateTitle}</h1>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
           <UpdateRequestForm

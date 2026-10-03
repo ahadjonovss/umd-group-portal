@@ -10,11 +10,13 @@ import { compressImage } from "@/lib/image-compress";
 import { accountBaseUsd } from "@/lib/payment";
 import { TermsConfirmModal } from "@/components/TermsConfirmModal";
 import type { Pricing } from "@/lib/firestore/settings";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 type Platform = "google" | "apple";
 type AccountType = "personal" | "corporate";
 
 export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number | null }) {
+  const t = useT();
   const router = useRouter();
   const [phase, setPhase] = useState<"intro" | "form">("intro");
   const [platform, setPlatform] = useState<Platform>("google");
@@ -31,23 +33,23 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
 
   const isApple = platform === "apple";
   const isCorp = accountType === "corporate";
-  const loginLabel = isApple ? "Apple ID (email)" : "Google akkaunt (Gmail)";
-  const platformFee = isApple ? "$99/yil" : "$25 (bir marta)";
+  const loginLabel = isApple ? t.accountForm.appleLogin : t.accountForm.googleLogin;
+  const platformFee = isApple ? t.accountForm.appleFee : t.accountForm.googleFee;
 
   // Narx hisob-kitobi
   const base = Math.round(accountBaseUsd(platform, accountType, pricing));
   const advance = Math.round((base * pricing.accountAdvance) / 100);
   const remaining = base - advance;
-  const uzs = (usd: number) => (rate ? Math.round(usd * rate).toLocaleString("en-US") + " so'm" : null);
+  const uzs = (usd: number) => (rate ? Math.round(usd * rate).toLocaleString("en-US") + " " + t.common.sum : null);
 
   function validate(): string | null {
-    if (!f.fullName?.trim() || !f.phone?.trim() || !f.email?.trim()) return "Aloqa ma'lumotlarini to'ldiring";
-    if (!f.login?.trim() || !f.loginPassword?.trim()) return `${loginLabel} va parolni kiriting`;
+    if (!f.fullName?.trim() || !f.phone?.trim() || !f.email?.trim()) return t.accountForm.errContact;
+    if (!f.login?.trim() || !f.loginPassword?.trim()) return t.accountForm.errLogin(loginLabel);
     if (isCorp) {
-      if (!f.companyName?.trim()) return "Yuridik kompaniya nomini kiriting";
-      if (!f.legalAddress?.trim()) return "Yuridik manzilni kiriting";
+      if (!f.companyName?.trim()) return t.accountForm.errCompanyName;
+      if (!f.legalAddress?.trim()) return t.accountForm.errLegalAddress;
     } else {
-      if (!f.holderName?.trim()) return "Akkaunt egasining to'liq ismini kiriting";
+      if (!f.holderName?.trim()) return t.accountForm.errHolderName;
     }
     return null;
   }
@@ -79,13 +81,13 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
       const res = await fetch("/api/submit/account", { method: "POST", body: fd });
       setProgress(90);
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Xato yuz berdi");
+      if (!res.ok || !json.success) throw new Error(json.error || t.common.error);
       setProgress(100);
       await new Promise((r) => setTimeout(r, 400));
       router.push(`/success?service=account&appId=${json.id}`);
     } catch (err2) {
       setStatus("error");
-      setError(err2 instanceof Error ? err2.message : "Kutilmagan xato");
+      setError(err2 instanceof Error ? err2.message : t.form.unexpectedError);
     }
   }
 
@@ -107,26 +109,24 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
     return (
       <div className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-6">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Developer akkaunt ochish</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            Google Play yoki App Store uchun rasmiy developer akkauntni siz uchun ochib, sozlab beramiz.
-          </p>
+          <h2 className="text-xl font-semibold text-slate-900">{t.accountForm.introTitle}</h2>
+          <p className="text-sm text-slate-500 mt-1">{t.accountForm.introSub}</p>
         </div>
 
         {/* Tanlov moduli */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-700 mb-2">1. Platformani tanlang</p>
+            <p className="text-sm font-semibold text-slate-700 mb-2">{t.accountForm.pickPlatform}</p>
             <div className="flex gap-3">
-              <Radio active={platform === "google"} onClick={() => setPlatform("google")} title="Google Play Console" sub="Android" />
-              <Radio active={platform === "apple"} onClick={() => setPlatform("apple")} title="App Store Connect" sub="iOS" />
+              <Radio active={platform === "google"} onClick={() => setPlatform("google")} title={t.accountForm.googleConsole} sub="Android" />
+              <Radio active={platform === "apple"} onClick={() => setPlatform("apple")} title={t.accountForm.appStoreConnect} sub="iOS" />
             </div>
           </div>
           <div>
-            <p className="text-sm font-semibold text-slate-700 mb-2">2. Akkaunt turini tanlang</p>
+            <p className="text-sm font-semibold text-slate-700 mb-2">{t.accountForm.pickType}</p>
             <div className="flex gap-3">
-              <Radio active={!isCorp} onClick={() => setAccountType("personal")} title="Shaxsiy" sub="Jismoniy shaxs nomiga" />
-              <Radio active={isCorp} onClick={() => setAccountType("corporate")} title="Korporativ" sub="Tashkilot / yuridik shaxs" />
+              <Radio active={!isCorp} onClick={() => setAccountType("personal")} title={t.accountForm.personal} sub={t.accountForm.personalSub} />
+              <Radio active={isCorp} onClick={() => setAccountType("corporate")} title={t.accountForm.corporate} sub={t.accountForm.corporateSub} />
             </div>
           </div>
         </div>
@@ -134,20 +134,20 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
         {/* Xizmat haqi + breakdown — tanlov moduli tagida aniq */}
         <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
           <div className="flex items-baseline justify-between">
-            <span className="text-sm font-semibold text-teal-800">Bizning xizmat haqimiz</span>
+            <span className="text-sm font-semibold text-teal-800">{t.accountForm.ourFee}</span>
             <span className="text-2xl font-bold text-teal-700">${base}</span>
           </div>
           {uzs(base) && <p className="text-xs text-teal-600 text-right">~{uzs(base)}</p>}
           <div className="h-px bg-teal-200 my-3" />
-          <p className="text-xs font-semibold text-teal-800 mb-1.5">To&apos;lov tartibi:</p>
+          <p className="text-xs font-semibold text-teal-800 mb-1.5">{t.accountForm.paymentOrder}</p>
           <div className="flex flex-col gap-1 text-xs text-teal-700">
             <div className="flex justify-between">
-              <span>Avans ({pricing.accountAdvance}%) — ariza tasdiqlangach</span>
+              <span>{t.accountForm.advance(pricing.accountAdvance)}</span>
               <strong>${advance}</strong>
             </div>
             {remaining > 0 && (
               <div className="flex justify-between">
-                <span>Qolgan ({100 - pricing.accountAdvance}%) — akkaunt topshirilgach</span>
+                <span>{t.accountForm.remaining(100 - pricing.accountAdvance)}</span>
                 <strong>${remaining}</strong>
               </div>
             )}
@@ -156,20 +156,20 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
 
         {/* Xizmat haqi nimani o'z ichiga oladi */}
         <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <p className="text-sm font-semibold text-slate-800 mb-2">Xizmat haqi nimani o&apos;z ichiga oladi?</p>
+          <p className="text-sm font-semibold text-slate-800 mb-2">{t.accountForm.includesTitle}</p>
           <ul className="flex flex-col gap-2 text-sm text-slate-600">
             <li className="flex gap-2">
               <span className="text-teal-500">•</span>
-              <span>Akkauntni ro&apos;yxatdan o&apos;tkazish va to&apos;g&apos;ri sozlash</span>
+              <span>{t.accountForm.include1}</span>
             </li>
             <li className="flex gap-2">
               <span className="text-teal-500">•</span>
-              <span>Ma&apos;lumotlarni kiritish va tasdiqlash jarayonini kuzatish</span>
+              <span>{t.accountForm.include2}</span>
             </li>
             {isCorp && (
               <li className="flex gap-2">
                 <span className="text-teal-500">•</span>
-                <span>{isApple ? "D-U-N-S raqami va yuridik hujjatlarni rasmiylashtirishda ko'maklashish" : "Yuridik shaxs ma'lumotlarini to'g'ri sozlash"}</span>
+                <span>{isApple ? t.accountForm.include3Apple : t.accountForm.include3Google}</span>
               </li>
             )}
           </ul>
@@ -179,14 +179,14 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex gap-2.5">
           <span className="text-lg flex-shrink-0">⚠️</span>
           <p className="text-sm text-amber-800 leading-snug">
-            Bu narx <strong>platformaning rasmiy to&apos;lovini o&apos;z ichiga olmaydi</strong>.{" "}
-            {isApple ? "Apple Developer Program" : "Google Play Console"} to&apos;lovi (<strong>{platformFee}</strong>)
-            to&apos;g&apos;ridan-to&apos;g&apos;ri {isApple ? "Apple" : "Google"}ga alohida to&apos;lanadi.
+            {t.accountForm.warnPre} <strong>{t.accountForm.warnStrong}</strong>.{" "}
+            {isApple ? "Apple Developer Program" : "Google Play Console"} {t.accountForm.warnMid} (<strong>{platformFee}</strong>){" "}
+            {t.accountForm.warnPost(isApple ? "Apple" : "Google")}
           </p>
         </div>
 
         <Button type="button" size="lg" className="w-full" onClick={() => setPhase("form")}>
-          Davom etish →
+          {t.form.continue}
         </Button>
       </div>
     );
@@ -214,57 +214,57 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
         <div className="flex items-center justify-between gap-3 rounded-xl bg-teal-50 border border-teal-200 p-3">
           <div>
             <p className="text-sm font-semibold text-teal-800">
-              {isApple ? "App Store Connect" : "Google Play Console"} · {isCorp ? "Korporativ" : "Shaxsiy"}
+              {isApple ? t.accountForm.appStoreConnect : t.accountForm.googleConsole} · {isCorp ? t.accountForm.corporate : t.accountForm.personal}
             </p>
-            <p className="text-xs text-teal-600">Xizmat narxi: ${base} · Avans: ${advance}</p>
+            <p className="text-xs text-teal-600">{t.accountForm.priceLine(base, advance)}</p>
           </div>
           <button type="button" onClick={() => setPhase("intro")} className="text-xs font-medium text-teal-700 hover:underline flex-shrink-0">
-            ← O&apos;zgartirish
+            {t.form.change}
           </button>
         </div>
 
         {/* Aloqa */}
-        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Aloqa ma&apos;lumotlari</h3>
-        <Input label="To'liq ism" required placeholder="Sardor Abdullayev" value={f.fullName ?? ""} onChange={set("fullName")} />
-        <Input label="Telefon" required placeholder="+998901234567" value={f.phone ?? ""} onChange={set("phone")} />
-        <Input label="Email" type="email" required placeholder="email@example.com" value={f.email ?? ""} onChange={set("email")} />
+        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">{t.form.sectionContact}</h3>
+        <Input label={t.form.fullName} required placeholder={t.form.fullNamePlaceholder} value={f.fullName ?? ""} onChange={set("fullName")} />
+        <Input label={t.form.phone} required placeholder={t.form.phonePlaceholder} value={f.phone ?? ""} onChange={set("phone")} />
+        <Input label={t.form.email} type="email" required placeholder={t.form.emailPlaceholder} value={f.email ?? ""} onChange={set("email")} />
 
         <div className="h-px bg-slate-200" />
 
         {/* Akkaunt login */}
-        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">{isApple ? "Apple ID" : "Google akkaunt"}</h3>
-        <Input label={loginLabel} required placeholder={isApple ? "apple-id@icloud.com" : "example@gmail.com"} value={f.login ?? ""} onChange={set("login")} />
-        <Input label="Parol" required placeholder="Akkaunt paroli" value={f.loginPassword ?? ""} onChange={set("loginPassword")} />
+        <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">{isApple ? t.accountForm.sectionAppleId : t.accountForm.sectionGoogleAccount}</h3>
+        <Input label={loginLabel} required placeholder={isApple ? t.accountForm.applePlaceholder : t.accountForm.googlePlaceholder} value={f.login ?? ""} onChange={set("login")} />
+        <Input label={t.form.password} required placeholder={t.accountForm.loginPasswordPlaceholder} value={f.loginPassword ?? ""} onChange={set("loginPassword")} />
 
         <div className="h-px bg-slate-200" />
 
         {/* Tur bo'yicha maydonlar */}
         {isCorp ? (
           <>
-            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Tashkilot ma&apos;lumotlari</h3>
-            <Input label="Yuridik kompaniya nomi" required placeholder="MChJ «Namuna»" value={f.companyName ?? ""} onChange={set("companyName")} />
-            <Textarea label="Yuridik manzil" required rows={2} placeholder="Ko'cha, shahar, pochta indeksi, mamlakat" value={f.legalAddress ?? ""} onChange={set("legalAddress")} />
-            <Input label="Kompaniya telefoni" placeholder="+998..." value={f.companyPhone ?? ""} onChange={set("companyPhone")} />
-            <Input label="Kompaniya email" type="email" placeholder="info@company.uz" value={f.companyEmail ?? ""} onChange={set("companyEmail")} />
-            <Input label="Veb-sayt" placeholder="https://company.uz" value={f.website ?? ""} onChange={set("website")} />
-            <Input label="Kompaniya turi" placeholder="MChJ, AJ, LLC..." value={f.companyType ?? ""} onChange={set("companyType")} />
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">{t.accountForm.sectionOrg}</h3>
+            <Input label={t.accountForm.legalCompanyName} required placeholder={t.accountForm.legalCompanyPlaceholder} value={f.companyName ?? ""} onChange={set("companyName")} />
+            <Textarea label={t.accountForm.legalAddress} required rows={2} placeholder={t.accountForm.legalAddressPlaceholder} value={f.legalAddress ?? ""} onChange={set("legalAddress")} />
+            <Input label={t.accountForm.companyPhone} placeholder="+998..." value={f.companyPhone ?? ""} onChange={set("companyPhone")} />
+            <Input label={t.accountForm.companyEmail} type="email" placeholder="info@company.uz" value={f.companyEmail ?? ""} onChange={set("companyEmail")} />
+            <Input label={t.accountForm.website} placeholder="https://company.uz" value={f.website ?? ""} onChange={set("website")} />
+            <Input label={t.accountForm.companyType} placeholder={t.accountForm.companyTypePlaceholder} value={f.companyType ?? ""} onChange={set("companyType")} />
             {!isApple && (
-              <Input label="Faoliyat turi" placeholder="IT, savdo, ta'lim..." value={f.activityType ?? ""} onChange={set("activityType")} />
+              <Input label={t.accountForm.activityType} placeholder={t.accountForm.activityTypePlaceholder} value={f.activityType ?? ""} onChange={set("activityType")} />
             )}
 
             <div className="h-px bg-slate-200" />
             <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">
-              {isApple ? "Legal Signatory (imzolovchi)" : "Kontakt shaxs"}
+              {isApple ? t.accountForm.sectionSignatory : t.accountForm.sectionContactPerson}
             </h3>
-            <Input label="F.I.O." placeholder="To'liq ism" value={f.cpName ?? ""} onChange={set("cpName")} />
-            <Input label="Lavozim" placeholder="Direktor, menejer..." value={f.cpPosition ?? ""} onChange={set("cpPosition")} />
-            <Input label="Telefon" placeholder="+998..." value={f.cpPhone ?? ""} onChange={set("cpPhone")} />
-            <Input label="Email" type="email" placeholder="email@..." value={f.cpEmail ?? ""} onChange={set("cpEmail")} />
+            <Input label={t.accountForm.cpName} placeholder={t.accountForm.cpNamePlaceholder} value={f.cpName ?? ""} onChange={set("cpName")} />
+            <Input label={t.accountForm.cpPosition} placeholder={t.accountForm.cpPositionPlaceholder} value={f.cpPosition ?? ""} onChange={set("cpPosition")} />
+            <Input label={t.form.phone} placeholder="+998..." value={f.cpPhone ?? ""} onChange={set("cpPhone")} />
+            <Input label={t.form.email} type="email" placeholder="email@..." value={f.cpEmail ?? ""} onChange={set("cpEmail")} />
 
             {isApple && (
               <div>
-                <label className="text-sm font-medium text-slate-700">Guvohnoma scan (ixtiyoriy)</label>
-                <p className="text-xs text-slate-500 mb-1.5">Kompaniya ro&apos;yxatdan o&apos;tganlik guvohnomasi (rasm yoki PDF)</p>
+                <label className="text-sm font-medium text-slate-700">{t.accountForm.certLabel}</label>
+                <p className="text-xs text-slate-500 mb-1.5">{t.accountForm.certHint}</p>
                 <input
                   type="file"
                   accept="image/*,application/pdf"
@@ -276,24 +276,24 @@ export function AccountForm({ pricing, rate }: { pricing: Pricing; rate: number 
           </>
         ) : (
           <>
-            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Akkaunt egasi</h3>
-            <Input label={isApple ? "To'liq ism familiya (pasportdagi)" : "To'liq ism familiya"} required placeholder="Sardor Abdullayev" value={f.holderName ?? ""} onChange={set("holderName")} />
+            <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">{t.accountForm.sectionHolder}</h3>
+            <Input label={isApple ? t.accountForm.holderNameApple : t.accountForm.holderName} required placeholder={t.form.fullNamePlaceholder} value={f.holderName ?? ""} onChange={set("holderName")} />
             {isApple ? (
               <>
-                <Textarea label="Yuridik manzil" rows={2} placeholder="Ko'cha, shahar, pochta indeksi, mamlakat" value={f.legalAddress ?? ""} onChange={set("legalAddress")} />
-                <Input label="Telefon" placeholder="+998..." value={f.holderPhone ?? ""} onChange={set("holderPhone")} />
+                <Textarea label={t.accountForm.legalAddress} rows={2} placeholder={t.accountForm.legalAddressPlaceholder} value={f.legalAddress ?? ""} onChange={set("legalAddress")} />
+                <Input label={t.form.phone} placeholder="+998..." value={f.holderPhone ?? ""} onChange={set("holderPhone")} />
               </>
             ) : (
-              <Input label="Mamlakat" placeholder="O'zbekiston" value={f.country ?? ""} onChange={set("country")} />
+              <Input label={t.accountForm.country} placeholder={t.accountForm.countryPlaceholder} value={f.country ?? ""} onChange={set("country")} />
             )}
           </>
         )}
 
-        <Textarea label="Qo'shimcha izoh (ixtiyoriy)" rows={2} placeholder="Qo'shimcha ma'lumot..." value={f.note ?? ""} onChange={set("note")} />
+        <Textarea label={t.accountForm.extraNote} rows={2} placeholder={t.form.notePlaceholder} value={f.note ?? ""} onChange={set("note")} />
 
         {error && status === "error" && <p className="text-sm text-red-600">❌ {error}</p>}
 
-        <Button type="submit" size="lg" className="w-full">Yuborish ✓</Button>
+        <Button type="submit" size="lg" className="w-full">{t.form.submitCheck}</Button>
       </form>
     </>
   );

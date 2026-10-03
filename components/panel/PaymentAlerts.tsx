@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PaymentView } from "@/components/panel/PaymentView";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 // Har bir to'lov qayerdan kelib chiqqanini bildiradi — "hammasini birga to'lash"
 // so'rovida serverga aynan shu ma'lumot yuboriladi.
@@ -61,6 +62,7 @@ function RenewalInlinePay({
   cardHolder: string;
   walletUzs: number;
 }) {
+  const t = useT();
   const [requestId, setRequestId] = useState<string | null>(null);
   const [actual, setActual] = useState<{ usd: number; uzs: number | null } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,11 +78,11 @@ function RenewalInlinePay({
         body: JSON.stringify({ appId }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Xato yuz berdi");
+      if (!json.success) throw new Error(json.error || t.common.error);
       setRequestId(json.id);
       if (typeof json.usd === "number") setActual({ usd: json.usd, uzs: typeof json.uzs === "number" ? json.uzs : null });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Xato yuz berdi");
+      setError(e instanceof Error ? e.message : t.common.error);
     } finally {
       setLoading(false);
     }
@@ -99,7 +101,7 @@ function RenewalInlinePay({
         cardNumber={cardNumber}
         cardHolder={cardHolder}
         walletUzs={walletUzs}
-        amountLabel="Obunani uzaytirish (+9 oy)"
+        amountLabel={t.panel.renewalPayLabel}
         receiptSent={false}
         askTaxPhone
       />
@@ -113,7 +115,7 @@ function RenewalInlinePay({
         disabled={loading}
         className="self-start inline-flex items-center gap-2 h-9 px-4 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-60 transition-colors"
       >
-        {loading ? "Boshlanmoqda…" : `To'lash — $${usd}`}
+        {loading ? t.panel.renewalStarting : t.panel.renewalPay(usd)}
       </button>
       {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
@@ -133,6 +135,7 @@ export function PaymentAlerts({
   rate: number | null;
   walletUzs?: number;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [renewalOpenAppId, setRenewalOpenAppId] = useState<string | null>(null);
@@ -161,9 +164,9 @@ export function PaymentAlerts({
             </svg>
           </span>
           <div className="min-w-0 text-left">
-            <p className="text-sm font-bold text-slate-900">To&apos;lov kutilmoqda</p>
+            <p className="text-sm font-bold text-slate-900">{t.panel.alertsTitle}</p>
             <p className="text-xs text-amber-700">
-              {items.length} ta to&apos;lov{groups.length > 1 ? ` · ${groups.length} ta ilova` : ""}
+              {t.panel.alertsCount(items.length)}{groups.length > 1 ? t.panel.alertsApps(groups.length) : ""}
             </p>
           </div>
         </div>
@@ -190,7 +193,7 @@ export function PaymentAlerts({
                 className="w-full flex items-center justify-between gap-3"
               >
                 <span className="text-sm font-semibold text-slate-800">
-                  💳 Hammasini birga to&apos;lash <span className="text-slate-400 font-normal">({bulkItems.length} ta)</span>
+                  {t.panel.payAllTitle} <span className="text-slate-400 font-normal">{t.panel.payAllCount(bulkItems.length)}</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600">
                   ${bulkTotal}
@@ -210,7 +213,7 @@ export function PaymentAlerts({
                     cardNumber={cardNumber}
                     cardHolder={cardHolder}
                     walletUzs={walletUzs}
-                    amountLabel={`Hammasi — ${bulkItems.length} ta to'lov`}
+                    amountLabel={t.panel.payAllLabel(bulkItems.length)}
                     receiptSent={false}
                     askTaxPhone
                   />
@@ -259,8 +262,8 @@ export function PaymentAlerts({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-900 truncate">{g.title}</p>
                   <p className="text-xs text-amber-700 truncate">
-                    {g.items.length > 1 ? `${g.items.length} ta to'lov: ${g.items.map((i) => i.label).join(", ")}` : g.items[0].label}
-                    {" · to'lash uchun bosing"}
+                    {g.items.length > 1 ? t.panel.multiPay(g.items.length, g.items.map((i) => i.label).join(", ")) : g.items[0].label}
+                    {t.panel.clickToPay}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

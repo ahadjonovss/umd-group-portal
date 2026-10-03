@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState, DragEvent, ChangeEvent, useEffect } from "react";
+import { useT } from "@/components/i18n/LanguageProvider";
+import type { Dict } from "@/lib/i18n";
 
 export interface ImageValidationConfig {
   width: number;
@@ -36,11 +38,12 @@ type Props = ImageUploadProps | MultiImageUploadProps;
 
 async function validateClientImage(
   file: File,
-  config: ImageValidationConfig
+  config: ImageValidationConfig,
+  t: Dict
 ): Promise<{ valid: boolean; warning?: string; error?: string; preview?: string }> {
   return new Promise((resolve) => {
     if (file.size > config.maxSizeMB * 1024 * 1024) {
-      resolve({ valid: false, error: `Fayl hajmi ${config.maxSizeMB}MB dan oshmasligi kerak` });
+      resolve({ valid: false, error: t.upload.tooLarge(config.maxSizeMB) });
       return;
     }
 
@@ -52,7 +55,7 @@ async function validateClientImage(
         if (img.width !== config.width || img.height !== config.height) {
           resolve({
             valid: false,
-            error: `Rasm o'lchami ${config.width}×${config.height} px bo'lishi kerak. Siz ${img.width}×${img.height} px yubordingiz.`,
+            error: t.upload.wrongSize(config.width, config.height, img.width, img.height),
           });
         } else {
           resolve({ valid: true });
@@ -61,7 +64,7 @@ async function validateClientImage(
         if (img.width !== config.width || img.height !== config.height) {
           resolve({
             valid: true,
-            warning: `Tavsiya etilgan o'lcham: ${config.width}×${config.height} px. Siz ${img.width}×${img.height} px yubordingiz.`,
+            warning: t.upload.recommendedSize(config.width, config.height, img.width, img.height),
           });
         } else {
           resolve({ valid: true });
@@ -70,7 +73,7 @@ async function validateClientImage(
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      resolve({ valid: false, error: "Rasm faylini o'qishda xato" });
+      resolve({ valid: false, error: t.upload.readError });
     };
     img.src = url;
   });
@@ -84,6 +87,7 @@ interface PreviewItem {
 }
 
 export function ImageUpload(props: Props) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [previews, setPreviews] = useState<PreviewItem[]>([]);
@@ -100,7 +104,7 @@ export function ImageUpload(props: Props) {
     if (!isMultiple) {
       const file = files[0];
       if (!file) return;
-      const result = await validateClientImage(file, props.validation);
+      const result = await validateClientImage(file, props.validation, t);
       const preview = URL.createObjectURL(file);
       setPreviews([{ file, preview, error: result.error, warning: result.warning }]);
       if (result.valid) {
@@ -121,7 +125,7 @@ export function ImageUpload(props: Props) {
     const validFiles: File[] = [];
 
     for (const file of toProcess) {
-      const result = await validateClientImage(file, props.validation);
+      const result = await validateClientImage(file, props.validation, t);
       const preview = URL.createObjectURL(file);
       newPreviews.push({ file, preview, error: result.error, warning: result.warning });
       if (result.valid) validFiles.push(file);
@@ -191,9 +195,9 @@ export function ImageUpload(props: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <p className="text-xs text-gray-600">
-            <span className="text-blue-600 font-medium">Rasm tanlash</span> yoki sudrab tashlang
+            <span className="text-blue-600 font-medium">{t.upload.pickImage}</span>{t.upload.orDragImage}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">PNG, JPEG • max {props.validation.maxSizeMB}MB</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t.upload.imageHint(props.validation.maxSizeMB)}</p>
         </div>
       )}
 

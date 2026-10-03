@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export function PushCertRequestForm({
   appId,
@@ -19,6 +20,7 @@ export function PushCertRequestForm({
   rate: number | null;
   discountPercent?: number;
 }) {
+  const t = useT();
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,11 +35,11 @@ export function PushCertRequestForm({
         body: JSON.stringify({ appId }),
       });
       const json = await res.json();
-      if (!json.success) throw new Error(json.error || "Xato yuz berdi");
+      if (!json.success) throw new Error(json.error || t.common.error);
       router.push(`/panel/app/${appId}`);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Xato yuz berdi");
+      setError(err instanceof Error ? err.message : t.common.error);
       setLoading(false);
     }
   }
@@ -45,21 +47,18 @@ export function PushCertRequestForm({
   return (
     <div className="flex flex-col gap-5">
       <div className="bg-sky-50 border border-sky-200 rounded-xl p-4">
-        <p className="text-sm font-semibold text-sky-800">{appName} — Push sertifikat</p>
-        <p className="text-xs text-sky-700 mt-1 leading-relaxed">
-          Apple push notification (APNs) sertifikatini tayyorlab beramiz. To&apos;lov tasdiqlangач
-          sertifikat Telegram orqali sizga yuboriladi.
-        </p>
+        <p className="text-sm font-semibold text-sky-800">{t.requestPage.pushHeading(appName)}</p>
+        <p className="text-xs text-sky-700 mt-1 leading-relaxed">{t.requestPage.pushSub}</p>
         <p className="text-sm font-bold text-slate-900 mt-2">
-          Narx: ${usd}
+          {t.requestPage.priceLabel(usd)}
           {uzs ? (
             <span className="font-normal text-slate-500">
-              {" "}(~{uzs.toLocaleString("en-US")} so&apos;m{rate ? `, 1$=${rate.toLocaleString("en-US")}` : ""})
+              {t.requestPage.priceUzs(uzs.toLocaleString("en-US"), rate ? rate.toLocaleString("en-US") : null)}
             </span>
           ) : null}
         </p>
         {discountPercent > 0 && (
-          <p className="text-xs font-semibold text-emerald-600 mt-1">🎉 Chegirma qo&apos;llandi: −{discountPercent}%</p>
+          <p className="text-xs font-semibold text-emerald-600 mt-1">{t.requestPage.discountApplied(discountPercent)}</p>
         )}
       </div>
 
@@ -67,10 +66,10 @@ export function PushCertRequestForm({
 
       <div className="flex gap-3 justify-end">
         <Button type="button" variant="outline" size="lg" onClick={() => router.push(`/panel/app/${appId}`)}>
-          Bekor
+          {t.common.cancelShort}
         </Button>
         <Button type="button" size="lg" loading={loading} onClick={submit}>
-          So&apos;rov yuborish
+          {t.requestPage.submit}
         </Button>
       </div>
     </div>

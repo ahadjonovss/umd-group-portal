@@ -1,6 +1,11 @@
+"use client";
+
+import { useT } from "@/components/i18n/LanguageProvider";
+
 // Kabinet: Telegram ulash taklifi / yana akkaunt qo'shish.
 // Tugma bosilganda /api/telegram/link ga o'tadi — u token yaratib botga yo'naltiradi.
 export function TelegramLinkAlert({ count = 0 }: { count?: number }) {
+  const t = useT();
   // Allaqachon ulangan bo'lsa — kichik "yana ulash" qatori
   if (count > 0) {
     return (
@@ -13,8 +18,8 @@ export function TelegramLinkAlert({ count = 0 }: { count?: number }) {
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
-        Yana Telegram akkaunt ulash
-        <span className="text-slate-400">({count} ta ulangan)</span>
+        {t.panel.tgLinkMore}
+        <span className="text-slate-400">{t.panel.tgLinkedCount(count)}</span>
       </a>
     );
   }
@@ -32,13 +37,11 @@ export function TelegramLinkAlert({ count = 0 }: { count?: number }) {
         </svg>
       </span>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-sky-900">Telegramga ulaning</p>
-        <p className="text-xs text-sky-700">
-          Ilovalaringiz bo&apos;yicha barcha yangiliklarni — status, to&apos;lov, so&apos;rovlar — Telegramda olib turing
-        </p>
+        <p className="text-sm font-semibold text-sky-900">{t.panel.tgTitle}</p>
+        <p className="text-xs text-sky-700">{t.panel.tgSub}</p>
       </div>
       <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-semibold flex-shrink-0 group-hover:bg-sky-700 transition-colors">
-        Ulash
+        {t.panel.tgCta}
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
         </svg>

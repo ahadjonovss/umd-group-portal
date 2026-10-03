@@ -2,16 +2,21 @@ import { AppStoreForm } from "@/components/forms/AppStoreForm";
 import { FormPageLayout } from "@/components/FormPageLayout";
 import { getPricing } from "@/lib/firestore/settings";
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "App Store Joylashtirish — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.submitPage.appStore.meta };
+}
 export const dynamic = "force-dynamic";
 
 export default async function AppStorePage() {
+  const t = await getT();
   const pricing = await getPricing();
   return (
     <FormPageLayout
-      title="App Store — Ilova Joylashtirish"
-      subtitle="iOS ilovangizni Apple App Store-ga chiqarish"
+      title={t.submitPage.appStore.title}
+      subtitle={t.submitPage.appStore.subtitle}
     >
       <AppStoreForm pricing={pricing} />
     </FormPageLayout>

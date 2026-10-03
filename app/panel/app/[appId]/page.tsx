@@ -21,8 +21,16 @@ import { estimatedDateIso, etaDaysFor } from "@/lib/eta";
 import { appAdvanceStage, showFinalPayment, appPaymentDone } from "@/lib/panel-status";
 import { getInstallment, isPayable, installmentKeysFor, type PayState } from "@/lib/payment-state";
 import { InvoicePayment } from "@/components/panel/InvoicePayment";
-import { SERVICE_LABELS, accountLabel, formatDate, platformOf, appLabel, appTitle, statusMetaFor } from "@/lib/labels";
-import { REQUEST_TYPE_LABEL, requestStatusLabel, REQUEST_STATUS_META } from "@/lib/request-status";
+import { formatDate, platformOf, statusMetaFor } from "@/lib/labels";
+import { REQUEST_STATUS_META } from "@/lib/request-status";
+import { getT } from "@/lib/i18n/server";
+import {
+  accountLabelOf,
+  appLabelOf,
+  appTitleFor,
+  requestStatusLabelOf,
+  statusTextFor,
+} from "@/lib/i18n/format";
 import { themeFor, ServiceLogo } from "@/components/serviceTheme";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { ReviewButton } from "@/components/panel/ReviewButton";
@@ -40,71 +48,11 @@ import {
   ClockIcon,
 } from "@/components/panel/AppSections";
 
-export const metadata: Metadata = { title: "Ilova — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.appDetail.meta };
+}
 export const dynamic = "force-dynamic";
-
-const FIELD_LABELS: Record<string, string> = {
-  fullName: "To'liq ism",
-  phone: "Telefon",
-  email: "Email",
-  telegram: "Telegram",
-  appName: "Ilova nomi",
-  packageName: "Package name",
-  shortDescription: "Qisqa tavsif",
-  fullDescription: "To'liq tavsif",
-  privacyPolicyUrl: "Privacy Policy",
-  subtitle: "Subtitle",
-  supportUrl: "Support URL",
-  githubRepoUrl: "GitHub repo",
-  githubUsername: "GitHub username",
-  bundleId: "Bundle ID",
-  certificatePassword: "Sertifikat paroli",
-  keystorePassword: "Keystore paroli",
-  keyAlias: "Key alias",
-  keyPassword: "Key paroli",
-  testLogin: "Test login",
-  testPassword: "Test parol",
-  note: "Izoh",
-  developerAccountId: "Developer Account ID",
-  googlePaymentsProfileId: "Payments Profile ID",
-  transactionId: "Transaction ID",
-  appStoreConnectTeamId: "App Store Connect Team ID",
-  appleDevAccountEmail: "Apple Dev akkaunt email",
-  releaseNotes: "Relizdagi o'zgarishlar",
-  months: "Muddat (oy)",
-  // Akkaunt ochish
-  platform: "Platforma",
-  accountType: "Akkaunt turi",
-  login: "Akkaunt login",
-  loginPassword: "Akkaunt paroli",
-  holderName: "Akkaunt egasi (F.I.O.)",
-  holderPhone: "Telefon",
-  country: "Mamlakat",
-  companyName: "Yuridik kompaniya nomi",
-  legalAddress: "Yuridik manzil",
-  companyPhone: "Kompaniya telefoni",
-  companyEmail: "Kompaniya email",
-  website: "Veb-sayt",
-  companyType: "Kompaniya turi",
-  activityType: "Faoliyat turi",
-  cpName: "Kontakt/Signatory F.I.O.",
-  cpPosition: "Lavozim",
-  cpPhone: "Kontakt telefon",
-  cpEmail: "Kontakt email",
-};
-
-const PAYMENT_KIND_LABEL: Record<string, string> = {
-  advance: "Avans (oldindan)",
-  final: "Qolgan to'lov",
-  full: "To'liq to'lov",
-  transfer: "Transfer to'lovi",
-  update: "Update to'lovi",
-  renewal: "Obuna uzaytirish",
-  push_certificate: "Push sertifikat",
-  update_package: "Update paketi",
-  custom: "Qo'shimcha to'lov",
-  recurring: "Davriy to'lov",
-};
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -156,7 +104,8 @@ export default async function AppDetailPage({
   if (!detail || detail.app.ownerUid !== user.uid) notFound();
   const { app, submission } = detail;
 
-  const [pricing, paymentInfo, usdRate, requests, payments, myReview, activity, walletUzs] = await Promise.all([
+  const [t, pricing, paymentInfo, usdRate, requests, payments, myReview, activity, walletUzs] = await Promise.all([
+    getT(),
     getPricing(),
     getPaymentInfo(),
     getUsdRate(),
@@ -167,9 +116,12 @@ export default async function AppDetailPage({
     getUserWalletUzs(user.uid),
   ]);
 
+  const FIELD_LABELS: Record<string, string> = t.fieldLabels;
+  const PAYMENT_KIND_LABEL: Record<string, string> = t.paymentKind;
   const theme = themeFor(app);
-  const status = statusMetaFor(app, app.status);
-  const title = appTitle(app);
+  const status = statusMetaFor(app, app.status); // rang/badge klasslari
+  const statusText = statusTextFor(t, app, app.status);
+  const title = appTitleFor(t, app);
   const transferred = app.status === "transferred";
   const subStarted = Boolean(app.subscription?.startDate);
   const canReview = isTerminalSuccess(app.status);
@@ -208,7 +160,7 @@ export default async function AppDetailPage({
   if (advanceAmount > 0) {
     invoiceList.push({
       key: "advance",
-      label: hasFinal ? "Avans" : "To'lov",
+      label: hasFinal ? t.appDetail.invoiceAdvance : t.appDetail.invoicePayment,
       usd: advanceAmount,
       uzs: advanceUzs,
       state: (advInst?.state as PayState) ?? (app.receiptSent ? "submitted" : "due"),
@@ -217,7 +169,7 @@ export default async function AppDetailPage({
   if (hasFinal && finalAmount > 0) {
     invoiceList.push({
       key: "final",
-      label: "Yakuniy",
+      label: t.appDetail.invoiceFinal,
       usd: finalAmount,
       uzs: finalUzs,
       state: (finInst?.state as PayState) ?? (app.finalPaid ? "confirmed" : app.finalReceiptSent ? "submitted" : "due"),
@@ -238,31 +190,31 @@ export default async function AppDetailPage({
 
   // Umumiy metama'lumot
   const generalRows: [string, string][] = [];
-  if (app.appName) generalRows.push(["Ilova nomi", app.appName]);
+  if (app.appName) generalRows.push([t.appDetail.rowAppName, app.appName]);
   generalRows.push([
-    "Xizmat turi",
+    t.appDetail.rowServiceType,
     app.serviceType === "account" && app.accountPlatform
-      ? `${appLabel(app)} · ${accountLabel(app.accountPlatform, app.accountType)}`
-      : appLabel(app),
+      ? `${appLabelOf(t, app)} · ${accountLabelOf(t, app.accountPlatform, app.accountType)}`
+      : appLabelOf(t, app),
   ]);
-  generalRows.push(["Holati", status.label]);
-  generalRows.push(["Yuborilgan sana", formatDate(app.createdAt)]);
-  if (app.publication.published) generalRows.push(["Store'ga chiqarilgan", formatDate(app.publication.publishedAt)]);
-  if (app.publishedPrice) generalRows.push(["Chiqarilgan narx", `$${app.publishedPrice}`]);
-  if (app.taxPhone) generalRows.push(["Soliq cheki telefoni", app.taxPhone]);
+  generalRows.push([t.appDetail.rowStatus, statusText.label]);
+  generalRows.push([t.appDetail.rowSubmittedAt, formatDate(app.createdAt)]);
+  if (app.publication.published) generalRows.push([t.appDetail.rowPublishedAt, formatDate(app.publication.publishedAt)]);
+  if (app.publishedPrice) generalRows.push([t.appDetail.rowPublishedPrice, `$${app.publishedPrice}`]);
+  if (app.taxPhone) generalRows.push([t.appDetail.rowTaxPhone, app.taxPhone]);
   if (app.subscription?.startDate) {
-    generalRows.push(["Obuna boshlangan", formatDate(app.subscription.startDate)]);
-    generalRows.push(["Obuna tugashi", formatDate(app.subscription.endDate)]);
-    generalRows.push(["Obuna holati", app.subscription.active ? "Faol" : "Faol emas"]);
-    if (app.subscription.renewedCount > 0) generalRows.push(["Uzaytirilgan", `${app.subscription.renewedCount} marta`]);
+    generalRows.push([t.appDetail.rowSubStart, formatDate(app.subscription.startDate)]);
+    generalRows.push([t.appDetail.rowSubEnd, formatDate(app.subscription.endDate)]);
+    generalRows.push([t.appDetail.rowSubStatus, app.subscription.active ? t.appDetail.rowSubActive : t.appDetail.rowSubInactive]);
+    if (app.subscription.renewedCount > 0) generalRows.push([t.appDetail.rowRenewed, t.appDetail.rowRenewedTimes(app.subscription.renewedCount)]);
   }
-  if (transferred) generalRows.push(["Transfer qilingan", formatDate(app.transferredAt)]);
+  if (transferred) generalRows.push([t.appDetail.rowTransferredAt, formatDate(app.transferredAt)]);
 
   // Aloqa ma'lumotlari
   const contactRows: [string, string][] = [];
-  if (app.contact?.fullName) contactRows.push(["To'liq ism", app.contact.fullName]);
-  if (app.contact?.phone) contactRows.push(["Telefon", app.contact.phone]);
-  if (app.contact?.email) contactRows.push(["Email", app.contact.email]);
+  if (app.contact?.fullName) contactRows.push([t.appDetail.rowFullName, app.contact.fullName]);
+  if (app.contact?.phone) contactRows.push([t.appDetail.rowPhone, app.contact.phone]);
+  if (app.contact?.email) contactRows.push([t.appDetail.rowEmail, app.contact.email]);
 
   // Yuborilgan (forma) ma'lumotlari — aloqa maydonlarini takrorlamaymiz
   const CONTACT_KEYS = new Set(["fullName", "phone", "email", "telegram"]);
@@ -283,7 +235,7 @@ export default async function AppDetailPage({
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Kabinet
+            {t.appDetail.backToPanel}
           </Link>
           <div className="flex-1" />
           <Logo size={26} color="#3a3733" />
@@ -295,16 +247,16 @@ export default async function AppDetailPage({
         <div className="relative overflow-hidden bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
           <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${theme.accent}`} />
           <div className="flex gap-4 items-start pl-2">
-            <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} app={app} />
+            <ServiceLogo serviceType={app.serviceType} iconUrl={app.iconUrl} appName={app.appName} app={app} fallbackAlt={t.service.appPlaceholder} />
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h1 className="text-lg font-bold text-slate-900 truncate">{title}</h1>
-                  <p className={`text-sm font-medium ${theme.text}`}>{appLabel(app)}</p>
+                  <p className={`text-sm font-medium ${theme.text}`}>{appLabelOf(t, app)}</p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${status.badge}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
-                  {status.label}
+                  {statusText.label}
                 </span>
               </div>
 
@@ -314,7 +266,7 @@ export default async function AppDetailPage({
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
-                    {formatDate(app.transferredAt)} da transfer qilingan
+                    {t.panel.transferredOn(formatDate(app.transferredAt))}
                   </div>
                 ) : subStarted ? (
                   <SubscriptionProgress sub={app.subscription!} />
@@ -331,7 +283,7 @@ export default async function AppDetailPage({
               <svg className="w-3.5 h-3.5 flex-shrink-0 mt-px text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>{status.desc}</span>
+              <span>{statusText.desc}</span>
             </p>
           )}
 
@@ -361,14 +313,14 @@ export default async function AppDetailPage({
 
               {/* Qo'shimcha hisob-fakturalar (admin biriktirgan) */}
               {customReqs.length > 0 && (
-                <SectionCard title="Qo'shimcha hisob-fakturalar">
+                <SectionCard title={t.appDetail.cardCustomInvoices}>
                   <CustomInvoiceSection reqs={customReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
                 </SectionCard>
               )}
 
               {/* Obunasi tugab, store'dan olib tashlangan ilova — uzaytirib qayta tiklash */}
               {app.status === "subscription_ended" && (
-                <SectionCard title="Obunani tiklash">
+                <SectionCard title={t.appDetail.cardRestoreSub}>
                   <RenewalSection app={app} req={renewalReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
                 </SectionCard>
               )}
@@ -376,7 +328,7 @@ export default async function AppDetailPage({
               {/* Amallar — update / obuna uzaytirish / transfer / push sertifikat.
                   Faqat to'lovi yakunlangan chiqarilgan ilovada (yoki iOS yakunlangan — push uchun). */}
               {paymentDone && (app.status === "published" || (isTerminalSuccess(app.status) && platformOf(app.serviceType) === "ios")) && (
-                <SectionCard title="Amallar">
+                <SectionCard title={t.appDetail.cardActions}>
                   <div className="flex flex-col gap-4">
                     <UpdatePackageSection app={app} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} priceUsd={pkgPriceUsd} quota={pkgQuota} rate={rate} purchasePending={pkgPurchasePending} />
                     <UpdateSection app={app} req={updateReq} cardNumber={cardNumber} cardHolder={cardHolder} paymentDone={paymentDone} walletUzs={walletUzs} />
@@ -391,27 +343,27 @@ export default async function AppDetailPage({
               {!subStarted && app.subscription && !isTerminalError(app.status) && (
                 <div className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 ring-1 ring-slate-200 px-2.5 py-1.5 text-xs text-slate-500 self-start">
                   <ClockIcon />
-                  Obuna ilova chiqarilgach boshlanadi (9 oy)
+                  {t.appDetail.subStartsAfter}
                 </div>
               )}
 
               {/* Ilova ma'lumotlari */}
-              <SectionCard title="Ilova ma'lumotlari">
+              <SectionCard title={t.appDetail.cardAppInfo}>
                 {hasAnyInfo ? (
                   <div className="flex flex-col gap-5">
-                    <InfoGroup label="Umumiy" rows={generalRows} />
-                    <InfoGroup label="Aloqa" rows={contactRows} />
-                    <InfoGroup label="Yuborilgan ma'lumotlar" rows={submissionRows} />
+                    <InfoGroup label={t.appDetail.groupGeneral} rows={generalRows} />
+                    <InfoGroup label={t.appDetail.groupContact} rows={contactRows} />
+                    <InfoGroup label={t.appDetail.groupSubmission} rows={submissionRows} />
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400">Qo&apos;shimcha ma&apos;lumot yo&apos;q.</p>
+                  <p className="text-sm text-slate-400">{t.appDetail.noExtraInfo}</p>
                 )}
               </SectionCard>
 
               {/* So'rovlar (transfer/update/uzaytirish) — ma'lumotlari + statusi bilan.
                   Qo'shimcha hisob-fakturalar (custom) yuqorida alohida ko'rsatiladi. */}
               {requests.filter((r) => r.type !== "custom").length > 0 && (
-                <SectionCard title="So'rovlar">
+                <SectionCard title={t.appDetail.cardRequests}>
                   <div className="flex flex-col gap-3">
                     {requests.filter((r) => r.type !== "custom").map((r) => {
                       const m = REQUEST_STATUS_META[r.status];
@@ -421,14 +373,14 @@ export default async function AppDetailPage({
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-slate-900">
-                                {REQUEST_TYPE_LABEL[r.type]}
+                                {t.requestType[r.type]}
                                 <span className="text-slate-400 font-normal"> · ${r.amountUsd}</span>
                               </p>
                               <p className="text-[11px] text-slate-400">{formatDate(r.createdAt)}</p>
                             </div>
                             <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${m.badge}`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${m.dot}`} />
-                              {requestStatusLabel(r.type, r.status)}
+                              {requestStatusLabelOf(t, r.type, r.status)}
                             </span>
                           </div>
                           {dataEntries.length > 0 && (
@@ -450,9 +402,9 @@ export default async function AppDetailPage({
 
               {/* Store havolasi */}
               {app.publication.published && (
-                <SectionCard title="Store'da">
+                <SectionCard title={t.appDetail.cardInStore}>
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-slate-500">Chiqarilgan sana: <strong className="text-slate-800">{formatDate(app.publication.publishedAt)}</strong></span>
+                    <span className="text-slate-500">{t.appDetail.publishedOn} <strong className="text-slate-800">{formatDate(app.publication.publishedAt)}</strong></span>
                     {app.publication.storeUrl && (
                       <a
                         href={app.publication.storeUrl}
@@ -460,7 +412,7 @@ export default async function AppDetailPage({
                         rel="noopener noreferrer"
                         className={`inline-flex items-center gap-1 font-semibold ${theme.text} hover:underline`}
                       >
-                        Store havolasi ↗
+                        {t.appDetail.storeLink}
                       </a>
                     )}
                   </div>
@@ -469,7 +421,7 @@ export default async function AppDetailPage({
 
               {/* Baholash */}
               {(canReview || myReview) && (
-                <SectionCard title="Xizmatni baholash">
+                <SectionCard title={t.appDetail.cardReview}>
                   {myReview ? (
                     <div className="flex flex-col gap-2.5">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -482,7 +434,7 @@ export default async function AppDetailPage({
                               : "bg-amber-50 text-amber-600 ring-amber-200"
                           }`}
                         >
-                          {myReview.approved ? "E'lon qilingan" : "Tekshiruvda"}
+                          {myReview.approved ? t.appDetail.reviewPublished : t.appDetail.reviewPending}
                         </span>
                       </div>
                       {myReview.comment && (
@@ -491,7 +443,7 @@ export default async function AppDetailPage({
                     </div>
                   ) : (
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm text-slate-500">Xizmatimiz haqidagi fikringiz biz uchun muhim.</p>
+                      <p className="text-sm text-slate-500">{t.appDetail.reviewPrompt}</p>
                       <ReviewButton appId={app.id} reviewed={app.reviewed} />
                     </div>
                   )}
@@ -502,7 +454,7 @@ export default async function AppDetailPage({
           payment={
             <>
               {hasOpenInvoice ? (
-                <SectionCard title="Hisob-fakturalar">
+                <SectionCard title={t.appDetail.cardInvoices}>
                   <InvoicePayment
                     appId={app.id}
                     invoices={invoiceList}
@@ -514,12 +466,12 @@ export default async function AppDetailPage({
                   />
                 </SectionCard>
               ) : payments.length === 0 ? (
-                <p className="text-sm text-slate-400 py-6 text-center">Hozircha to&apos;lov amali yo&apos;q.</p>
+                <p className="text-sm text-slate-400 py-6 text-center">{t.appDetail.noPaymentsYet}</p>
               ) : null}
 
               {/* To'lovlar tarixi */}
               {payments.length > 0 && (
-                <SectionCard title="To'lovlar tarixi">
+                <SectionCard title={t.appDetail.cardPaymentHistory}>
                   <div className="flex flex-col gap-2">
                     {payments.map((p) => (
                       <div key={p.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-100 px-4 py-3 flex items-center justify-between gap-3">
@@ -530,7 +482,7 @@ export default async function AppDetailPage({
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
                             {formatDate(p.createdAt)}
-                            {p.amountUzs ? ` · ~${p.amountUzs.toLocaleString("en-US")} so'm` : ""}
+                            {p.amountUzs ? t.appDetail.payUzsSuffix(p.amountUzs.toLocaleString("en-US")) : ""}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -545,7 +497,7 @@ export default async function AppDetailPage({
                             }`}
                           >
                             <span className={`w-1.5 h-1.5 rounded-full ${p.status === "confirmed" ? "bg-emerald-500" : p.status === "rejected" ? "bg-red-500" : "bg-amber-500"}`} />
-                            {p.status === "confirmed" ? "Tasdiqlangan" : p.status === "rejected" ? "Rad etilgan" : "Kutilmoqda"}
+                            {p.status === "confirmed" ? t.appDetail.payConfirmed : p.status === "rejected" ? t.appDetail.payRejected : t.appDetail.payPending}
                           </span>
                         </div>
                       </div>

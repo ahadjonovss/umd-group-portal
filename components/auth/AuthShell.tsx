@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ReactNode } from "react";
 import { Logo } from "@/components/Logo";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
 
 export function AuthShell({
   title,
@@ -15,11 +16,12 @@ export function AuthShell({
 }) {
   return (
     <div className="min-h-screen bg-gradient-subtle flex flex-col">
-      <header className="px-4 py-4">
+      <header className="px-4 py-4 flex items-center justify-between">
         <Link href="/" className="inline-flex items-center gap-2">
           <Logo size={30} color="#3a3733" />
           <span className="text-sm font-bold text-slate-900">UMD GROUP</span>
         </Link>
+        <LanguageSwitcher />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">

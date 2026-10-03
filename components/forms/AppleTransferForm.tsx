@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -8,16 +8,18 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
-import { appleTransferSchema, type AppleTransferData } from "@/lib/validations/apple-transfer";
+import { makeAppleTransferSchema, type AppleTransferData } from "@/lib/validations/apple-transfer";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export function AppleTransferForm() {
+  const t = useT();
   const router = useRouter();
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [progress, setProgress] = useState(0);
 
   const form = useForm<AppleTransferData>({
-    resolver: zodResolver(appleTransferSchema),
+    resolver: zodResolver(useMemo(() => makeAppleTransferSchema(t), [t])),
     defaultValues: { appStoreConnectTeamId: "", appleDevAccountEmail: "" },
   });
 
@@ -36,13 +38,13 @@ export function AppleTransferForm() {
       const res = await fetchPromise;
       await animateProgress(80, 95, 400);
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
+      if (!res.ok || !json.success) throw new Error(json.error || json.message || t.common.error);
       await animateProgress(95, 100, 200);
       await new Promise((r) => setTimeout(r, 500));
       router.push(`/success?service=apple-transfer&appId=${json.id}`);
     } catch (err: unknown) {
       setSubmitStatus("error");
-      setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
+      setSubmitError(err instanceof Error ? err.message : t.form.unexpectedError);
     }
   }
 
@@ -73,37 +75,37 @@ export function AppleTransferForm() {
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-5">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Apple App Store — App Transfer</h2>
-          <p className="text-sm text-gray-500 mt-1">Ilovani bizning akkauntga o&apos;tkazish uchun ma&apos;lumotlar</p>
+          <h2 className="text-xl font-semibold text-gray-900">{t.appleTransferForm.heading}</h2>
+          <p className="text-sm text-gray-500 mt-1">{t.appleTransferForm.sub}</p>
         </div>
 
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Apple akkaunt</h3>
+        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{t.appleTransferForm.sectionAccount}</h3>
 
         <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
-          ℹ️ Team ID ni qayerdan topish: <br />
-          <span className="font-medium">App Store Connect → Users and Access → Team ID</span>
+          {t.appleTransferForm.whereToFind} <br />
+          <span className="font-medium">{t.appleTransferForm.whereToFindPath}</span>
         </div>
 
         <Input
-          label="App Store Connect Team ID"
+          label={t.appleTransferForm.teamId}
           required
-          placeholder="1A2B3C4D5E"
+          placeholder={t.appleTransferForm.teamIdPlaceholder}
           {...form.register("appStoreConnectTeamId")}
           error={form.formState.errors.appStoreConnectTeamId?.message}
-          hint="App Store Connect → Users and Access → Team ID"
+          hint={t.appleTransferForm.whereToFindPath}
         />
 
         <Input
-          label="Apple Developer Account Email"
+          label={t.appleTransferForm.devEmail}
           type="email"
           required
-          placeholder="example@company.com"
+          placeholder={t.appleTransferForm.devEmailPlaceholder}
           {...form.register("appleDevAccountEmail")}
           error={form.formState.errors.appleDevAccountEmail?.message}
-          hint="Apple Developer akkauntingizga ulangan email"
+          hint={t.appleTransferForm.devEmailHint}
         />
 
-        <Button type="submit" size="lg" className="w-full">Yuborish ✓</Button>
+        <Button type="submit" size="lg" className="w-full">{t.form.submitCheck}</Button>
       </form>
     </>
   );

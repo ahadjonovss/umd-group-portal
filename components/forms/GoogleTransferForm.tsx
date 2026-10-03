@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -8,16 +8,18 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
-import { googleTransferSchema, type GoogleTransferData } from "@/lib/validations/google-transfer";
+import { makeGoogleTransferSchema, type GoogleTransferData } from "@/lib/validations/google-transfer";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export function GoogleTransferForm() {
+  const t = useT();
   const router = useRouter();
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [progress, setProgress] = useState(0);
 
   const form = useForm<GoogleTransferData>({
-    resolver: zodResolver(googleTransferSchema),
+    resolver: zodResolver(useMemo(() => makeGoogleTransferSchema(t), [t])),
     defaultValues: { developerAccountId: "", transactionId: "" },
   });
 
@@ -36,13 +38,13 @@ export function GoogleTransferForm() {
       const res = await fetchPromise;
       await animateProgress(80, 95, 400);
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
+      if (!res.ok || !json.success) throw new Error(json.error || json.message || t.common.error);
       await animateProgress(95, 100, 200);
       await new Promise((r) => setTimeout(r, 500));
       router.push(`/success?service=google-transfer&appId=${json.id}`);
     } catch (err: unknown) {
       setSubmitStatus("error");
-      setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
+      setSubmitError(err instanceof Error ? err.message : t.form.unexpectedError);
     }
   }
 
@@ -72,50 +74,50 @@ export function GoogleTransferForm() {
       )}
     <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Google Play — App Transfer</h2>
-        <p className="text-sm text-gray-500 mt-1">Ilovani bizning akkauntga o&apos;tkazish uchun ma&apos;lumotlar</p>
+        <h2 className="text-xl font-semibold text-gray-900">{t.googleTransferForm.heading}</h2>
+        <p className="text-sm text-gray-500 mt-1">{t.googleTransferForm.sub}</p>
       </div>
 
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Developer akkaunt</h3>
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{t.googleTransferForm.sectionAccount}</h3>
 
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700">
-        ℹ️ Developer Account ID ni qayerdan topish: <br />
-        <span className="font-medium">Play Console → Settings → Developer account → Account details</span>
+        {t.googleTransferForm.whereToFind} <br />
+        <span className="font-medium">{t.googleTransferForm.whereToFindPath}</span>
       </div>
 
       <Input
-        label="Developer Account ID"
+        label={t.googleTransferForm.devAccountId}
         required
-        placeholder="12345678901234567890"
+        placeholder={t.googleTransferForm.devAccountIdPlaceholder}
         {...form.register("developerAccountId")}
         error={form.formState.errors.developerAccountId?.message}
-        hint="Play Console → Settings → Developer account → Account details"
+        hint={t.googleTransferForm.whereToFindPath}
       />
 
       <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 leading-relaxed">
-        ℹ️ <span className="font-semibold">Transaction ID</span> ni qanday olish mumkin:
+        {t.googleTransferForm.txTitlePre} <span className="font-semibold">{t.googleTransferForm.txTitleStrong}</span>{t.googleTransferForm.txTitlePost}
         <br />
-        1. Akkauntga <span className="font-semibold">$25</span> to&apos;lov qiling (Google Play developer to&apos;lovi).
+        {t.googleTransferForm.txStep1Pre} <span className="font-semibold">{t.googleTransferForm.txStep1Amount}</span> {t.googleTransferForm.txStep1Post}
         <br />
-        2. Transaction ID ni quyidagilardan toping:
+        {t.googleTransferForm.txStep2}
         <br />
-        &nbsp;&nbsp;• To&apos;lovdan keyin Google yuborgan <span className="font-medium">email xabaridan</span>, yoki
+        &nbsp;&nbsp;{t.googleTransferForm.txStep2aPre} <span className="font-medium">{t.googleTransferForm.txStep2a}</span>{t.googleTransferForm.txStep2aPost}
         <br />
-        &nbsp;&nbsp;• <span className="font-medium">Google Payments profili → Payment history (to&apos;lovlar tarixi)</span> dan.
+        &nbsp;&nbsp;• <span className="font-medium">{t.googleTransferForm.txStep2b}</span>{t.googleTransferForm.txStep2bPost}
       </div>
 
       <Input
-        label="Transaction ID"
+        label={t.googleTransferForm.transactionId}
         required
-        placeholder="0.G.1234-5678-9012-3456"
+        placeholder={t.googleTransferForm.transactionIdPlaceholder}
         {...form.register("transactionId")}
         error={form.formState.errors.transactionId?.message}
-        hint="$25 to'lovdan keyin email xabari yoki Google profil → Payment history"
+        hint={t.googleTransferForm.transactionIdHint}
       />
 
 
 
-      <Button type="submit" size="lg" className="w-full">Yuborish ✓</Button>
+      <Button type="submit" size="lg" className="w-full">{t.form.submitCheck}</Button>
     </form>
     </>
   );

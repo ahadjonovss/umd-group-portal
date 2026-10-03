@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 type TabKey = "info" | "payment" | "activity";
 
@@ -19,12 +20,13 @@ export function AppDetailTabs({
   activityCount: number;
   defaultPayment?: boolean;
 }) {
+  const dict = useT();
   const [tab, setTab] = useState<TabKey>(defaultPayment ? "payment" : "info");
 
   const tabs: { key: TabKey; label: string; count?: number }[] = [
-    { key: "info", label: "Ma'lumot" },
-    { key: "payment", label: "To'lov", count: paymentCount },
-    { key: "activity", label: "Amaliyotlar tarixi", count: activityCount },
+    { key: "info", label: dict.panel.tabInfo },
+    { key: "payment", label: dict.panel.tabPayment, count: paymentCount },
+    { key: "activity", label: dict.panel.tabActivity, count: activityCount },
   ];
 
   return (

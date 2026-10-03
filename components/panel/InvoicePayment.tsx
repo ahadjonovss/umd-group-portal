@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PaymentView } from "@/components/panel/PaymentView";
 import type { PayState } from "@/lib/payment-state";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 interface Invoice {
   key: "advance" | "final";
@@ -12,12 +13,14 @@ interface Invoice {
   state: PayState; // due | submitted | confirmed | rejected | locked
 }
 
-const STATE_BADGE: Record<string, { text: string; cls: string; dot: string }> = {
-  due: { text: "To'lanmagan", cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
-  rejected: { text: "Rad etilgan — qayta yuboring", cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
-  submitted: { text: "Yuborildi — tekshiruvda", cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
-  confirmed: { text: "To'langan", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
-  locked: { text: "Keyinroq", cls: "bg-slate-100 text-slate-500 ring-slate-200", dot: "bg-slate-400" },
+type BadgeKey = "due" | "rejected" | "submitted" | "confirmed" | "locked";
+
+const STATE_BADGE: Record<BadgeKey, { cls: string; dot: string }> = {
+  due: { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
+  rejected: { cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
+  submitted: { cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  confirmed: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  locked: { cls: "bg-slate-100 text-slate-500 ring-slate-200", dot: "bg-slate-400" },
 };
 
 type Choice = "full" | "advance" | "final";
@@ -39,6 +42,7 @@ export function InvoicePayment({
   walletUzs: number;
   discountPercent: number;
 }) {
+  const t = useT();
   const advInv = invoices.find((i) => i.key === "advance");
   const finInv = invoices.find((i) => i.key === "final");
   const isPayable = (i?: Invoice) => !!i && (i.state === "due" || i.state === "rejected");
@@ -62,7 +66,7 @@ export function InvoicePayment({
   // Tanlangan invoice(lar) uchun PaymentView parametrlari
   let payProps: { usd: number; uzs: number | null; kind?: string; label: string } | null = null;
   if (choice === "full" && canFull) {
-    payProps = { usd: fullUsd, uzs: fullUzs, kind: "full", label: "To'liq to'lov" };
+    payProps = { usd: fullUsd, uzs: fullUzs, kind: "full", label: t.panel.payFullLabel };
   } else {
     const inv = invoices.find((i) => i.key === choice && (i.state === "due" || i.state === "rejected"));
     if (inv) payProps = { usd: inv.usd, uzs: inv.uzs, kind: inv.key === "final" ? "final" : undefined, label: inv.label };
@@ -74,7 +78,7 @@ export function InvoicePayment({
       <div className="flex flex-col gap-2">
         {invoices.map((i) => {
           // Yakuniy avans to'langunча "keyinroq" ko'rinishida turadi
-          const effState = i.key === "final" && !advDone && i.state !== "confirmed" ? "locked" : i.state;
+          const effState: BadgeKey = i.key === "final" && !advDone && i.state !== "confirmed" ? "locked" : i.state;
           const b = STATE_BADGE[effState] ?? STATE_BADGE.due;
           return (
             <div key={i.key} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5">
@@ -82,12 +86,12 @@ export function InvoicePayment({
                 <p className="text-sm font-medium text-slate-800">{i.label}</p>
                 <p className="text-xs text-slate-500">
                   ${i.usd}
-                  {i.uzs ? <span className="text-slate-400"> · ~{i.uzs.toLocaleString("en-US")} so&apos;m</span> : null}
+                  {i.uzs ? <span className="text-slate-400"> · ~{i.uzs.toLocaleString("en-US")} {t.common.sum}</span> : null}
                 </p>
               </div>
               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${b.cls}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${b.dot}`} />
-                {b.text}
+                {t.panel.invoiceState[effState]}
               </span>
             </div>
           );
@@ -104,7 +108,7 @@ export function InvoicePayment({
                 onClick={() => setChoice("full")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${choice === "full" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
               >
-                To&apos;liq to&apos;lash
+                {t.panel.payFull}
               </button>
               {selectable.map((i) => (
                 <button

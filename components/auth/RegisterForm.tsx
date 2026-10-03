@@ -7,11 +7,13 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { registerWithEmail, authErrorMessage } from "@/lib/auth/client";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 // Telegram username: 5–32 belgi, harf/raqam/pastki chiziq (@ ixtiyoriy)
 const TG_RE = /^@?[A-Za-z0-9_]{5,32}$/;
 
 export function RegisterForm() {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/panel";
@@ -27,9 +29,9 @@ export function RegisterForm() {
     e.preventDefault();
     setError("");
 
-    if (fullName.trim().length < 2) return setError("To'liq ismni kiriting");
-    if (!TG_RE.test(telegram.trim())) return setError("Telegram username: @ bilan, 5–32 belgi (harf, raqam, _)");
-    if (password.length < 6) return setError("Parol kamida 6 belgi bo'lishi kerak");
+    if (fullName.trim().length < 2) return setError(t.auth.errFullName);
+    if (!TG_RE.test(telegram.trim())) return setError(t.auth.errTelegram);
+    if (password.length < 6) return setError(t.auth.errPasswordShort);
 
     // @ belgisisiz, toza username saqlaymiz
     const tgUsername = telegram.trim().replace(/^@/, "");
@@ -45,8 +47,8 @@ export function RegisterForm() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      if (err instanceof FirebaseError) setError(authErrorMessage(err.code));
-      else setError(err instanceof Error ? err.message : "Xatolik yuz berdi");
+      if (err instanceof FirebaseError) setError(authErrorMessage(err.code, t));
+      else setError(err instanceof Error ? err.message : t.auth.errors.generic);
       setLoading(false);
     }
   }
@@ -54,23 +56,23 @@ export function RegisterForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <Input
-        label="To'liq ism"
+        label={t.auth.fullName}
         required
         autoComplete="name"
-        placeholder="Sardor Abdullayev"
+        placeholder={t.auth.fullNamePlaceholder}
         value={fullName}
         onChange={(e) => setFullName(e.target.value)}
       />
       <Input
-        label="Telegram username"
+        label={t.auth.telegram}
         required
         autoComplete="off"
-        placeholder="@username"
+        placeholder={t.auth.telegramPlaceholder}
         value={telegram}
         onChange={(e) => setTelegram(e.target.value)}
       />
       <Input
-        label="Email"
+        label={t.auth.email}
         type="email"
         required
         autoComplete="email"
@@ -79,16 +81,16 @@ export function RegisterForm() {
         onChange={(e) => setEmail(e.target.value)}
       />
       <PasswordInput
-        label="Parol"
+        label={t.auth.password}
         required
         autoComplete="new-password"
-        placeholder="Kamida 6 belgi"
+        placeholder={t.auth.passwordMinPlaceholder}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       {error && <p className="text-sm text-red-600">❌ {error}</p>}
       <Button type="submit" size="lg" loading={loading} className="w-full">
-        Ro&apos;yxatdan o&apos;tish
+        {t.auth.submitRegister}
       </Button>
     </form>
   );

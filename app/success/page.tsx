@@ -9,19 +9,14 @@ import { getUsdRate } from "@/lib/cbu";
 import { advanceUsdApp } from "@/lib/payment";
 import { getActiveDiscount } from "@/lib/firestore/discounts";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
+import { getT } from "@/lib/i18n/server";
+import type { Dict } from "@/lib/i18n";
 
-export const metadata: Metadata = { title: "Ariza Qabul Qilindi — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.success.meta };
+}
 export const dynamic = "force-dynamic";
-
-const serviceNames: Record<string, string> = {
-  "play-market":      "Play Market Joylashtirish",
-  "app-store":        "App Store Joylashtirish",
-  "google-transfer":  "Google Play Transfer",
-  "apple-transfer":   "Apple App Store Transfer",
-  "duns":             "DUNS Raqami Ochish",
-  "account":          "Developer Akkaunt Ochish",
-  "custom":           "Maxsus Xizmat",
-};
 
 interface PaymentDue {
   appId: string;
@@ -29,8 +24,9 @@ interface PaymentDue {
   uzs: number | null;
 }
 
-function SuccessContent({ service, payment }: { service: string | null; payment: PaymentDue | null }) {
-  const serviceName = service ? (serviceNames[service] ?? service) : "Xizmat";
+function SuccessContent({ service, payment, t }: { service: string | null; payment: PaymentDue | null; t: Dict }) {
+  const names: Record<string, string> = t.success.serviceNames;
+  const serviceName = service ? (names[service] ?? service) : t.success.defaultService;
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex items-center justify-center px-4 py-8">
@@ -64,26 +60,25 @@ function SuccessContent({ service, payment }: { service: string | null; payment:
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Ariza qabul qilindi!</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t.success.title}</h1>
           <p className="text-slate-500 text-sm mb-1">
-            <span className="font-semibold text-slate-700">{serviceName}</span> bo&apos;yicha
-            arizangiz muvaffaqiyatli yuborildi.
+            <span className="font-semibold text-slate-700">{serviceName}</span> {t.success.bodyPost}
           </p>
-          <p className="text-slate-400 text-xs mb-6">Jamoamiz tez orada siz bilan bog&apos;lanadi.</p>
+          <p className="text-slate-400 text-xs mb-6">{t.success.contactSoon}</p>
 
           {/* To'lov — katta va diqqatni tortadigan */}
           {payment && (
             <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 text-left shadow-lg shadow-slate-900/20 animate-slide-up">
-              <p className="text-xs text-slate-300 mb-1">Davom etish uchun to&apos;lov kerak</p>
+              <p className="text-xs text-slate-300 mb-1">{t.success.paymentNeeded}</p>
               <p className="text-4xl font-bold text-white tracking-tight">
-                {payment.uzs ? `${payment.uzs.toLocaleString("en-US")} so'm` : `$${payment.usd}`}
+                {payment.uzs ? `${payment.uzs.toLocaleString("en-US")} ${t.common.sum}` : `$${payment.usd}`}
               </p>
               {payment.uzs && <p className="text-sm text-slate-300 mt-0.5">≈ ${payment.usd}</p>}
               <Link
                 href={`/panel/app/${payment.appId}`}
                 className="mt-4 w-full inline-flex items-center justify-center gap-2 h-12 bg-white text-slate-900 text-sm font-bold rounded-xl hover:bg-slate-100 active:scale-95 transition-all shadow-sm"
               >
-                To&apos;lovga o&apos;tish
+                {t.success.goToPayment}
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                 </svg>
@@ -93,11 +88,11 @@ function SuccessContent({ service, payment }: { service: string | null; payment:
 
           {/* Steps */}
           <div className="bg-slate-50 rounded-2xl p-4 mb-6 text-left space-y-3">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">Keyingi qadamlar</p>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider mb-3">{t.success.nextSteps}</p>
             {[
-              payment ? "To'lovni amalga oshiring va chekni yuklang" : "Jamoamiz arizangizni ko'rib chiqadi (1-2 ish kuni)",
-              "Email yoki telefon orqali siz bilan bog'lanamiz",
-              "Ilovangiz joylashtirilishi haqida xabar beramiz",
+              payment ? t.success.stepPay : t.success.stepReview,
+              t.success.stepContact,
+              t.success.stepNotify,
             ].map((text, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 shadow-sm shadow-blue-200">
@@ -110,7 +105,7 @@ function SuccessContent({ service, payment }: { service: string | null; payment:
 
           {service === "play-market" && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800 text-center">
-              <span className="font-semibold">.aab</span> faylni Telegram orqali yuboring:
+              <span className="font-semibold">.aab</span> {t.success.aabTelegram}
               <a
                 href="https://t.me/umdgroupadmin"
                 target="_blank"
@@ -138,7 +133,7 @@ function SuccessContent({ service, payment }: { service: string | null; payment:
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
             )}
-            Bosh sahifaga qaytish
+            {t.success.backHome}
           </Link>
         </div>
 
@@ -171,13 +166,17 @@ async function getPaymentDue(appId: string): Promise<PaymentDue | null> {
 
 async function SuccessPageContent({ searchParams }: { searchParams: Promise<{ service?: string; appId?: string }> }) {
   const params = await searchParams;
-  const payment = params.appId ? await getPaymentDue(params.appId) : null;
-  return <SuccessContent service={params.service || null} payment={payment} />;
+  const [payment, t] = await Promise.all([
+    params.appId ? getPaymentDue(params.appId) : Promise.resolve(null),
+    getT(),
+  ]);
+  return <SuccessContent service={params.service || null} payment={payment} t={t} />;
 }
 
-export default function SuccessPage({ searchParams }: { searchParams: Promise<{ service?: string; appId?: string }> }) {
+export default async function SuccessPage({ searchParams }: { searchParams: Promise<{ service?: string; appId?: string }> }) {
+  const t = await getT();
   return (
-    <Suspense fallback={<SuccessContent service={null} payment={null} />}>
+    <Suspense fallback={<SuccessContent service={null} payment={null} t={t} />}>
       <SuccessPageContent searchParams={searchParams} />
     </Suspense>
   );

@@ -1,14 +1,19 @@
 import { GoogleTransferForm } from "@/components/forms/GoogleTransferForm";
 import { FormPageLayout } from "@/components/FormPageLayout";
 import type { Metadata } from "next";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Google Play Transfer — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.submitPage.googleTransfer.meta };
+}
 
-export default function GoogleTransferPage() {
+export default async function GoogleTransferPage() {
+  const t = await getT();
   return (
     <FormPageLayout
-      title="Google Play — App Transfer"
-      subtitle="Ilovani developer akkauntdan bizning akkauntga o'tkazish"
+      title={t.submitPage.googleTransfer.title}
+      subtitle={t.submitPage.googleTransfer.subtitle}
     >
       <GoogleTransferForm />
     </FormPageLayout>

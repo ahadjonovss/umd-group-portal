@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import type { Pricing } from "@/lib/firestore/settings";
 import { TermsContent, type TermsService } from "@/components/TermsContent";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 // So'rov yuborishdan oldin shartlarni ko'rsatib, tasdiqlatuvchi modal.
 export function TermsConfirmModal({
@@ -19,6 +20,7 @@ export function TermsConfirmModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [agreed, setAgreed] = useState(false);
 
   return createPortal(
@@ -28,7 +30,7 @@ export function TermsConfirmModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-slate-100">
-          <h3 className="text-base font-bold text-slate-900">Foydalanish shartlari</h3>
+          <h3 className="text-base font-bold text-slate-900">{t.termsConfirm.title}</h3>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -51,7 +53,7 @@ export function TermsConfirmModal({
               className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/40"
             />
             <span className="text-sm text-slate-700">
-              Yuqoridagi foydalanish shartlarini <strong>to&apos;liq o&apos;qib chiqdim</strong> va roziman.
+              {t.termsConfirm.agreePre} <strong>{t.termsConfirm.agreeStrong}</strong> {t.termsConfirm.agreePost}
             </span>
           </label>
           <div className="flex gap-3">
@@ -59,14 +61,14 @@ export function TermsConfirmModal({
               onClick={onClose}
               className="h-11 px-4 rounded-xl bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200"
             >
-              Bekor
+              {t.common.cancelShort}
             </button>
             <button
               disabled={!agreed || submitting}
               onClick={onConfirm}
               className="flex-1 h-11 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? "Yuborilmoqda…" : "O'qidim, so'rovni yuborish"}
+              {submitting ? t.termsConfirm.submitting : t.termsConfirm.submit}
             </button>
           </div>
         </div>

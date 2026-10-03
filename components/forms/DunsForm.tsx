@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -8,16 +8,18 @@ import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { SubmitProgressOverlay } from "@/components/SubmitProgressOverlay";
-import { dunsSchema, type DunsData } from "@/lib/validations/duns";
+import { makeDunsSchema, type DunsData } from "@/lib/validations/duns";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 export function DunsForm() {
+  const t = useT();
   const router = useRouter();
   const [submitStatus, setSubmitStatus] = useState<"idle" | "loading" | "error">("idle");
   const [submitError, setSubmitError] = useState("");
   const [progress, setProgress] = useState(0);
 
   const form = useForm<DunsData>({
-    resolver: zodResolver(dunsSchema),
+    resolver: zodResolver(useMemo(() => makeDunsSchema(t), [t])),
     defaultValues: { companyName: "", legalAddress: "", companyPhone: "", website: "", cpName: "", cpPhone: "" },
   });
 
@@ -36,13 +38,13 @@ export function DunsForm() {
       const res = await fetchPromise;
       await animateProgress(80, 95, 400);
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || json.message || "Xato yuz berdi");
+      if (!res.ok || !json.success) throw new Error(json.error || json.message || t.common.error);
       await animateProgress(95, 100, 200);
       await new Promise((r) => setTimeout(r, 500));
       router.push(`/success?service=duns&appId=${json.id}`);
     } catch (err: unknown) {
       setSubmitStatus("error");
-      setSubmitError(err instanceof Error ? err.message : "Kutilmagan xato");
+      setSubmitError(err instanceof Error ? err.message : t.form.unexpectedError);
     }
   }
 
@@ -72,63 +74,61 @@ export function DunsForm() {
       )}
     <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-xl mx-auto px-4 py-8 flex flex-col gap-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">DUNS raqami ochish</h2>
-        <p className="text-sm text-gray-500 mt-1">Biznesingiz uchun DUNS (Dun &amp; Bradstreet) raqamini rasmiylashtirib beramiz</p>
+        <h2 className="text-xl font-semibold text-gray-900">{t.dunsForm.heading}</h2>
+        <p className="text-sm text-gray-500 mt-1">{t.dunsForm.sub}</p>
       </div>
 
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700 leading-relaxed">
-        ℹ️ <span className="font-semibold">DUNS raqami</span> — Dun &amp; Bradstreet tomonidan beriladigan, biznesni
-        xalqaro miqyosda tasdiqlaydigan noyob identifikator. Apple Developer Enterprise akkaunt va boshqa xalqaro
-        xizmatlar uchun talab qilinadi.
+        ℹ️ <span className="font-semibold">{t.dunsForm.infoStrong}</span> {t.dunsForm.infoBody}
       </div>
 
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Kompaniya ma&apos;lumotlari</h3>
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{t.dunsForm.sectionCompany}</h3>
 
       <Input
-        label="Kompaniya nomi (yuridik)"
+        label={t.dunsForm.companyName}
         required
-        placeholder="Masalan: MCHJ Umd Group"
+        placeholder={t.dunsForm.companyNamePlaceholder}
         {...form.register("companyName")}
         error={form.formState.errors.companyName?.message}
       />
       <Input
-        label="Yuridik manzil"
+        label={t.dunsForm.legalAddress}
         required
-        placeholder="Shahar, ko'cha, uy raqami"
+        placeholder={t.dunsForm.legalAddressPlaceholder}
         {...form.register("legalAddress")}
         error={form.formState.errors.legalAddress?.message}
       />
       <Input
-        label="Kompaniya telefoni"
+        label={t.dunsForm.companyPhone}
         required
-        placeholder="+998 90 123 45 67"
+        placeholder={t.dunsForm.phonePlaceholder}
         {...form.register("companyPhone")}
         error={form.formState.errors.companyPhone?.message}
       />
       <Input
-        label="Veb-sayt (ixtiyoriy)"
-        placeholder="https://..."
+        label={t.dunsForm.website}
+        placeholder={t.dunsForm.websitePlaceholder}
         {...form.register("website")}
         error={form.formState.errors.website?.message}
       />
 
-      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Kontakt shaxs</h3>
+      <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{t.dunsForm.sectionContact}</h3>
 
       <Input
-        label="F.I.O."
+        label={t.dunsForm.cpName}
         required
-        placeholder="Kontakt shaxs to'liq ismi"
+        placeholder={t.dunsForm.cpNamePlaceholder}
         {...form.register("cpName")}
         error={form.formState.errors.cpName?.message}
       />
       <Input
-        label="Telefon (ixtiyoriy)"
-        placeholder="+998 90 123 45 67"
+        label={t.dunsForm.cpPhone}
+        placeholder={t.dunsForm.phonePlaceholder}
         {...form.register("cpPhone")}
         error={form.formState.errors.cpPhone?.message}
       />
 
-      <Button type="submit" size="lg" className="w-full">Yuborish ✓</Button>
+      <Button type="submit" size="lg" className="w-full">{t.form.submitCheck}</Button>
     </form>
     </>
   );

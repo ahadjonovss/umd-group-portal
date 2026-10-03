@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, DragEvent, ChangeEvent } from "react";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 interface FileUploadProps {
   label: string;
@@ -14,6 +15,7 @@ interface FileUploadProps {
 }
 
 export function FileUpload({ label, accept, required, error, hint, value, onChange, maxSizeMB = 50 }: FileUploadProps) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export function FileUpload({ label, accept, required, error, hint, value, onChan
   function handleFile(file: File) {
     setLocalError(null);
     if (file.size > maxSizeMB * 1024 * 1024) {
-      setLocalError(`Fayl hajmi ${maxSizeMB}MB dan oshmasligi kerak`);
+      setLocalError(t.upload.tooLarge(maxSizeMB));
       return;
     }
     onChange(file);
@@ -84,8 +86,8 @@ export function FileUpload({ label, accept, required, error, hint, value, onChan
             </svg>
           </div>
           <p className="text-sm text-slate-600">
-            <span className="text-blue-600 font-medium">Fayl tanlash</span>
-            <span className="text-slate-400"> yoki sudrab tashlang</span>
+            <span className="text-blue-600 font-medium">{t.upload.pickFile}</span>
+            <span className="text-slate-400">{t.upload.orDrag}</span>
           </p>
           {accept && <p className="text-xs text-slate-400 mt-1">{accept}</p>}
         </div>

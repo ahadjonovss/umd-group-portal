@@ -1,11 +1,14 @@
 "use client";
 
+import { useT } from "@/components/i18n/LanguageProvider";
+
 interface StepProgressProps {
   steps: string[];
   currentStep: number;
 }
 
 export function StepProgress({ steps, currentStep }: StepProgressProps) {
+  const t = useT();
   const progressPct = ((currentStep - 1) / (steps.length - 1)) * 100;
 
   return (
@@ -13,7 +16,7 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
       {/* Top: step label */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-medium text-slate-500">
-          Qadam {currentStep} / {steps.length}
+          {t.common.step(currentStep, steps.length)}
         </span>
         <span className="text-xs font-semibold text-blue-600">
           {steps[currentStep - 1]}

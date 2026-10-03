@@ -1,13 +1,18 @@
+"use client";
+
 import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import type { RequestView } from "@/lib/firestore/requests";
 import { statusFlowFor, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { isRequestTerminalError, requestStatusLabel, REQUEST_STATUS_META, REQUEST_TYPE_LABEL, requestFlow } from "@/lib/request-status";
+import { isRequestTerminalError, REQUEST_STATUS_META, requestFlow } from "@/lib/request-status";
 import { STATUS_META, formatDate, platformOf, statusMetaFor } from "@/lib/labels";
 import { daysUntil, periodLabel, periodName, RECURRING_STATUS_BADGE, RECURRING_STATUS_LABEL } from "@/lib/billing";
 import { PaymentView } from "@/components/panel/PaymentView";
 import { requestAwaitingPayment } from "@/lib/panel-status";
 import { pkgActive, pkgDaysLeft, getInstallment, isPayable, type PayState } from "@/lib/payment-state";
+import { useT } from "@/components/i18n/LanguageProvider";
+import { Rich } from "@/components/i18n/Rich";
+import { requestStatusLabelOf } from "@/lib/i18n/format";
 
 export function ClockIcon() {
   return (
@@ -32,6 +37,7 @@ export function RenewalSection({
   paymentDone: boolean;
   walletUzs?: number;
 }) {
+  const t = useT();
   // Chiqarilgan (yoki obunasi tugab, store'dan olib tashlangan) + obunasi boshlangan + qolgan to'lovi yakunlangan ilovada
   if ((app.status !== "published" && app.status !== "subscription_ended") || !app.subscription?.startDate || !paymentDone) return null;
 
@@ -47,7 +53,7 @@ export function RenewalSection({
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        Obunani uzaytirish (+9 oy)
+        {t.sections.renewalCta}
       </Link>
     );
   }
@@ -58,10 +64,10 @@ export function RenewalSection({
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">Obunani uzaytirish (+9 oy)</span>
+        <span className="text-sm font-semibold text-slate-700">{t.sections.renewalTitle}</span>
         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-          {requestStatusLabel(req.type, req.status)}
+          {requestStatusLabelOf(t, req.type, req.status)}
         </span>
       </div>
       {idx >= 0 && (
@@ -81,15 +87,13 @@ export function RenewalSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           walletUzs={walletUzs}
-          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
+          amountLabel={t.panel.requestPayLabel(t.requestType[req.type])}
           receiptSent={req.receiptSent}
           askTaxPhone
         />
       )}
       {req.status === "in_progress" && req.receiptSent && (
-        <p className="text-xs text-slate-500 leading-snug">
-          To&apos;lov tasdiqlandi. Obuna muddati tez orada uzaytiriladi.
-        </p>
+        <p className="text-xs text-slate-500 leading-snug">{t.sections.renewalDone}</p>
       )}
     </div>
   );
@@ -111,6 +115,7 @@ export function PushCertSection({
   paymentDone: boolean;
   walletUzs?: number;
 }) {
+  const t = useT();
   if (platformOf(app.serviceType) !== "ios" || !isTerminalSuccess(app.status) || !paymentDone) return null;
 
   const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
@@ -124,7 +129,7 @@ export function PushCertSection({
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
         </svg>
-        Push sertifikat olish
+        {t.sections.pushCta}
       </Link>
     );
   }
@@ -135,10 +140,10 @@ export function PushCertSection({
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">Push sertifikat</span>
+        <span className="text-sm font-semibold text-slate-700">{t.sections.pushTitle}</span>
         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-          {requestStatusLabel(req.type, req.status)}
+          {requestStatusLabelOf(t, req.type, req.status)}
         </span>
       </div>
       {idx >= 0 && (
@@ -158,28 +163,27 @@ export function PushCertSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           walletUzs={walletUzs}
-          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
+          amountLabel={t.panel.requestPayLabel(t.requestType[req.type])}
           receiptSent={req.receiptSent}
           askTaxPhone
         />
       )}
       {req.status === "in_progress" && req.receiptSent && (
-        <p className="text-xs text-slate-500 leading-snug">
-          To&apos;lov tasdiqlandi. Sertifikat tayyorlanib, Telegram orqali yuboriladi.
-        </p>
+        <p className="text-xs text-slate-500 leading-snug">{t.sections.pushDone}</p>
       )}
     </div>
   );
 }
 
 export function StatusProgress({ app }: { app: AppView }) {
+  const t = useT();
   if (isTerminalError(app.status)) {
     const meta = STATUS_META[app.status];
     return (
       <div className="flex items-center gap-2 rounded-lg bg-red-50 ring-1 ring-red-100 px-2.5 py-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
         <span className="text-xs font-medium text-red-600">
-          {app.status === "rejected" ? "Ariza rad etildi" : "Ariza bekor qilindi"}
+          {app.status === "rejected" ? t.sections.rejectedApp : t.sections.cancelledApp}
         </span>
       </div>
     );
@@ -193,9 +197,9 @@ export function StatusProgress({ app }: { app: AppView }) {
     <div>
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-[11px] font-medium text-slate-500">
-          Bosqich {Math.max(currentIndex + 1, 1)}/{flow.length}
+          {t.sections.stage(Math.max(currentIndex + 1, 1), flow.length)}
         </span>
-        <span className={`text-[11px] font-semibold ${meta.text}`}>{meta.label}</span>
+        <span className={`text-[11px] font-semibold ${meta.text}`}>{t.status[app.status].label}</span>
       </div>
       <div className="flex gap-1">
         {flow.map((s, i) => (
@@ -215,6 +219,7 @@ type SubData = NonNullable<AppView["subscription"]>;
 
 // Ilova chiqarilgandan keyin: bosqich bari o'rnida obuna muddati foizda.
 export function SubscriptionProgress({ sub }: { sub: SubData }) {
+  const t = useT();
   const start = sub.startDate ? new Date(sub.startDate).getTime() : 0;
   const end = sub.endDate ? new Date(sub.endDate).getTime() : 0;
   const now = Date.now();
@@ -234,10 +239,10 @@ export function SubscriptionProgress({ sub }: { sub: SubData }) {
       <div className="flex items-center justify-between mb-1.5">
         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-500">
           <ClockIcon />
-          Obuna muddati
+          {t.sections.subPeriod}
         </span>
         <span className={`text-[11px] font-semibold ${textColor}`}>
-          {expired ? "Muddati tugagan" : `${pctLeft}% · ${dLeft} kun qoldi`}
+          {expired ? t.sections.subExpired : t.sections.subLeft(pctLeft, dLeft)}
         </span>
       </div>
       <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
@@ -248,7 +253,7 @@ export function SubscriptionProgress({ sub }: { sub: SubData }) {
       </div>
       <p className="text-[11px] text-slate-400 mt-1">
         {formatDate(sub.startDate)} → {formatDate(sub.endDate)}
-        {sub.renewedCount > 0 ? ` · ${sub.renewedCount}× uzaytirilgan` : ""}
+        {sub.renewedCount > 0 ? t.sections.subRenewed(sub.renewedCount) : ""}
       </p>
     </div>
   );
@@ -269,6 +274,7 @@ export function TransferSection({
   paymentDone: boolean;
   walletUzs?: number;
 }) {
+  const t = useT();
   if (app.status !== "published") return null;
   // Qolgan to'lov yakunlanmaguncha transfer so'rovi ochilmaydi
   // (faol/yakunlangan so'rov bo'lsa holatini ko'rsatishda davom etamiz).
@@ -281,7 +287,7 @@ export function TransferSection({
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
         </svg>
-        Transfer yakunlandi
+        {t.sections.transferDone}
       </div>
     );
   }
@@ -296,7 +302,7 @@ export function TransferSection({
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        Transferga so&apos;rov yuborish
+        {t.sections.transferCta}
       </Link>
     );
   }
@@ -307,10 +313,10 @@ export function TransferSection({
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">Transfer so&apos;rovi</span>
+        <span className="text-sm font-semibold text-slate-700">{t.sections.transferTitle}</span>
         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-          {requestStatusLabel(req.type, req.status)}
+          {requestStatusLabelOf(t, req.type, req.status)}
         </span>
       </div>
       {idx >= 0 && (
@@ -330,7 +336,7 @@ export function TransferSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           walletUzs={walletUzs}
-          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
+          amountLabel={t.panel.requestPayLabel(t.requestType[req.type])}
           receiptSent={req.receiptSent}
           askTaxPhone
         />
@@ -354,6 +360,7 @@ export function UpdateSection({
   paymentDone: boolean;
   walletUzs?: number;
 }) {
+  const t = useT();
   if (app.status !== "published" || !paymentDone) return null;
 
   const active = req ? !isRequestTerminalError(req.status) && req.status !== "completed" : false;
@@ -370,7 +377,7 @@ export function UpdateSection({
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
         </svg>
-        {freeByPackage ? "Update chiqarish (paketdan, bepul)" : "Update chiqarish"}
+        {freeByPackage ? t.sections.updateCtaFree : t.sections.updateCta}
       </Link>
     );
   }
@@ -381,10 +388,10 @@ export function UpdateSection({
   return (
     <div className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-700">Update so&apos;rovi</span>
+        <span className="text-sm font-semibold text-slate-700">{t.sections.updateTitle}</span>
         <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${meta.badge}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
-          {requestStatusLabel(req.type, req.status)}
+          {requestStatusLabelOf(t, req.type, req.status)}
         </span>
       </div>
       {idx >= 0 && (
@@ -404,18 +411,14 @@ export function UpdateSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           walletUzs={walletUzs}
-          amountLabel={`${REQUEST_TYPE_LABEL[req.type]} to'lovi`}
+          amountLabel={t.panel.requestPayLabel(t.requestType[req.type])}
           receiptSent={req.receiptSent}
           askTaxPhone
         />
       )}
       {req.status === "in_progress" && req.receiptSent && (
         <div className="rounded-lg bg-white ring-1 ring-slate-100 p-3 text-xs text-slate-600 leading-snug">
-          {app.serviceType === "app-store" ? (
-            <>Yangi kodni <strong>GitHub</strong> repozitoriyangizga <strong>push</strong> qiling — jamoamiz App Store&apos;ga yuklaydi.</>
-          ) : (
-            <>Yangi <strong>.aab</strong> faylni Telegram <strong>@umdgroupadmin</strong> ga yuboring.</>
-          )}
+          <Rich text={app.serviceType === "app-store" ? t.sections.updateHintIos : t.sections.updateHintAndroid} />
         </div>
       )}
     </div>
@@ -444,6 +447,7 @@ export function UpdatePackageSection({
   rate: number | null;
   purchasePending?: boolean;
 }) {
+  const t = useT();
   if (!paymentDone || isTerminalError(app.status)) return null;
 
   const pkg = app.updatePackage;
@@ -461,23 +465,21 @@ export function UpdatePackageSection({
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            Update paketi faol
+            {t.sections.pkgActive}
           </span>
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-white text-cyan-700 ring-1 ring-cyan-200">
             <ClockIcon />
-            {daysLeft} kun qoldi
+            {t.sections.pkgDaysLeft(daysLeft)}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs text-cyan-700/90">
-          <span>Ishlatilgan updatelar</span>
+          <span>{t.sections.pkgUsed}</span>
           <span className="font-semibold">{pkg.used} / {pkg.quota}</span>
         </div>
         <div className="h-1.5 rounded-full bg-cyan-100 overflow-hidden">
           <div className="h-full rounded-full bg-cyan-500 transition-all" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-[11px] text-cyan-700/80 leading-snug">
-          Paket amal qilar ekan, updatelar bepul chiqariladi. Kvota yoki muddat tugasa — yangi paket olishingiz mumkin.
-        </p>
+        <p className="text-[11px] text-cyan-700/80 leading-snug">{t.sections.pkgNote}</p>
       </div>
     );
   }
@@ -489,9 +491,9 @@ export function UpdatePackageSection({
       <summary className="flex items-center justify-between gap-2 p-3.5 cursor-pointer list-none select-none">
         <span className="flex flex-col">
           <span className="text-sm font-semibold text-slate-700">
-            {expired ? "Update paketi tugadi — yangilash" : "Update paketi"}
+            {expired ? t.sections.pkgExpiredTitle : t.sections.pkgTitle}
           </span>
-          <span className="text-xs text-slate-500">1 oy · {quota} ta update bepul</span>
+          <span className="text-xs text-slate-500">{t.sections.pkgSub(quota)}</span>
         </span>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-600 text-white text-xs font-semibold">
           ${priceUsd}
@@ -502,8 +504,7 @@ export function UpdatePackageSection({
       </summary>
       <div className="px-3.5 pb-3.5 border-t border-slate-100 pt-3 flex flex-col gap-3">
         <p className="text-xs text-slate-500 leading-snug">
-          Paket faollashgach, <strong>1 oy</strong> davomida <strong>{quota} tagacha</strong> update
-          qo&apos;shimcha to&apos;lovsiz chiqariladi. Har bir alohida update {app.serviceType === "app-store" ? "$5" : "$3"} bo&apos;ladi.
+          <Rich text={t.sections.pkgBuyNote(quota, app.serviceType === "app-store" ? "$5" : "$3")} />
         </p>
         <PaymentView
           endpoint="/api/payment/receipt"
@@ -514,7 +515,7 @@ export function UpdatePackageSection({
           cardNumber={cardNumber}
           cardHolder={cardHolder}
           walletUzs={walletUzs}
-          amountLabel="Update paketi"
+          amountLabel={t.sections.pkgPayLabel}
           receiptSent={purchasePending}
           askTaxPhone
         />
@@ -523,12 +524,12 @@ export function UpdatePackageSection({
   );
 }
 
-const CUSTOM_INVOICE_BADGE: Record<PayState, { text: string; cls: string; dot: string }> = {
-  due: { text: "To'lanmagan", cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
-  rejected: { text: "Rad etilgan — qayta yuboring", cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
-  submitted: { text: "Yuborildi — tekshiruvda", cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
-  confirmed: { text: "To'langan", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
-  locked: { text: "Keyinroq", cls: "bg-slate-100 text-slate-500 ring-slate-200", dot: "bg-slate-400" },
+const CUSTOM_INVOICE_BADGE: Record<PayState, { cls: string; dot: string }> = {
+  due: { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
+  rejected: { cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
+  submitted: { cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  confirmed: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+  locked: { cls: "bg-slate-100 text-slate-500 ring-slate-200", dot: "bg-slate-400" },
 };
 
 // Admin biriktirgan qo'shimcha (custom) hisob-fakturalar — mustaqil to'lov sifatida.
@@ -543,6 +544,7 @@ export function CustomInvoiceSection({
   cardHolder: string;
   walletUzs?: number;
 }) {
+  const t = useT();
   const items = reqs.filter((r) => r.type === "custom");
   if (!items.length) return null;
 
@@ -552,7 +554,7 @@ export function CustomInvoiceSection({
         const full = getInstallment(req.payment, "full");
         const state: PayState = (full?.state as PayState) ?? "due";
         const badge = CUSTOM_INVOICE_BADGE[state] ?? CUSTOM_INVOICE_BADGE.due;
-        const title = req.appName || "Qo'shimcha to'lov";
+        const title = req.appName || t.sections.customDefaultTitle;
         const payable = isPayable(full);
         return (
           <div key={req.id} className="rounded-xl bg-slate-50 ring-1 ring-slate-100 p-3.5 flex flex-col gap-2">
@@ -561,12 +563,12 @@ export function CustomInvoiceSection({
                 <p className="text-sm font-semibold text-slate-800 truncate">{title}</p>
                 <p className="text-xs text-slate-500">
                   ${req.amountUsd}
-                  {req.amountUzs ? <span className="text-slate-400"> · ~{req.amountUzs.toLocaleString("en-US")} so&apos;m</span> : null}
+                  {req.amountUzs ? <span className="text-slate-400"> · ~{req.amountUzs.toLocaleString("en-US")} {t.common.sum}</span> : null}
                 </p>
               </div>
               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${badge.cls}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                {badge.text}
+                {t.panel.invoiceState[state]}
               </span>
             </div>
             {payable && (

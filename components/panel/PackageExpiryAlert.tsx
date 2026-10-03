@@ -1,12 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import type { AppView } from "@/lib/firestore/apps";
 import { pkgActive, pkgDaysLeft } from "@/lib/payment-state";
-import { SERVICE_LABELS } from "@/lib/labels";
+import { useT } from "@/components/i18n/LanguageProvider";
+import { Rich } from "@/components/i18n/Rich";
+import { appTitleOf } from "@/lib/i18n/format";
 
 const WARN_WITHIN_DAYS = 3;
 
 // Update paketi tez orada tugaydigan ilovalar bo'yicha eslatma.
 export function PackageExpiryAlert({ apps }: { apps: AppView[] }) {
+  const t = useT();
   const expiring = apps.filter((a) => {
     if (!pkgActive(a.updatePackage)) return false;
     const d = pkgDaysLeft(a.updatePackage);
@@ -18,7 +23,7 @@ export function PackageExpiryAlert({ apps }: { apps: AppView[] }) {
     <div className="flex flex-col gap-2">
       {expiring.map((a) => {
         const days = pkgDaysLeft(a.updatePackage);
-        const name = a.appName || SERVICE_LABELS[a.serviceType];
+        const name = appTitleOf(t, a.appName, a.serviceType);
         return (
           <Link
             key={a.id}
@@ -28,11 +33,10 @@ export function PackageExpiryAlert({ apps }: { apps: AppView[] }) {
             <span className="w-10 h-10 rounded-xl bg-cyan-100 flex items-center justify-center text-xl flex-shrink-0">⏳</span>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-cyan-800">
-                <span className="font-bold">{name}</span> update paketi{" "}
-                <span className="font-bold">{days} kun</span>dan so&apos;ng tugaydi
+                <span className="font-bold">{name}</span> <Rich text={t.panel.pkgExpiring(days)} />
               </p>
               <p className="text-xs text-cyan-700">
-                Qolgan updatelar: {a.updatePackage!.quota - a.updatePackage!.used} ta · paketni yangilash mumkin
+                {t.panel.pkgRemaining(a.updatePackage!.quota - a.updatePackage!.used)}
               </p>
             </div>
             <svg className="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

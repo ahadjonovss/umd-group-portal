@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { ReviewModal } from "@/components/ReviewModal";
-import { SERVICE_SHORT, SERVICE_BADGE } from "@/lib/labels";
+import { SERVICE_BADGE } from "@/lib/labels";
+import { useT } from "@/components/i18n/LanguageProvider";
+import type { Dict } from "@/lib/i18n";
 import type { Review } from "@/app/api/reviews/route";
 
 const REVIEW_TOKEN = process.env.NEXT_PUBLIC_REVIEW_TOKEN;
@@ -34,7 +36,7 @@ function formatDate(raw: string) {
   return `${dd}.${mm}.${yyyy}`;
 }
 
-function ReviewCard({ review }: { review: Review }) {
+function ReviewCard({ review, t }: { review: Review; t: Dict }) {
   const initial = review.name.charAt(0).toUpperCase();
   const colors = ["bg-blue-600","bg-violet-600","bg-emerald-600","bg-orange-500","bg-pink-600"];
   const color = colors[initial.charCodeAt(0) % colors.length];
@@ -65,7 +67,7 @@ function ReviewCard({ review }: { review: Review }) {
       {review.serviceType && (
         <div className="flex flex-wrap items-center gap-2 pt-3 mt-auto border-t border-slate-100">
           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${SERVICE_BADGE[review.serviceType]}`}>
-            {SERVICE_SHORT[review.serviceType]}
+            {t.service.short[review.serviceType]}
           </span>
           {review.appName && (
             <span className="text-xs font-medium text-slate-600 truncate">{review.appName}</span>
@@ -75,7 +77,7 @@ function ReviewCard({ review }: { review: Review }) {
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
-              Store&apos;da
+              {t.reviews.inStore}
             </span>
           )}
         </div>
@@ -94,6 +96,7 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [canReview, setCanReview] = useState(false);
   const searchParams = useSearchParams();
+  const t = useT();
 
   useEffect(() => {
     const token = searchParams.get("review");
@@ -138,16 +141,16 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
           </svg>
-          Sharhlar
+          {t.reviews.badge}
         </div>
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Mijozlar sharhlari</h2>
+        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">{t.reviews.title}</h2>
         {avg && (
           <div className="flex items-center justify-center gap-1.5 mt-1.5">
             <svg className="w-4 h-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
             </svg>
             <span className="text-sm font-bold text-slate-900">{avg}</span>
-            <span className="text-xs text-slate-500">({reviews.length} sharh)</span>
+            <span className="text-xs text-slate-500">{t.reviews.count(reviews.length)}</span>
           </div>
         )}
         {canReview && (
@@ -159,7 +162,7 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
               </svg>
-              Baho berish
+              {t.reviews.rateButton}
             </button>
           </div>
         )}
@@ -171,7 +174,7 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
           <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
-          Rahmat! Sharh muvaffaqiyatli yuborildi.
+          {t.reviews.thanks}
         </div>
       )}
 
@@ -187,7 +190,7 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
           >
             {[...marqueeItems, ...marqueeItems].map((r, i) => (
               <div key={i} className="w-[280px] sm:w-[320px] flex-shrink-0 pr-3">
-                <ReviewCard review={r} />
+                <ReviewCard review={r} t={t} />
               </div>
             ))}
           </div>
@@ -199,8 +202,8 @@ export function ReviewsSection({ initialReviews }: ReviewsSectionProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-slate-700 mb-1">Hali sharh yo&apos;q</p>
-          <p className="text-xs text-slate-400">Birinchi bo&apos;lib fikr bildiring!</p>
+          <p className="text-sm font-medium text-slate-700 mb-1">{t.reviews.emptyTitle}</p>
+          <p className="text-xs text-slate-400">{t.reviews.emptySubtitle}</p>
         </div>
       )}
 

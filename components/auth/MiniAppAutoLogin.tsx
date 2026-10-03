@@ -5,6 +5,7 @@ import Script from "next/script";
 import { useSearchParams } from "next/navigation";
 import { signInWithCustomToken } from "firebase/auth";
 import { auth } from "@/lib/firebase/client";
+import { useT } from "@/components/i18n/LanguageProvider";
 
 // Telegram Mini App ichida ochilганда — initData orqali avtomatik login qiladi.
 // Oddiy brauzerda (initData yo'q) hech narsa qilmaydi.
@@ -15,6 +16,7 @@ declare global {
 }
 
 export function MiniAppAutoLogin() {
+  const t = useT();
   const search = useSearchParams();
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
   const [scriptReady, setScriptReady] = useState(false);
@@ -69,11 +71,11 @@ export function MiniAppAutoLogin() {
       {status === "working" && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-white">
           <div className="w-9 h-9 rounded-full border-2 border-slate-200 border-t-blue-600 animate-spin" />
-          <p className="text-sm text-slate-500">Kabinetга kirilyapti…</p>
+          <p className="text-sm text-slate-500">{t.auth.miniAppSigningIn}</p>
         </div>
       )}
       {status === "error" && (
-        <p className="text-center text-xs text-amber-600 mt-3">Avtomatik kirish bo&apos;lmadi — quyida qo&apos;lda kiring.</p>
+        <p className="text-center text-xs text-amber-600 mt-3">{t.auth.miniAppFailed}</p>
       )}
     </>
   );

@@ -3,19 +3,24 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { RegisterForm } from "@/components/auth/RegisterForm";
+import { getT } from "@/lib/i18n/server";
 
-export const metadata: Metadata = { title: "Ro'yxatdan o'tish — UMD GROUP" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return { title: t.auth.registerMeta };
+}
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const t = await getT();
   return (
     <AuthShell
-      title="Ro'yxatdan o'tish"
-      subtitle="Yangi hisob yarating"
+      title={t.auth.registerTitle}
+      subtitle={t.auth.registerSubtitle}
       footer={
         <>
-          Hisobingiz bormi?{" "}
+          {t.auth.hasAccount}{" "}
           <Link href="/login" className="font-semibold text-blue-600 hover:text-blue-700">
-            Kirish
+            {t.auth.loginLink}
           </Link>
         </>
       }

@@ -1,38 +1,42 @@
 import { z } from "zod";
+import type { Dict } from "@/lib/i18n";
 
-export const appStoreStep1Schema = z.object({
-  fullName: z.string().min(2, "To'liq ism kamida 2 belgi bo'lishi kerak"),
-  phone: z.string().min(1, "Telefon raqami majburiy"),
-  email: z.string().email("Noto'g'ri email format"),
-  telegram: z.string().optional(),
-});
+export const makeAppStoreStep1Schema = (t: Dict) =>
+  z.object({
+    fullName: z.string().min(2, t.validation.fullNameMin),
+    phone: z.string().min(1, t.validation.phoneRequired),
+    email: z.string().email(t.validation.emailInvalid),
+    telegram: z.string().optional(),
+  });
 
-export const appStoreStep2Schema = z.object({
-  appName: z
-    .string()
-    .min(1, "Ilova nomi majburiy")
-    .max(30, "Ilova nomi max 30 belgi"),
-  subtitle: z
-    .string()
-    .min(1, "Subtitle majburiy")
-    .max(30, "Subtitle max 30 belgi"),
-  fullDescription: z
-    .string()
-    .min(1, "To'liq tavsif majburiy")
-    .max(4000, "To'liq tavsif max 4000 belgi"),
-  privacyPolicyUrl: z
-    .string()
-    .url("To'g'ri URL kiriting")
-    .refine((url) => url.startsWith("https://"), "URL HTTPS bo'lishi shart"),
-  supportUrl: z
-    .string()
-    .url("To'g'ri URL kiriting")
-    .refine((url) => url.startsWith("https://"), "URL HTTPS bo'lishi shart"),
-});
+export const makeAppStoreStep2Schema = (t: Dict) =>
+  z.object({
+    appName: z
+      .string()
+      .min(1, t.validation.appNameRequired)
+      .max(30, t.validation.appNameMax),
+    subtitle: z
+      .string()
+      .min(1, t.validation.subtitleRequired)
+      .max(30, t.validation.subtitleMax),
+    fullDescription: z
+      .string()
+      .min(1, t.validation.fullDescRequired)
+      .max(4000, t.validation.fullDescMax),
+    privacyPolicyUrl: z
+      .string()
+      .url(t.validation.urlInvalid)
+      .refine((url) => url.startsWith("https://"), t.validation.urlHttps),
+    supportUrl: z
+      .string()
+      .url(t.validation.urlInvalid)
+      .refine((url) => url.startsWith("https://"), t.validation.urlHttps),
+  });
 
-export const appStoreStep3Schema = z.object({
-  githubRepoUrl: z.string().url("To'g'ri GitHub URL kiriting"),
-});
+export const makeAppStoreStep3Schema = (t: Dict) =>
+  z.object({
+    githubRepoUrl: z.string().url(t.validation.githubUrlInvalid),
+  });
 
 export const appStoreStep5Schema = z.object({
   testLogin: z.string().optional(),
@@ -40,7 +44,7 @@ export const appStoreStep5Schema = z.object({
   note: z.string().optional(),
 });
 
-export type AppStoreStep1 = z.infer<typeof appStoreStep1Schema>;
-export type AppStoreStep2 = z.infer<typeof appStoreStep2Schema>;
-export type AppStoreStep3 = z.infer<typeof appStoreStep3Schema>;
+export type AppStoreStep1 = z.infer<ReturnType<typeof makeAppStoreStep1Schema>>;
+export type AppStoreStep2 = z.infer<ReturnType<typeof makeAppStoreStep2Schema>>;
+export type AppStoreStep3 = z.infer<ReturnType<typeof makeAppStoreStep3Schema>>;
 export type AppStoreStep5 = z.infer<typeof appStoreStep5Schema>;
