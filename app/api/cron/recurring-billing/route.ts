@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, Timestamp } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
 import { notifyUser, esc } from "@/lib/notify";
 import { notifier } from "@/lib/telegram-notifier";
 import { urlButton } from "@/lib/telegram";
 import { SITE_URL } from "@/lib/site";
 import { appLabel } from "@/lib/labels";
 import { serviceDefOf } from "@/lib/firestore/apps";
-import { createRecurringInvoice, getOpenRecurringInvoices } from "@/lib/firestore/requests";
-import { addMonths } from "@/lib/billing";
-import { getUsdRate } from "@/lib/cbu";
+import { getOpenRecurringInvoices } from "@/lib/firestore/requests";
+import { issueNextRecurringInvoice } from "@/lib/firestore/recurring";
 import { isTerminalError } from "@/lib/app-status";
 import type { AppStatus } from "@/lib/app-status";
 
@@ -34,11 +33,6 @@ function shouldRemind(daysOverdue: number, graceDays: number): boolean {
   return daysOverdue > 7 && daysOverdue % 7 === 0;
 }
 
-function dmy(d: Date): string {
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
-}
-
 // Davriy (oylik) to'lovlar: muddati kelgan hisob-fakturalarni yaratadi va
 // to'lanmaganlari uchun eslatma yuboradi.
 //
@@ -57,7 +51,6 @@ export async function GET(req: NextRequest) {
   let reminded = 0;
   let pastDue = 0;
   const errors: string[] = [];
-  const rate = await getUsdRate();
 
   for (const doc of snap.docs) {
     try {
@@ -70,53 +63,15 @@ export async function GET(req: NextRequest) {
       const def = serviceDefOf(doc);
       const name = (app.appName as string | null) || appLabel(def);
       const ownerUid = app.ownerUid as string;
-      const periodMonths: number = rec.periodMonths ?? 1;
       const amountUsd: number = rec.amountUsd ?? 0;
       const graceDays: number = rec.graceDays ?? 7;
 
       // ── 1) Muddati kelgan hisob-fakturani yaratamiz ──
       const nextMs: number = rec.nextChargeAt?.toMillis?.() ?? 0;
       if (amountUsd > 0 && nextMs && nextMs <= now.getTime()) {
-        const periodStart = new Date(nextMs);
-        const periodEnd = addMonths(periodStart, periodMonths);
-        const periodNo = (rec.periodNo ?? 0) + 1;
-
-        // Idempotentlik: shu davr uchun hisob allaqachon bormi
-        const dup = await adminDb
-          .collection("requests")
-          .where("appId", "==", doc.id)
-          .where("type", "==", "recurring")
-          .where("periodNo", "==", periodNo)
-          .limit(1)
-          .get();
-
-        if (dup.empty) {
-          await createRecurringInvoice({
-            appId: doc.id,
-            ownerUid,
-            ownerName: app.contact?.fullName || "Mijoz",
-            ownerPhone: app.contact?.phone || "-",
-            appName: name,
-            serviceLabel: appLabel(def),
-            amountUsd,
-            rate,
-            amountUzs: rate ? Math.round(amountUsd * rate) : null,
-            periodNo,
-            periodStart,
-            periodEnd,
-          });
-          invoiced++;
-          await notifier.payments(
-            `🧾 Davriy hisob\\-faktura yaratildi\n👤 ${esc(app.contact?.fullName || "Mijoz")}\n📦 ${esc(name)}\n💵 $${esc(String(Math.round(amountUsd)))}\n🗓 ${esc(dmy(periodStart))} — ${esc(dmy(periodEnd))}`
-          );
-        }
-
-        await doc.ref.update({
-          "billing.recurring.periodNo": periodNo,
-          "billing.recurring.invoicesCount": (rec.invoicesCount ?? 0) + 1,
-          "billing.recurring.lastInvoiceAt": Timestamp.fromDate(periodStart),
-          "billing.recurring.nextChargeAt": Timestamp.fromDate(periodEnd),
-        });
+        const res = await issueNextRecurringInvoice(doc.id);
+        if (res.ok && !res.skipped) invoiced++;
+        if (!res.ok && res.error) errors.push(`${doc.id}: ${res.error}`);
       }
 
       // ── 2) To'lanmagan hisob-fakturalar: eslatma (holat o'zgarmaydi) ──

@@ -1095,6 +1095,22 @@ export const uz = {
     payPartialSummary: (approx: number, total: number) => `~$${approx} · jami qoldiq $${total}`,
 
     // Davriy to'lovni oldindan to'lash
+    // Davriy to'lov bo'limi
+    recurringPeriod: (months: number) => (months === 1 ? "oylik" : months === 12 ? "yillik" : `${months} oyda bir`),
+    recurringTitle: (period: string) => `${period.replace(/^./, (c) => c.toUpperCase())} to'lov`,
+    recurringStatus: {
+      pending: "Kutilmoqda",
+      active: "Faol",
+      past_due: "Qarzdor",
+      cancelled: "Bekor qilingan",
+    },
+    recurringStartsOnDelivery: "Ish topshirilgach boshlanadi",
+    recurringOverdue: (days: number) => `${days} kun kechikdi`,
+    recurringNextCharge: (date: string) => `Keyingi hisob: ${date}`,
+    recurringPaidPeriods: (n: number) => `To'langan davrlar: ${n} ta`,
+    recurringInvoiceNo: (no: number) => `Davriy to'lov${no ? ` #${no}` : ""}`,
+    recurringHistory: (n: number) => `To'lov tarixi (${n})`,
+
     prepayTitle: "Oldindan to'lash",
     prepayHint: (date: string) => `Keyingi davr ${date} da boshlanadi — xohlasangiz hoziroq yopib qo'ysangiz bo'ladi.`,
     prepayButton: (period: string, usd: number) => `Keyingi ${period} to'lovni to'lash · $${usd}`,
@@ -1168,6 +1184,7 @@ export const uz = {
     meta: "Ilova — UMD GROUP",
     backToPanel: "Kabinet",
 
+    cardRecurring: "Davriy to'lov",
     cardCustomInvoices: "Qo'shimcha hisob-fakturalar",
     cardRestoreSub: "Obunani tiklash",
     cardActions: "Amallar",

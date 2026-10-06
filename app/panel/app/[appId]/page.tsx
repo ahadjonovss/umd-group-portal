@@ -19,7 +19,7 @@ import { AppDetailTabs } from "@/components/panel/AppDetailTabs";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { estimatedDateIso, etaDaysFor } from "@/lib/eta";
 import { appAdvanceStage, showFinalPayment, appPaymentDone } from "@/lib/panel-status";
-import { getInstallment, isPayable, installmentKeysFor, type PayState } from "@/lib/payment-state";
+import { getInstallment, isPayable, installmentKeysFor, paidUsdOf, paidUzsOf, remainingUsdOf, type PayState } from "@/lib/payment-state";
 import { InvoicePayment } from "@/components/panel/InvoicePayment";
 import { formatDate, platformOf, statusMetaFor } from "@/lib/labels";
 import { REQUEST_STATUS_META } from "@/lib/request-status";
@@ -154,24 +154,44 @@ export default async function AppDetailPage({
     (showFinal && (finInst ? isPayable(finInst) : !app.finalReceiptSent)) ||
     customPaymentNeeded;
 
-  // Hisob-fakturalar (invoice) ro'yxati
+  // Hisob-fakturalar (invoice) ro'yxati.
+  // Qisman to'lovlar bo'lsa "usd" QOLGAN summani ko'rsatadi, "paidUsd" — to'langanini.
   const hasFinal = installmentKeysFor(app).includes("final");
-  const invoiceList: { key: "advance" | "final"; label: string; usd: number; uzs: number | null; state: PayState }[] = [];
+  const advPaidUsd = paidUsdOf(advInst);
+  const finPaidUsd = paidUsdOf(finInst);
+  const advanceLeft = remainingUsdOf(advanceAmount, advInst);
+  const finalLeft = remainingUsdOf(finalAmount, finInst);
+  const invoiceList: {
+    key: "advance" | "final";
+    label: string;
+    usd: number;
+    uzs: number | null;
+    state: PayState;
+    totalUsd: number;
+    paidUsd: number;
+    paidUzs: number;
+  }[] = [];
   if (advanceAmount > 0) {
     invoiceList.push({
       key: "advance",
       label: hasFinal ? t.appDetail.invoiceAdvance : t.appDetail.invoicePayment,
-      usd: advanceAmount,
-      uzs: advanceUzs,
+      usd: advanceLeft,
+      uzs: rate ? Math.round(advanceLeft * rate) : null,
       state: (advInst?.state as PayState) ?? (app.receiptSent ? "submitted" : "due"),
+      totalUsd: advanceAmount,
+      paidUsd: advPaidUsd,
+      paidUzs: paidUzsOf(advInst),
     });
   }
   if (hasFinal && finalAmount > 0) {
     invoiceList.push({
       key: "final",
       label: t.appDetail.invoiceFinal,
-      usd: finalAmount,
-      uzs: finalUzs,
+      usd: finalLeft,
+      uzs: rate ? Math.round(finalLeft * rate) : null,
+      totalUsd: finalAmount,
+      paidUsd: finPaidUsd,
+      paidUzs: paidUzsOf(finInst),
       state: (finInst?.state as PayState) ?? (app.finalPaid ? "confirmed" : app.finalReceiptSent ? "submitted" : "due"),
     });
   }
@@ -304,20 +324,6 @@ export default async function AppDetailPage({
           defaultPayment={paymentNeeded}
           info={
             <>
-              {/* Davriy (oylik) to'lov — maxsus xizmatlar */}
-              {(app.billing?.recurring || recurringReqs.length > 0) && (
-                <SectionCard title="Davriy to'lov">
-                  <RecurringSection app={app} reqs={recurringReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
-                </SectionCard>
-              )}
-
-              {/* Qo'shimcha hisob-fakturalar (admin biriktirgan) */}
-              {customReqs.length > 0 && (
-                <SectionCard title={t.appDetail.cardCustomInvoices}>
-                  <CustomInvoiceSection reqs={customReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
-                </SectionCard>
-              )}
-
               {/* Obunasi tugab, store'dan olib tashlangan ilova — uzaytirib qayta tiklash */}
               {app.status === "subscription_ended" && (
                 <SectionCard title={t.appDetail.cardRestoreSub}>
@@ -453,6 +459,21 @@ export default async function AppDetailPage({
           }
           payment={
             <>
+              {/* Davriy (oylik) to'lov — reja holati, to'lanmagan hisoblar va
+                  "oldindan to'lash" tugmasi */}
+              {(app.billing?.recurring || recurringReqs.length > 0) && (
+                <SectionCard title={t.appDetail.cardRecurring}>
+                  <RecurringSection app={app} reqs={recurringReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
+                </SectionCard>
+              )}
+
+              {/* Qo'shimcha hisob-fakturalar (admin biriktirgan) */}
+              {customReqs.length > 0 && (
+                <SectionCard title={t.appDetail.cardCustomInvoices}>
+                  <CustomInvoiceSection reqs={customReqs} cardNumber={cardNumber} cardHolder={cardHolder} walletUzs={walletUzs} />
+                </SectionCard>
+              )}
+
               {hasOpenInvoice ? (
                 <SectionCard title={t.appDetail.cardInvoices}>
                   <InvoicePayment
@@ -465,7 +486,7 @@ export default async function AppDetailPage({
                     discountPercent={discPct}
                   />
                 </SectionCard>
-              ) : payments.length === 0 ? (
+              ) : payments.length === 0 && !app.billing?.recurring && recurringReqs.length === 0 && customReqs.length === 0 ? (
                 <p className="text-sm text-slate-400 py-6 text-center">{t.appDetail.noPaymentsYet}</p>
               ) : null}
 

@@ -6,8 +6,9 @@ import type { RequestView } from "@/lib/firestore/requests";
 import { statusFlowFor, isTerminalError, isTerminalSuccess } from "@/lib/app-status";
 import { isRequestTerminalError, REQUEST_STATUS_META, requestFlow } from "@/lib/request-status";
 import { STATUS_META, formatDate, platformOf, statusMetaFor } from "@/lib/labels";
-import { daysUntil, periodLabel, periodName, RECURRING_STATUS_BADGE, RECURRING_STATUS_LABEL } from "@/lib/billing";
+import { daysUntil, periodLabel, RECURRING_STATUS_BADGE } from "@/lib/billing";
 import { PaymentView } from "@/components/panel/PaymentView";
+import { PrepayButton } from "@/components/panel/PrepayButton";
 import { requestAwaitingPayment } from "@/lib/panel-status";
 import { pkgActive, pkgDaysLeft, getInstallment, isPayable, type PayState } from "@/lib/payment-state";
 import { useT } from "@/components/i18n/LanguageProvider";
@@ -597,11 +598,12 @@ export function CustomInvoiceSection({
 
 // ── Davriy (oylik) to'lov bo'limi ──────────────────────────
 // Reja holati + to'lanmagan hisob-fakturalar + to'langanlar tarixi.
-const RECURRING_BADGE: Record<string, { text: string; cls: string; dot: string }> = {
-  due: { text: "To'lanmagan", cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
-  rejected: { text: "Rad etilgan — qayta yuboring", cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
-  submitted: { text: "Yuborildi — tekshiruvda", cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
-  confirmed: { text: "To'langan", cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
+// Matni lug'atdan (t.panel.invoiceState) olinadi — bu yerda faqat ranglar.
+const RECURRING_BADGE: Record<string, { cls: string; dot: string }> = {
+  due: { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
+  rejected: { cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
+  submitted: { cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
+  confirmed: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
 };
 
 export function RecurringSection({
@@ -617,6 +619,7 @@ export function RecurringSection({
   cardHolder: string;
   walletUzs?: number;
 }) {
+  const t = useT();
   const rec = app.billing?.recurring ?? null;
   const invoices = reqs.filter((r) => r.type === "recurring");
   if (!rec && !invoices.length) return null;
@@ -625,6 +628,8 @@ export function RecurringSection({
   const paid = invoices.filter((r) => r.status === "completed");
   const left = rec ? daysUntil(rec.nextChargeAt) : null;
   const overdue = typeof left === "number" && left < 0;
+  // Faol obunada to'lanmagan hisob bo'lmasa — keyingi davrni oldindan yopish mumkin
+  const canPrepay = Boolean(rec && rec.active && rec.status !== "cancelled" && rec.amountUsd > 0 && open.length === 0);
 
   return (
     <div className="flex flex-col gap-3">
@@ -636,28 +641,47 @@ export function RecurringSection({
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {`${periodName(rec.periodMonths).replace(/^./, (c) => c.toUpperCase())} to'lov`}
+              {t.panel.recurringTitle(t.panel.recurringPeriod(rec.periodMonths))}
             </span>
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 ${RECURRING_STATUS_BADGE[rec.status]}`}>
-              {RECURRING_STATUS_LABEL[rec.status]}
+              {t.panel.recurringStatus[rec.status]}
             </span>
           </div>
           <div className={`flex items-center justify-between text-xs ${overdue ? "text-red-700/90" : "text-purple-700/90"}`}>
-            <span className="font-semibold">${rec.amountUsd} / {periodName(rec.periodMonths)}</span>
+            <span className="font-semibold">${rec.amountUsd} / {t.panel.recurringPeriod(rec.periodMonths)}</span>
             {rec.nextChargeAt && (
               <span className="inline-flex items-center gap-1">
                 <ClockIcon />
                 {rec.status === "pending"
-                  ? "Ish topshirilgach boshlanadi"
+                  ? t.panel.recurringStartsOnDelivery
                   : overdue
-                    ? `${Math.abs(left as number)} kun kechikdi`
-                    : `Keyingi hisob: ${formatDate(rec.nextChargeAt)}`}
+                    ? t.panel.recurringOverdue(Math.abs(left as number))
+                    : t.panel.recurringNextCharge(formatDate(rec.nextChargeAt))}
               </span>
             )}
           </div>
           {rec.paidCount > 0 && (
-            <p className="text-[11px] text-slate-500">To&apos;langan davrlar: {rec.paidCount} ta</p>
+            <p className="text-[11px] text-slate-500">{t.panel.recurringPaidPeriods(rec.paidCount)}</p>
           )}
+        </div>
+      )}
+
+      {/* Oldindan to'lash — to'lanmagan hisob yo'q bo'lsa, keyingi davrni istalgan
+          vaqtda yopish mumkin (muddat kelishini kutish shart emas). */}
+      {canPrepay && (
+        <div className="rounded-xl bg-white ring-1 ring-slate-200 p-3.5 flex flex-col gap-2">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">{t.panel.prepayTitle}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {t.panel.prepayHint(rec!.nextChargeAt ? formatDate(rec!.nextChargeAt) : "—")}
+            </p>
+          </div>
+          <PrepayButton
+            appId={app.id}
+            label={t.panel.prepayButton(t.panel.recurringPeriod(rec!.periodMonths), rec!.amountUsd)}
+            loadingLabel={t.panel.prepayLoading}
+            errorLabel={t.common.error}
+          />
         </div>
       )}
 
@@ -672,7 +696,7 @@ export function RecurringSection({
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">
-                  Davriy to&apos;lov{req.periodNo ? ` #${req.periodNo}` : ""}
+                  {t.panel.recurringInvoiceNo(req.periodNo)}
                 </p>
                 <p className="text-xs text-slate-500">
                   ${req.amountUsd}
@@ -684,7 +708,7 @@ export function RecurringSection({
               </div>
               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${badge.cls}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                {badge.text}
+                {t.panel.invoiceState[state] ?? t.panel.invoiceState.due}
               </span>
             </div>
             {payable && (
@@ -697,7 +721,7 @@ export function RecurringSection({
                 cardNumber={cardNumber}
                 cardHolder={cardHolder}
                 walletUzs={walletUzs}
-                amountLabel={`Davriy to'lov${req.periodNo ? ` #${req.periodNo}` : ""}`}
+                amountLabel={t.panel.recurringInvoiceNo(req.periodNo)}
                 receiptSent={req.receiptSent}
                 askTaxPhone
               />
@@ -710,7 +734,7 @@ export function RecurringSection({
       {paid.length > 0 && (
         <details className="rounded-xl bg-white ring-1 ring-slate-100 p-3">
           <summary className="text-xs font-semibold text-slate-600 cursor-pointer">
-            To&apos;lov tarixi ({paid.length})
+            {t.panel.recurringHistory(paid.length)}
           </summary>
           <ul className="mt-2 flex flex-col gap-1.5">
             {paid.map((r) => (

@@ -1083,6 +1083,22 @@ export const ru: typeof uz = {
     payPartialSummary: (approx: number, total: number) => `~$${approx} · весь остаток $${total}`,
 
     // Предоплата периодического платежа
+    // Периодический платёж
+    recurringPeriod: (months: number) => (months === 1 ? "месячный" : months === 12 ? "годовой" : `раз в ${months} мес.`),
+    recurringTitle: (period: string) => `${period.replace(/^./, (c) => c.toUpperCase())} платёж`,
+    recurringStatus: {
+      pending: "Ожидается",
+      active: "Активен",
+      past_due: "Задолженность",
+      cancelled: "Отменён",
+    },
+    recurringStartsOnDelivery: "Начнётся после сдачи работы",
+    recurringOverdue: (days: number) => `просрочено на ${days} дн.`,
+    recurringNextCharge: (date: string) => `Следующий счёт: ${date}`,
+    recurringPaidPeriods: (n: number) => `Оплачено периодов: ${n}`,
+    recurringInvoiceNo: (no: number) => `Периодический платёж${no ? ` #${no}` : ""}`,
+    recurringHistory: (n: number) => `История платежей (${n})`,
+
     prepayTitle: "Оплатить заранее",
     prepayHint: (date: string) => `Следующий период начинается ${date} — при желании можно закрыть его уже сейчас.`,
     prepayButton: (period: string, usd: number) => `Оплатить следующий ${period} платёж · $${usd}`,
@@ -1154,6 +1170,7 @@ export const ru: typeof uz = {
     meta: "Приложение — UMD GROUP",
     backToPanel: "Кабинет",
 
+    cardRecurring: "Периодический платёж",
     cardCustomInvoices: "Дополнительные счета",
     cardRestoreSub: "Восстановление подписки",
     cardActions: "Действия",

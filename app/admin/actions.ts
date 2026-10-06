@@ -32,10 +32,7 @@ import {
 } from "@/lib/firestore/catalog";
 import { assignCustomService, type AssignInput } from "@/lib/firestore/assign";
 import { cancelRecurring, resumeRecurring, updateRecurringPlan } from "@/lib/firestore/apps";
-import { createRecurringInvoice, getOpenRecurringInvoices } from "@/lib/firestore/requests";
-import { addMonths } from "@/lib/billing";
-import { appLabel } from "@/lib/labels";
-import { Timestamp } from "@/lib/firebase/admin";
+import { issueNextRecurringInvoice } from "@/lib/firestore/recurring";
 import { normalizeSnapshot } from "@/lib/service-def";
 
 // Joriy admin sessiyasidan "kim" (actor) ma'lumotini quradi.
@@ -595,48 +592,7 @@ export async function actUpdateRecurringPlan(
 // Admin: muddatidan oldin davriy hisob-faktura chiqaradi (davr siljiydi).
 export async function actCreateRecurringInvoiceNow(appId: string) {
   await requireAdmin();
-  const snap = await adminDb.collection("apps").doc(appId).get();
-  if (!snap.exists) return { ok: false, error: "Ariza topilmadi" };
-  const app = snap.data()!;
-  const rec = app.billing?.recurring;
-  if (!rec || !rec.amountUsd) return { ok: false, error: "Davriy to'lov sozlanmagan" };
-  if (rec.status === "cancelled") return { ok: false, error: "Davriy to'lov bekor qilingan" };
-
-  const open = await getOpenRecurringInvoices(appId);
-  if (open.length >= 3) return { ok: false, error: "To'lanmagan hisob-fakturalar juda ko'p (3+)" };
-
-  try {
-    const periodMonths: number = rec.periodMonths ?? 1;
-    const periodStart: Date = rec.nextChargeAt?.toDate?.() ?? new Date();
-    const periodEnd = addMonths(periodStart, periodMonths);
-    const periodNo = (rec.periodNo ?? 0) + 1;
-    const rate = await getUsdRate();
-    const amountUsd: number = rec.amountUsd;
-    const name = (app.appName as string | null) || appLabel({ serviceType: app.serviceType, catalogSnapshot: app.catalogSnapshot });
-
-    await createRecurringInvoice({
-      appId,
-      ownerUid: app.ownerUid,
-      ownerName: app.contact?.fullName || "Mijoz",
-      ownerPhone: app.contact?.phone || "-",
-      appName: name,
-      serviceLabel: name,
-      amountUsd,
-      rate,
-      amountUzs: rate ? Math.round(amountUsd * rate) : null,
-      periodNo,
-      periodStart,
-      periodEnd,
-    });
-    await snap.ref.update({
-      "billing.recurring.periodNo": periodNo,
-      "billing.recurring.invoicesCount": (rec.invoicesCount ?? 0) + 1,
-      "billing.recurring.lastInvoiceAt": Timestamp.fromDate(periodStart),
-      "billing.recurring.nextChargeAt": Timestamp.fromDate(periodEnd),
-    });
-    revalidatePath("/admin");
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Xatolik" };
-  }
+  const r = await issueNextRecurringInvoice(appId, { maxOpen: 3 });
+  if (r.ok) revalidatePath("/admin");
+  return r.ok ? { ok: true } : { ok: false, error: r.error ?? "Xatolik" };
 }
