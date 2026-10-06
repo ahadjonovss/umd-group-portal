@@ -12,7 +12,8 @@ import {
   isRequestActive,
   isRequestPreWork,
 } from "@/lib/request-status";
-import { SERVICE_SHORT, formatDate } from "@/lib/labels";
+import { SERVICE_SHORT, formatDate, platformOf } from "@/lib/labels";
+import { UMD_GOOGLE_PAYMENTS_ID } from "@/lib/site";
 import { actSetRequestStatus, actSetRequestNote, actDeleteRequest, actConfirmRequestPayment, actRejectRequest } from "@/app/admin/actions";
 import { RejectCompensationDialog } from "@/components/admin/RejectCompensationDialog";
 
@@ -28,6 +29,45 @@ const DATA_LABELS: Record<string, string> = {
   months: "Muddat (oy)",
   note: "Izoh (mijoz)",
 };
+
+// Yozuv: yorliq + qiymat + nusxalash tugmasi.
+function CopyField({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard bloklansa — jim
+    }
+  }
+  return (
+    <div className={`min-w-0 rounded-lg px-2 py-1.5 ${accent ? "bg-violet-50 ring-1 ring-violet-200" : ""}`}>
+      <p className={`text-[10px] ${accent ? "text-violet-500" : "text-slate-400"}`}>{label}</p>
+      <div className="flex items-start gap-1.5">
+        <button
+          onClick={copy}
+          title="Nusxalash"
+          className={`mt-0.5 w-5 h-5 flex-shrink-0 rounded flex items-center justify-center transition-colors ${
+            copied ? "bg-emerald-100 text-emerald-600" : "bg-white ring-1 ring-slate-200 text-slate-400 hover:text-slate-700 hover:ring-slate-300"
+          }`}
+        >
+          {copied ? (
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          )}
+        </button>
+        <p className={`text-sm break-words ${accent ? "font-semibold text-violet-900" : "text-slate-800"}`}>{value}</p>
+      </div>
+    </div>
+  );
+}
 
 const TYPE_COLOR: Record<string, string> = {
   transfer: "bg-violet-100 text-violet-700",
@@ -161,6 +201,8 @@ export function AdminRequestRow({ request, cancelFeePct = 20 }: { request: Reque
   const active = isRequestActive(request.status);
   const title = request.appName || SERVICE_SHORT[request.serviceType];
   const entries = Object.entries(request.data).filter(([, v]) => v && String(v).trim() !== "");
+  // Google Play transferida admin UMD'ning to'lov profili ID'sini ham ko'radi
+  const isGoogleTransfer = request.type === "transfer" && platformOf(request.serviceType) === "android";
   const typeColor = TYPE_COLOR[request.type] ?? "bg-slate-100 text-slate-700";
 
   return (
@@ -199,13 +241,15 @@ export function AdminRequestRow({ request, cancelFeePct = 20 }: { request: Reque
       </div>
 
       {/* Ma'lumotlar (doim ko'rinadi) */}
-      {entries.length > 0 && (
-        <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 rounded-lg p-3">
+      {(entries.length > 0 || isGoogleTransfer) && (
+        <div className="grid sm:grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 rounded-lg p-2">
+          {/* Google transferda yuboruvchi (UMD) akkauntning to'lov profili —
+              Google'ning transfer formasida shu ID so'raladi. */}
+          {isGoogleTransfer && (
+            <CopyField label="UMD to'lov ID (yuboruvchi)" value={UMD_GOOGLE_PAYMENTS_ID} accent />
+          )}
           {entries.map(([k, v]) => (
-            <div key={k} className="min-w-0">
-              <p className="text-[10px] text-slate-400">{DATA_LABELS[k] ?? k}</p>
-              <p className="text-sm text-slate-800 break-words">{v}</p>
-            </div>
+            <CopyField key={k} label={DATA_LABELS[k] ?? k} value={String(v)} />
           ))}
         </div>
       )}

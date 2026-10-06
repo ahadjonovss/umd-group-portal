@@ -8,6 +8,11 @@ export const TELEGRAM_MANAGER = "umdgroupadmintg";
 export const TELEGRAM_MANAGER_AT = `@${TELEGRAM_MANAGER}`;
 export const TELEGRAM_MANAGER_URL = `https://t.me/${TELEGRAM_MANAGER}`;
 
+// UMD GROUP'ning Google Play Payments profil ID'si.
+// Ilovani transfer qilishda Google SOURCE (yuboruvchi) akkauntning shu ID'sini
+// so'raydi — admin transfer so'rovida uni qo'lma-qo'l ko'ra olishi uchun.
+export const UMD_GOOGLE_PAYMENTS_ID = "PDS.1414-9578-1707-33651";
+
 export function adminAppUrl(appId: string): string {
   return `${SITE_URL}/admin/app/${appId}`;
 }
