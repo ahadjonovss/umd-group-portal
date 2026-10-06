@@ -1318,17 +1318,17 @@ export const uz = {
     transferTitle: "Transferga so'rov",
     transferHeading: (appName: string) => `${appName} — Transfer`,
     transferSub: (store: string) =>
-      `Ilovani ${store} akkauntingizdan UMD GROUP akkauntiga o'tkazish.`,
+      `Ilovani UMD GROUP akkauntidan sizning ${store} akkauntingizga o'tkazish — shundan so'ng ilova to'liq sizniki bo'ladi.`,
     transferErrGoogle: "Developer Account ID va Transaction ID majburiy",
     transferErrRequired: "Majburiy maydonni to'ldiring",
     devAccountId: "Developer Account ID",
-    devAccountIdHint: "Play Console → Settings → Developer account → Account details",
+    devAccountIdHint: "Sizning akkauntingiz: Play Console → Settings → Developer account → Account details",
     txInfo:
-      "ℹ️ **Transaction ID**: akkauntga **$25** to'lov qilingandan so'ng Google yuborgan **email xabaridan** yoki **Google profil → Payment history** dan topasiz.",
+      "ℹ️ **Transaction ID**: ilovani qabul qiluvchi — ya'ni **sizning akkauntingiz** Google'ga **$25** to'lagandan so'ng kelgan **email xabaridan** yoki **Google profil → Payment history** dan topasiz.",
     transactionId: "Transaction ID",
     transactionIdHint: "$25 to'lovdan keyingi email yoki Payment history",
-    teamId: "App Store Connect Team ID",
-    appleEmail: "Apple Developer akkaunt email",
+    teamId: "App Store Connect Team ID (sizning akkauntingiz)",
+    appleEmail: "Apple Developer akkaunt email (sizniki)",
 
     renewalMeta: "Obunani uzaytirish — UMD GROUP",
     renewalTitle: "Obunani uzaytirish",

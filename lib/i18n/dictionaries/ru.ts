@@ -1303,17 +1303,17 @@ export const ru: typeof uz = {
     transferTitle: "Заявка на перенос",
     transferHeading: (appName: string) => `${appName} — Перенос`,
     transferSub: (store: string) =>
-      `Перенос приложения с вашего аккаунта ${store} на аккаунт UMD GROUP.`,
+      `Перенос приложения с аккаунта UMD GROUP на ваш аккаунт ${store} — после этого приложение полностью ваше.`,
     transferErrGoogle: "Developer Account ID и Transaction ID обязательны",
     transferErrRequired: "Заполните обязательное поле",
     devAccountId: "Developer Account ID",
-    devAccountIdHint: "Play Console → Settings → Developer account → Account details",
+    devAccountIdHint: "Ваш аккаунт: Play Console → Settings → Developer account → Account details",
     txInfo:
-      "ℹ️ **Transaction ID**: найдёте в **письме от Google**, отправленном после оплаты **$25** на аккаунт, либо в **профиле Google → Payment history**.",
+      "ℹ️ **Transaction ID**: принимающая сторона — то есть **ваш аккаунт** — платит Google **$25**; ID найдёте в **письме от Google** после оплаты либо в **профиле Google → Payment history**.",
     transactionId: "Transaction ID",
     transactionIdHint: "Письмо после оплаты $25 или Payment history",
-    teamId: "App Store Connect Team ID",
-    appleEmail: "Email аккаунта Apple Developer",
+    teamId: "App Store Connect Team ID (ваш аккаунт)",
+    appleEmail: "Email аккаунта Apple Developer (ваш)",
 
     renewalMeta: "Продление подписки — UMD GROUP",
     renewalTitle: "Продление подписки",
