@@ -11,7 +11,7 @@ import type { Pricing } from "@/lib/firestore/settings";
 import { SERVICE_LABELS, STATUS_META, platformOf, appShort, statusMetaFor } from "@/lib/labels";
 import { REQUEST_TYPE_LABEL, isRequestActive } from "@/lib/request-status";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
-import { getInstallment } from "@/lib/payment-state";
+import { getInstallment, remainingUsdOf } from "@/lib/payment-state";
 import { isTerminalError } from "@/lib/app-status";
 import type { ServiceType } from "@/types";
 
@@ -163,8 +163,8 @@ export function StatsPanel({
         if (!isTerminalError(a.status) && a.status !== "transferred" && a.status !== "subscription_ended") {
           const adv = getInstallment(a.payment, "advance");
           const fin = getInstallment(a.payment, "final");
-          if (adv && OPEN.has(adv.state)) owedUsd += Math.round(advanceUsdApp(a, pricing));
-          if (fin && OPEN.has(fin.state)) owedUsd += Math.round(finalUsdApp(a, pricing));
+          if (adv && OPEN.has(adv.state)) owedUsd += remainingUsdOf(Math.round(advanceUsdApp(a, pricing)), adv);
+          if (fin && OPEN.has(fin.state)) owedUsd += remainingUsdOf(Math.round(finalUsdApp(a, pricing)), fin);
         }
         if (a.status === "published" && a.subscription?.active && a.subscription.endDate?.slice(0, 7) === curMonth) {
           renewalDueUsd += Math.round(renewalUsd(a, pricing));

@@ -25,7 +25,7 @@ import type { PaymentView } from "@/lib/firestore/payments";
 import type { RequestView } from "@/lib/firestore/requests";
 import { isRequestActive, REQUEST_TYPE_LABEL } from "@/lib/request-status";
 import { STATUS_META, SERVICE_LABELS, SERVICE_SHORT, PLATFORM_LABEL, platformOf, appLabel, appShort, appTitle } from "@/lib/labels";
-import { getInstallment, isPayable } from "@/lib/payment-state";
+import { getInstallment, isPayable, remainingUsdOf } from "@/lib/payment-state";
 import { advanceUsdApp, finalUsdApp } from "@/lib/payment";
 import { isTerminalError } from "@/lib/app-status";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
@@ -276,11 +276,11 @@ export function AdminTabs({
       const adv = getInstallment(a.payment, "advance");
       const fin = getInstallment(a.payment, "final");
       if (isPayable(adv)) {
-        const amt = pricing ? Math.round(applyDiscount(advanceUsdApp(a, pricing), pct)) : 0;
+        const amt = pricing ? remainingUsdOf(Math.round(applyDiscount(advanceUsdApp(a, pricing), pct)), adv) : 0;
         if (amt > 0) out.push({ key: `${a.id}:advance`, appId: a.id, title, kindLabel: fin ? "Avans" : "To'lov", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
       }
       if (isPayable(fin)) {
-        const amt = pricing ? Math.round(applyDiscount(finalUsdApp(a, pricing), pct)) : 0;
+        const amt = pricing ? remainingUsdOf(Math.round(applyDiscount(finalUsdApp(a, pricing), pct)), fin) : 0;
         if (amt > 0) out.push({ key: `${a.id}:final`, appId: a.id, title, kindLabel: "Yakuniy", amountUsd: amt, ownerUid: a.ownerUid, ownerName: owner, ownerPhone: a.contact?.phone || "", createdAt: a.createdAt, published: a.publication.published });
       }
     }

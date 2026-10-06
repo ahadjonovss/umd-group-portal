@@ -11,6 +11,11 @@ export interface Installment {
   paymentId: string | null; // -> payments kolleksiyasi (ledger) yozuvi
   taxPhone: string | null;
   taxReceiptUrl: string | null;
+  // Qisman to'lovlar: tasdiqlangan to'lovlar yig'indisi. To'liq to'langanda
+  // state "confirmed" bo'ladi; undan oldin "due" holatida qolib, qolgan
+  // summa ko'rsatiladi.
+  paidUsd?: number;
+  paidUzs?: number;
 }
 
 export interface PaymentState {
@@ -62,6 +67,30 @@ export function kindToInstallment(kind: string): InstallmentKey {
 
 export function getInstallment(p: PaymentState | null | undefined, key: InstallmentKey): Installment | null {
   return p?.installments?.[key] ?? null;
+}
+
+// ── Qisman to'lov ─────────────────────────────
+
+// Shu qism bo'yicha allaqachon tasdiqlangan summa ($).
+export function paidUsdOf(i: Installment | null | undefined): number {
+  const v = i?.paidUsd;
+  return typeof v === "number" && v > 0 ? v : 0;
+}
+
+export function paidUzsOf(i: Installment | null | undefined): number {
+  const v = i?.paidUzs;
+  return typeof v === "number" && v > 0 ? v : 0;
+}
+
+// To'liq summadan qolgan qismi ($). Tasdiqlangan bo'lsa 0.
+export function remainingUsdOf(requiredUsd: number, i: Installment | null | undefined): number {
+  if (i?.state === "confirmed") return 0;
+  return Math.max(0, Math.round(requiredUsd) - paidUsdOf(i));
+}
+
+// Qisman to'langanmi (biroz to'langan, lekin yakunlanmagan).
+export function isPartiallyPaid(i: Installment | null | undefined): boolean {
+  return i?.state !== "confirmed" && paidUsdOf(i) > 0;
 }
 
 // Qism hozir to'lanishi mumkinmi (forma ko'rsatiladi).

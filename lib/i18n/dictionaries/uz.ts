@@ -1051,11 +1051,14 @@ export const uz = {
     // Invoice
     invoiceState: {
       due: "To'lanmagan",
+      partial: "Qisman to'langan",
       rejected: "Rad etilgan — qayta yuboring",
       submitted: "Yuborildi — tekshiruvda",
       confirmed: "To'langan",
       locked: "Keyinroq",
     },
+    invoicePartial: (total: number, paid: number, left: number) =>
+      `Jami $${total} · to'langan $${paid} · qoldi $${left}`,
     payFull: "To'liq to'lash",
     payFullLabel: "To'liq to'lov",
 
@@ -1080,6 +1083,22 @@ export const uz = {
     paySubmit: "Chekni jo'natish",
     paySending: "Yuborilmoqda…",
     payErrNoReceipt: "Chek rasmini yuklang",
+    payErrNoAmount: "To'layotgan summangizni kiriting",
+
+    // Qisman to'lash
+    payAlreadyPaid: "Avval to'langan",
+    payPartialLink: "Hammasini to'lay olmayapsizmi? Qisman to'lash →",
+    payPartialTitle: "Shu safar qancha to'laysiz?",
+    payPartialRemaining: (sum: string) => `Qolgan summa: ${sum} so'm`,
+    payPartialLeftAfter: (sum: string) => `To'lovdan keyin qoladi: ${sum} so'm`,
+    payPartialCovers: "Qoldiq to'liq yopiladi ✓",
+    payPartialSummary: (approx: number, total: number) => `~$${approx} · jami qoldiq $${total}`,
+
+    // Davriy to'lovni oldindan to'lash
+    prepayTitle: "Oldindan to'lash",
+    prepayHint: (date: string) => `Keyingi davr ${date} da boshlanadi — xohlasangiz hoziroq yopib qo'ysangiz bo'ladi.`,
+    prepayButton: (period: string, usd: number) => `Keyingi ${period} to'lovni to'lash · $${usd}`,
+    prepayLoading: "Tayyorlanmoqda…",
     payErrPhone: "Telefon raqamini to'liq kiriting: +998 va 9 ta raqam",
 
     // Chek

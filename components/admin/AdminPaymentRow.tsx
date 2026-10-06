@@ -52,6 +52,7 @@ function ReceiptConfirmModal({
   netDueUzs,
   needsReceipt,
   taxPhone,
+  partialAllowed,
   saving,
   onConfirm,
   onClose,
@@ -61,6 +62,7 @@ function ReceiptConfirmModal({
   netDueUzs: number | null;
   needsReceipt: boolean;
   taxPhone: string | null;
+  partialAllowed: boolean;
   saving: boolean;
   onConfirm: (url: string, actualPaidUzs: number) => void;
   onClose: () => void;
@@ -100,7 +102,19 @@ function ReceiptConfirmModal({
           <p className="text-xs font-semibold text-emerald-600 mt-1.5">🪙 Ortiqcha +{overpay.toLocaleString("en-US")} so&apos;m mijoz hamyoniga tushadi</p>
         )}
         {overpay < 0 && (
-          <p className="text-xs font-semibold text-amber-600 mt-1.5">⚠️ Kam to&apos;lanган ({overpay.toLocaleString("en-US")} so&apos;m) — tekshiring</p>
+          partialAllowed ? (
+            <div className="mt-1.5 rounded-lg bg-indigo-50 ring-1 ring-indigo-100 p-2.5">
+              <p className="text-xs font-semibold text-indigo-700">
+                Qisman to&apos;lov sifatida yoziladi
+              </p>
+              <p className="text-[11px] text-indigo-600 mt-0.5">
+                {Math.abs(overpay).toLocaleString("en-US")} so&apos;m qarz bo&apos;lib qoladi — mijoz keyin to&apos;lay oladi.
+                Ariza keyingi bosqichga o&apos;tmaydi.
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs font-semibold text-amber-600 mt-1.5">⚠️ Kam to&apos;langan ({overpay.toLocaleString("en-US")} so&apos;m) — tekshiring</p>
+          )
         )}
 
         {/* Soliq cheki (kerak bo'lsa) */}
@@ -190,6 +204,14 @@ export function AdminPaymentRow({ payment, relatedPayments }: { payment: Payment
           <span className={`inline-flex flex-shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold ${style.badge}`}>
             {kindLabel(payment)}
           </span>
+          {payment.partial && (
+            <span
+              className="inline-flex flex-shrink-0 items-center rounded-md px-1.5 py-0.5 text-[11px] font-semibold bg-indigo-100 text-indigo-700"
+              title={payment.installmentUsd ? `Qismning to'liq summasi: $${payment.installmentUsd}` : undefined}
+            >
+              Qisman{payment.installmentUsd ? ` · $${payment.installmentUsd} dan` : ""}
+            </span>
+          )}
           {payment.amountUzs ? (
             <span className="text-xs text-slate-400 truncate">~{payment.amountUzs.toLocaleString("en-US")} so&apos;m</span>
           ) : null}
@@ -297,6 +319,7 @@ export function AdminPaymentRow({ payment, relatedPayments }: { payment: Payment
           netDueUzs={payment.netDueUzs}
           needsReceipt={needsReceipt}
           taxPhone={payment.taxPhone}
+          partialAllowed={!payment.requestId && (payment.kind === "advance" || payment.kind === "final")}
           saving={pending}
           onClose={() => setConfirmOpen(false)}
           onConfirm={(url, actualPaidUzs) =>

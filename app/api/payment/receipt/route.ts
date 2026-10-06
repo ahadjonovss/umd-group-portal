@@ -12,7 +12,7 @@ import { getActiveDiscount, bindDiscount } from "@/lib/firestore/discounts";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 import { getUsdRate } from "@/lib/cbu";
 import { isTerminalError, isTerminalSuccess } from "@/lib/app-status";
-import { isPayable } from "@/lib/payment-state";
+import { isPayable, getInstallment, paidUsdOf, type PaymentState } from "@/lib/payment-state";
 import { SERVICE_LABELS } from "@/lib/labels";
 import { tgAdminLink } from "@/lib/site";
 import { notifyUser, appLink } from "@/lib/notify";
@@ -47,6 +47,10 @@ export async function POST(req: NextRequest) {
     : kindParam === "update_package" ? "update_package"
     : "advance";
   const taxPhone = String(formData.get("taxPhone") || "").trim();
+  // Qisman to'lov: mijoz shu safar qancha to'layotganini o'zi kiritadi (so'mda).
+  // Bo'sh bo'lsa — qolgan summa to'liq to'lanadi.
+  const partialUzsRaw = String(formData.get("partialUzs") || "").replace(/\D/g, "");
+  const partialUzsInput = partialUzsRaw ? parseInt(partialUzsRaw, 10) : 0;
   if (!appId) {
     return NextResponse.json({ success: false, error: "appId yo'q" }, { status: 400 });
   }
@@ -125,7 +129,37 @@ export async function POST(req: NextRequest) {
     : kind === "full" ? serviceBaseUsd(pricedApp, pricing)
     : kind === "update_package" ? updatePackageUsd(serviceType, pricing)
     : advanceUsdApp(pricedApp, pricing);
-  const usd = Math.round(applyDiscount(baseAmount, pct));
+  // Shu qismning to'liq summasi va allaqachon to'langan (qisman) summasi
+  const installmentUsd = Math.round(applyDiscount(baseAmount, pct));
+  const paidSoFarUsd =
+    kind === "advance" || kind === "final"
+      ? paidUsdOf(getInstallment(app.payment as PaymentState | undefined, kind))
+      : 0;
+  const remainingUsd = Math.max(0, installmentUsd - paidSoFarUsd);
+  if (remainingUsd <= 0 && kind !== "update_package") {
+    return NextResponse.json({ success: false, error: "Bu qism allaqachon to'langan" }, { status: 400 });
+  }
+
+  // Qisman to'lov faqat avans/yakuniy qismlarida (to'liq to'lov va paketda emas)
+  const partialAllowed = kind === "advance" || kind === "final";
+  let usd = kind === "update_package" ? installmentUsd : remainingUsd;
+  let partial = false;
+  if (partialUzsInput > 0 && partialAllowed) {
+    if (!rate) {
+      return NextResponse.json({ success: false, error: "Valyuta kursi mavjud emas — qisman to'lov imkonsiz" }, { status: 400 });
+    }
+    const remainingUzs = Math.round(remainingUsd * rate);
+    if (partialUzsInput >= remainingUzs) {
+      usd = remainingUsd; // qolganini to'liq qoplaydi
+    } else {
+      const partUsd = Math.round(partialUzsInput / rate);
+      if (partUsd < 1) {
+        return NextResponse.json({ success: false, error: "Summa juda kichik" }, { status: 400 });
+      }
+      usd = partUsd;
+      partial = true;
+    }
+  }
   const uzs = rate ? Math.round(usd * rate) : null;
   const totalUsd = kind === "update_package" ? usd : Math.round(applyDiscount(serviceBaseUsd(pricedApp, pricing), pct));
   const appName = (app.appName as string | null) || SERVICE_LABELS[serviceType];
@@ -157,6 +191,8 @@ export async function POST(req: NextRequest) {
       rate,
       amountUzs: uzs,
       totalUsd,
+      partial,
+      installmentUsd: kind === "update_package" ? usd : installmentUsd,
       advancePercent: kind === "full" ? 100 : advancePercentForApp(pricedApp, pricing),
       taxPhone: taxPhone || null,
       discountId: discount?.id ?? null,
@@ -177,6 +213,7 @@ export async function POST(req: NextRequest) {
     `📞 ${esc(ownerPhone)}\n` +
     `💵 $${esc(String(usd))}` +
     (uzs ? ` \\(\\~${esc(uzs.toLocaleString("en-US"))} so'm\\)` : "") +
+    (partial ? `\n⚠️ QISMAN to'lov — jami $${esc(String(installmentUsd))}, to'langan $${esc(String(paidSoFarUsd))}, qoladi $${esc(String(Math.max(0, remainingUsd - usd)))}` : "") +
     `\n💳 Karta: ${esc(payment.cardNumber || "-")}` +
     (taxPhone ? `\n📇 Soliq cheki tel: ${esc(taxPhone)}` : "") +
     tgAdminLink(appId);
@@ -208,7 +245,9 @@ export async function POST(req: NextRequest) {
   // Mijozga tasdiq xabari
   await notifyUser(
     user.uid,
-    `🧾 Chekingizni oldik, rahmat 🙌\n\n📱 ${esc(appName)}\n💳 ${esc(kindLabel)} · $${esc(String(usd))}\n\nTez orada tekshirib tasdiqlaymiz 👌${appLink(appId)}`
+    `🧾 Chekingizni oldik, rahmat 🙌\n\n📱 ${esc(appName)}\n💳 ${esc(kindLabel)} · $${esc(String(usd))}` +
+      (partial ? `\n💰 Qisman to'lov · qoladi $${esc(String(Math.max(0, remainingUsd - usd)))}` : "") +
+      `\n\nTez orada tekshirib tasdiqlaymiz 👌${appLink(appId)}`
   );
 
   return NextResponse.json({ success: true });

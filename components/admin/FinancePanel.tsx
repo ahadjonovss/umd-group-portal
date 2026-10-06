@@ -10,7 +10,7 @@ import type { Pricing } from "@/lib/firestore/settings";
 import { SERVICE_LABELS, PLATFORM_LABEL, platformOf, type Platform } from "@/lib/labels";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
-import { getInstallment } from "@/lib/payment-state";
+import { getInstallment, remainingUsdOf } from "@/lib/payment-state";
 import { isTerminalError } from "@/lib/app-status";
 import type { ServiceType } from "@/types";
 
@@ -263,11 +263,11 @@ export function FinancePanel({
         const adv = getInstallment(a.payment, "advance");
         const fin = getInstallment(a.payment, "final");
         if (adv && OPEN.has(adv.state)) {
-          const amt = Math.round(applyDiscount(advanceUsdApp(a, pricing), pct));
+          const amt = remainingUsdOf(Math.round(applyDiscount(advanceUsdApp(a, pricing), pct)), adv);
           if (amt > 0) { owedUsd += amt; owedCount++; }
         }
         if (fin && OPEN.has(fin.state)) {
-          const amt = Math.round(applyDiscount(finalUsdApp(a, pricing), pct));
+          const amt = remainingUsdOf(Math.round(applyDiscount(finalUsdApp(a, pricing), pct)), fin);
           if (amt > 0) { owedUsd += amt; owedCount++; }
         }
       }

@@ -8,15 +8,19 @@ import { useT } from "@/components/i18n/LanguageProvider";
 interface Invoice {
   key: "advance" | "final";
   label: string;
-  usd: number;
+  usd: number; // QOLGAN summa ($) — qisman to'lovlar ayirilgan
   uzs: number | null;
   state: PayState; // due | submitted | confirmed | rejected | locked
+  totalUsd?: number; // qismning to'liq summasi ($)
+  paidUsd?: number; // shu qism bo'yicha to'langan ($)
+  paidUzs?: number;
 }
 
-type BadgeKey = "due" | "rejected" | "submitted" | "confirmed" | "locked";
+type BadgeKey = "due" | "partial" | "rejected" | "submitted" | "confirmed" | "locked";
 
 const STATE_BADGE: Record<BadgeKey, { cls: string; dot: string }> = {
   due: { cls: "bg-amber-50 text-amber-700 ring-amber-200", dot: "bg-amber-500" },
+  partial: { cls: "bg-indigo-50 text-indigo-700 ring-indigo-200", dot: "bg-indigo-500" },
   rejected: { cls: "bg-red-50 text-red-700 ring-red-200", dot: "bg-red-500" },
   submitted: { cls: "bg-blue-50 text-blue-700 ring-blue-200", dot: "bg-blue-500" },
   confirmed: { cls: "bg-emerald-50 text-emerald-700 ring-emerald-200", dot: "bg-emerald-500" },
@@ -64,12 +68,20 @@ export function InvoicePayment({
   const fullUzs = rate ? Math.round(fullUsd * rate) : null;
 
   // Tanlangan invoice(lar) uchun PaymentView parametrlari
-  let payProps: { usd: number; uzs: number | null; kind?: string; label: string } | null = null;
+  let payProps: { usd: number; uzs: number | null; kind?: string; label: string; paidUzs: number } | null = null;
   if (choice === "full" && canFull) {
-    payProps = { usd: fullUsd, uzs: fullUzs, kind: "full", label: t.panel.payFullLabel };
+    payProps = { usd: fullUsd, uzs: fullUzs, kind: "full", label: t.panel.payFullLabel, paidUzs: 0 };
   } else {
     const inv = invoices.find((i) => i.key === choice && (i.state === "due" || i.state === "rejected"));
-    if (inv) payProps = { usd: inv.usd, uzs: inv.uzs, kind: inv.key === "final" ? "final" : undefined, label: inv.label };
+    if (inv) {
+      payProps = {
+        usd: inv.usd,
+        uzs: inv.uzs,
+        kind: inv.key === "final" ? "final" : undefined,
+        label: inv.label,
+        paidUzs: inv.paidUzs ?? 0,
+      };
+    }
   }
 
   return (
@@ -78,16 +90,32 @@ export function InvoicePayment({
       <div className="flex flex-col gap-2">
         {invoices.map((i) => {
           // Yakuniy avans to'langunча "keyinroq" ko'rinishida turadi
-          const effState: BadgeKey = i.key === "final" && !advDone && i.state !== "confirmed" ? "locked" : i.state;
+          const base: BadgeKey = (i.key === "final" && !advDone && i.state !== "confirmed" ? "locked" : i.state) as BadgeKey;
+          const partlyPaid = (i.paidUsd ?? 0) > 0 && base !== "confirmed";
+          const effState: BadgeKey = partlyPaid && base === "due" ? "partial" : base;
           const b = STATE_BADGE[effState] ?? STATE_BADGE.due;
           return (
             <div key={i.key} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 ring-1 ring-slate-100 px-3.5 py-2.5">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-800">{i.label}</p>
-                <p className="text-xs text-slate-500">
-                  ${i.usd}
-                  {i.uzs ? <span className="text-slate-400"> · ~{i.uzs.toLocaleString("en-US")} {t.common.sum}</span> : null}
-                </p>
+                {partlyPaid ? (
+                  <>
+                    <p className="text-xs text-slate-500">
+                      {t.panel.invoicePartial(i.totalUsd ?? i.usd, i.paidUsd ?? 0, i.usd)}
+                    </p>
+                    <div className="mt-1 h-1.5 w-32 rounded-full bg-slate-200 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-emerald-500"
+                        style={{ width: `${Math.min(100, Math.round(((i.paidUsd ?? 0) / Math.max(1, i.totalUsd ?? i.usd)) * 100))}%` }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500">
+                    ${i.usd}
+                    {i.uzs ? <span className="text-slate-400"> · ~{i.uzs.toLocaleString("en-US")} {t.common.sum}</span> : null}
+                  </p>
+                )}
               </div>
               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ring-1 flex-shrink-0 ${b.cls}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${b.dot}`} />
@@ -135,6 +163,8 @@ export function InvoicePayment({
             askTaxPhone={choice === "full" || choice === "final" || (choice === "advance" && !invoices.some((i) => i.key === "final"))}
             discountPercent={discountPercent}
             walletUzs={walletUzs}
+            allowPartial={choice !== "full"}
+            paidUzs={payProps.paidUzs}
           />
         </div>
       )}

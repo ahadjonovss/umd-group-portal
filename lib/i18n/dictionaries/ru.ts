@@ -1040,11 +1040,14 @@ export const ru: typeof uz = {
 
     invoiceState: {
       due: "Не оплачено",
+      partial: "Оплачено частично",
       rejected: "Отклонено — отправьте заново",
       submitted: "Отправлено — на проверке",
       confirmed: "Оплачено",
       locked: "Позже",
     },
+    invoicePartial: (total: number, paid: number, left: number) =>
+      `Всего $${total} · оплачено $${paid} · осталось $${left}`,
     payFull: "Оплатить полностью",
     payFullLabel: "Полная оплата",
 
@@ -1068,6 +1071,22 @@ export const ru: typeof uz = {
     paySubmit: "Отправить чек",
     paySending: "Отправка…",
     payErrNoReceipt: "Загрузите изображение чека",
+    payErrNoAmount: "Укажите сумму, которую вы оплачиваете",
+
+    // Частичная оплата
+    payAlreadyPaid: "Оплачено ранее",
+    payPartialLink: "Не можете оплатить всю сумму? Оплатить частично →",
+    payPartialTitle: "Сколько вы оплачиваете сейчас?",
+    payPartialRemaining: (sum: string) => `Остаток: ${sum} сум`,
+    payPartialLeftAfter: (sum: string) => `После оплаты останется: ${sum} сум`,
+    payPartialCovers: "Остаток закрывается полностью ✓",
+    payPartialSummary: (approx: number, total: number) => `~$${approx} · весь остаток $${total}`,
+
+    // Предоплата периодического платежа
+    prepayTitle: "Оплатить заранее",
+    prepayHint: (date: string) => `Следующий период начинается ${date} — при желании можно закрыть его уже сейчас.`,
+    prepayButton: (period: string, usd: number) => `Оплатить следующий ${period} платёж · $${usd}`,
+    prepayLoading: "Подготовка…",
     payErrPhone: "Введите номер полностью: +998 и 9 цифр",
 
     receiptButton: "Чек",

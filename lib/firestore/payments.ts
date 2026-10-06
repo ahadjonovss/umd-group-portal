@@ -71,6 +71,8 @@ export interface CreatePaymentInput {
   discountPercent?: number; // qo'llangan chegirma foizi
   packageDays?: number; // update paketi: muddat (kun)
   packageQuota?: number; // update paketi: update soni
+  partial?: boolean; // qisman to'lov (summani mijoz o'zi kiritgan)
+  installmentUsd?: number; // shu qismning to'liq summasi ($) — qisman to'lovda qoldiqni hisoblash uchun
 }
 
 export async function createPayment(input: CreatePaymentInput): Promise<string> {
@@ -89,6 +91,8 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
   await ref.set({
     ...input,
     requestId: input.requestId ?? null,
+    partial: Boolean(input.partial),
+    installmentUsd: input.installmentUsd ?? input.amountUsd,
     taxPhone: input.taxPhone ?? null,
     discountId: input.discountId ?? null,
     discountPercent: input.discountPercent ?? 0,
@@ -109,7 +113,7 @@ export async function createPayment(input: CreatePaymentInput): Promise<string> 
   await logActivity(
     input.appId,
     "payment_submitted",
-    `${PAYMENT_KIND_LABEL[input.kind]} to'lovi uchun kvitansiya yuborildi ($${Math.round(input.amountUsd)})`,
+    `${PAYMENT_KIND_LABEL[input.kind]} to'lovi uchun kvitansiya yuborildi ($${Math.round(input.amountUsd)}${input.partial ? ", qisman" : ""})`,
     { type: "user", name: input.ownerName || "Foydalanuvchi", uid: input.ownerUid }
   );
   return ref.id;
@@ -140,6 +144,8 @@ export interface PaymentView {
   netDueUzs: number | null; // mijoz o'tkazishi kerak bo'lgan (so'm)
   actualPaidUzs: number | null; // admin kiritgan — mijoz aslida to'lagan (so'm)
   batchId: string | null; // "hammasini birga to'lash" orqali yuborilgan bo'lsa — guruh id
+  partial: boolean; // qisman to'lov (qismning bir qismini qoplaydi)
+  installmentUsd: number | null; // shu qismning to'liq summasi ($)
   createdAt: string | null;
 }
 
@@ -174,6 +180,8 @@ function mapPayment(d: QueryDocumentSnapshot): PaymentView {
     netDueUzs: typeof x.netDueUzs === "number" ? x.netDueUzs : (typeof x.amountUzs === "number" ? x.amountUzs : null),
     actualPaidUzs: typeof x.actualPaidUzs === "number" ? x.actualPaidUzs : null,
     batchId: x.batchId ?? null,
+    partial: Boolean(x.partial),
+    installmentUsd: typeof x.installmentUsd === "number" ? x.installmentUsd : null,
     createdAt: iso(x.createdAt),
   };
 }
@@ -256,7 +264,45 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     await startRecurring(appId, "on_advance_paid");
   };
 
-  if (requestId) {
+  // ── Qisman to'lov ──────────────────────────
+  // Mijoz qismning bir qismini to'lagan bo'lsa, to'langan summa yig'iladi.
+  // To'liq yig'ilmaguncha ariza bosqichi ilgarilamaydi va qism "due" holatida
+  // qolib, mijoz qolgan summani keyin to'lay oladi.
+  const isAppInstallment = !requestId && (p.kind === "advance" || p.kind === "final");
+  const netDueUzs = typeof p.netDueUzs === "number" ? p.netDueUzs : ((p.amountUzs as number) ?? 0);
+  const walletAppliedUzs = typeof p.walletAppliedUzs === "number" ? p.walletAppliedUzs : 0;
+
+  // Admin tasdiqlashda kelgan summani kiritsa va u kutilgandan KAM bo'lsa —
+  // to'lov qisman deb hisoblanadi (mijoz chekni to'liq summaga yuborgan bo'lsa ham).
+  let effUsd = (p.amountUsd as number) ?? 0;
+  let effUzs = (p.amountUzs as number) ?? 0;
+  let underpaid = false;
+  if (isAppInstallment && typeof actualPaidUzs === "number" && actualPaidUzs >= 0 && actualPaidUzs < netDueUzs - 1) {
+    underpaid = true;
+    effUzs = walletAppliedUzs + Math.round(actualPaidUzs);
+    const r = typeof p.rate === "number" && p.rate > 0 ? p.rate : effUsd > 0 ? ((p.amountUzs as number) ?? 0) / effUsd : 0;
+    effUsd = r > 0 ? Math.round(effUzs / r) : 0;
+  }
+
+  const isPartial = isAppInstallment && (Boolean(p.partial) || underpaid);
+  let partialIncomplete = false;
+  let newPaidUsd = 0;
+  let newPaidUzs = 0;
+  let remainingUsd = 0;
+  if (isPartial) {
+    const appSnap = await adminDb.collection("apps").doc(p.appId as string).get();
+    const key = kindToInstallment(p.kind as string);
+    const inst = appSnap.get("payment")?.installments?.[key] as { paidUsd?: number; paidUzs?: number } | undefined;
+    newPaidUsd = (typeof inst?.paidUsd === "number" ? inst.paidUsd : 0) + effUsd;
+    newPaidUzs = (typeof inst?.paidUzs === "number" ? inst.paidUzs : 0) + effUzs;
+    const required = typeof p.installmentUsd === "number" ? p.installmentUsd : ((p.amountUsd as number) ?? 0);
+    remainingUsd = Math.max(0, Math.round(required - newPaidUsd));
+    partialIncomplete = remainingUsd > 0;
+  }
+
+  if (partialIncomplete) {
+    // Bosqich ilgarilamaydi — faqat to'langan summa yangilanadi
+  } else if (requestId) {
     // Request to'lovi: so'rovni keyingi bosqichga o'tkazadi
     await confirmRequestPayment(requestId);
   } else if (p.kind === "final") {
@@ -292,20 +338,51 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
     confirmedAt: FieldValue.serverTimestamp(),
     ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
     ...(typeof actualPaidUzs === "number" ? { actualPaidUzs: Math.round(actualPaidUzs) } : {}),
+    // Kelgan summa kutilgandan kam bo'lsa — yozuv haqiqiy summaga tuzatiladi
+    // (moliya hisobotlari tasdiqlangan amountUsd yig'indisiga tayanadi).
+    ...(underpaid
+      ? {
+          partial: true,
+          originalAmountUsd: p.amountUsd ?? 0,
+          originalAmountUzs: p.amountUzs ?? 0,
+          amountUsd: effUsd,
+          amountUzs: effUzs,
+          netDueUzs: Math.round(actualPaidUzs as number),
+        }
+      : {}),
   });
 
-  // payment obyekti: qism "confirmed"
-  await setInstallment(p.appId as string, p.requestId as string | null, p.kind as string, {
-    state: "confirmed",
-    ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
-  });
+  // payment obyekti: qism holati (qisman to'lovda "due" bo'lib qoladi)
+  if (partialIncomplete) {
+    await setInstallment(p.appId as string, null, p.kind as string, {
+      state: "due",
+      paidUsd: newPaidUsd,
+      paidUzs: newPaidUzs,
+      paymentId: null,
+      ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
+    });
+    // Chek belgisini tozalaymiz — mijoz qolgan summa uchun yangi chek yubora oladi
+    await adminDb
+      .collection("apps")
+      .doc(p.appId as string)
+      .update(p.kind === "final" ? { finalReceiptSent: false } : { receiptSent: false })
+      .catch(() => {});
+  } else {
+    await setInstallment(p.appId as string, p.requestId as string | null, p.kind as string, {
+      state: "confirmed",
+      ...(isAppInstallment && newPaidUsd > 0 ? { paidUsd: newPaidUsd, paidUzs: newPaidUzs } : {}),
+      ...(taxReceiptUrl ? { taxReceiptUrl } : {}),
+    });
+  }
 
   if (actor) {
     const kind = (p.kind as PaymentKind) ?? "advance";
     await logActivity(
       p.appId as string,
       "payment_confirmed",
-      `${PAYMENT_KIND_LABEL[kind]} to'lovi tasdiqlandi ($${Math.round((p.amountUsd as number) ?? 0)})`,
+      partialIncomplete
+        ? `${PAYMENT_KIND_LABEL[kind]} qisman to'landi ($${Math.round(effUsd)}) — qoldi $${remainingUsd}`
+        : `${PAYMENT_KIND_LABEL[kind]} to'lovi tasdiqlandi ($${Math.round(effUsd)})`,
       actor
     );
   }
@@ -314,10 +391,13 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
   {
     const kind = (p.kind as PaymentKind) ?? "advance";
     const name = (p.appName as string) || SERVICE_LABELS[p.serviceType as ServiceType];
-    const amt = Math.round((p.amountUsd as number) ?? 0);
+    const amt = Math.round(effUsd);
     let head = "";
     let extra = "";
-    if (kind === "update_package") {
+    if (partialIncomplete) {
+      head = "✅ Qisman to'lovingiz qabul qilindi, rahmat 🙌";
+      extra = `\n\n💰 Qolgan summa: $${remainingUsd} — tayyor bo'lganingizda yuborsangiz bo'ladi`;
+    } else if (kind === "update_package") {
       // paket faollashuvi alohida to'liq xabar beradi — bu yerda takrorlamaymiz
     } else if (kind === "final" || kind === "full") {
       head = "✅ To'lovingiz to'liq yakunlandi, rahmat 🙌";
@@ -340,7 +420,7 @@ export async function confirmPayment(paymentId: string, taxReceiptUrl?: string, 
 
   // Chegirma yakuniy/to'liq to'lov tasdiqlanganda ishlatilgan deb belgilanadi
   const discountId = p.discountId as string | null | undefined;
-  const completing = p.kind === "final" || (p.advancePercent ?? 0) >= 100;
+  const completing = !partialIncomplete && (p.kind === "final" || (p.advancePercent ?? 0) >= 100);
   if (discountId && completing) {
     try {
       await markDiscountUsed(discountId);

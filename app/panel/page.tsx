@@ -26,7 +26,7 @@ import { getPricing, getPaymentInfo } from "@/lib/firestore/settings";
 import { getUserRequests } from "@/lib/firestore/requests";
 import { getUsdRate } from "@/lib/cbu";
 import { advanceUsdApp, finalUsdApp, renewalUsd } from "@/lib/payment";
-import { getInstallment, isPayable } from "@/lib/payment-state";
+import { getInstallment, isPayable, remainingUsdOf } from "@/lib/payment-state";
 import { categoryForServiceType, applyDiscount } from "@/lib/discount";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -98,11 +98,11 @@ export default async function PanelPage() {
     const adv = getInstallment(a.payment, "advance");
     const fin = getInstallment(a.payment, "final");
     if (isPayable(adv)) {
-      const amt = Math.round(applyDiscount(advanceUsdApp(a, pricing), pct));
+      const amt = remainingUsdOf(Math.round(applyDiscount(advanceUsdApp(a, pricing), pct)), adv);
       if (amt > 0) payAlerts.push({ appId: a.id, title, label: fin ? t.panel.advanceLabel : t.panel.paymentLabel, usd: amt, key: { type: "app", appId: a.id, kind: "advance" } });
     }
     if (isPayable(fin)) {
-      const amt = Math.round(applyDiscount(finalUsdApp(a, pricing), pct));
+      const amt = remainingUsdOf(Math.round(applyDiscount(finalUsdApp(a, pricing), pct)), fin);
       if (amt > 0) payAlerts.push({ appId: a.id, title, label: t.panel.finalLabel, usd: amt, key: { type: "app", appId: a.id, kind: "final" } });
     }
   }

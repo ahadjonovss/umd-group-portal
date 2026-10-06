@@ -17,6 +17,13 @@ export interface PaymentViewProps {
   askTaxPhone?: boolean; // yakuniy/to'liq to'lovda soliq cheki uchun telefon so'ralsin
   discountPercent?: number; // qo'llangan chegirma (%) — belgisi ko'rsatiladi
   walletUzs?: number; // foydalanuvchi hamyon balansi (so'm)
+  allowPartial?: boolean; // qisman to'lash imkoni (avans/yakuniy qismlarida)
+  paidUzs?: number; // shu qism bo'yicha allaqachon to'langan summa (so'm)
+}
+
+// "1234567" -> "1 234 567"
+function groupUzs(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 }
 
 const UZ_PHONE_RE = /^\+998\d{9}$/;
@@ -41,16 +48,29 @@ export function PaymentView({
   askTaxPhone = false,
   discountPercent = 0,
   walletUzs = 0,
+  allowPartial = false,
+  paidUzs = 0,
 }: PaymentViewProps) {
   const t = useT();
   const label = amountLabel ?? t.panel.payDefaultLabel;
   const router = useRouter();
+
+  // Qisman to'lov: mijoz shu safar qancha to'layotganini o'zi kiritadi
+  const [partialOn, setPartialOn] = useState(false);
+  const [partialRaw, setPartialRaw] = useState("");
+  const partialUzs = partialRaw ? parseInt(partialRaw, 10) : 0;
+  const partialActive = allowPartial && partialOn;
+
+  // Shu to'lov qoplaydigan summa (qisman bo'lsa — kiritilgan summa)
+  const coverUzs = partialActive && partialUzs > 0 && uzs != null ? Math.min(partialUzs, uzs) : uzs;
+  const leftAfterUzs = uzs != null && coverUzs != null ? Math.max(0, uzs - coverUzs) : 0;
+
   // Tartib: xizmat narxi -> chegirma -> hamyon (chegirma hamyondan OLDIN)
   const grossUzs = discountPercent > 0 && uzs != null ? Math.round(uzs / (1 - Math.min(discountPercent, 100) / 100)) : uzs;
   const discountUzs = grossUzs != null && uzs != null ? grossUzs - uzs : 0;
-  const walletApplied = walletUzs > 0 && uzs ? Math.min(walletUzs, uzs) : 0;
-  const netUzs = uzs !== null ? uzs - walletApplied : null;
-  const showBreakdown = discountUzs > 0 || walletApplied > 0;
+  const walletApplied = walletUzs > 0 && coverUzs ? Math.min(walletUzs, coverUzs) : 0;
+  const netUzs = coverUzs !== null ? coverUzs - walletApplied : null;
+  const showBreakdown = (!partialActive && discountUzs > 0) || walletApplied > 0;
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
   const [copied, setCopied] = useState(false);
@@ -75,6 +95,10 @@ export function PaymentView({
   }
 
   async function send() {
+    if (partialActive && (!partialUzs || partialUzs <= 0)) {
+      setError(t.panel.payErrNoAmount);
+      return;
+    }
     if (!file) { setError(t.panel.payErrNoReceipt); return; }
     if (askTaxPhone && !UZ_PHONE_RE.test(fullPhone)) {
       setError(t.panel.payErrPhone);
@@ -85,6 +109,7 @@ export function PaymentView({
     try {
       const fd = new FormData();
       Object.entries(idPayload).forEach(([k, v]) => fd.append(k, v));
+      if (partialActive && partialUzs > 0) fd.append("partialUzs", String(partialUzs));
       if (askTaxPhone) fd.append("taxPhone", fullPhone);
       fd.append("receipt", file);
       const res = await fetch(endpoint, { method: "POST", body: fd });
@@ -147,13 +172,80 @@ export function PaymentView({
           </div>
         )}
 
+        {/* Avval to'langan qism (qisman to'lovlardan) */}
+        {paidUzs > 0 && (
+          <div className="mb-2 flex items-center justify-between rounded-xl bg-emerald-500/15 px-2.5 py-1.5 text-xs">
+            <span className="text-emerald-200">✓ {t.panel.payAlreadyPaid}</span>
+            <span className="font-semibold text-emerald-200">{paidUzs.toLocaleString("en-US")} {t.common.sum}</span>
+          </div>
+        )}
+
         <p className="text-[11px] text-slate-400">{t.panel.payToPay}</p>
         <p className="text-3xl font-bold tracking-tight">
           {payAmount != null ? `${payAmount.toLocaleString("en-US")} ${t.common.sum}` : `$${usd}`}
         </p>
         <p className="text-xs text-slate-300 mt-0.5">
-          ${usd}{rate ? t.panel.payRate(rate.toLocaleString("en-US")) : ""}
+          {partialActive && rate && payAmount != null ? (
+            t.panel.payPartialSummary(Math.round((coverUzs ?? 0) / rate), usd)
+          ) : (
+            <>
+              ${usd}
+              {rate ? t.panel.payRate(rate.toLocaleString("en-US")) : ""}
+            </>
+          )}
         </p>
+
+        {/* Qisman to'lash */}
+        {allowPartial && uzs != null && (
+          <div className="mt-3 pt-3 border-t border-white/10">
+            {!partialOn ? (
+              <button
+                onClick={() => { setPartialOn(true); setError(""); }}
+                className="text-xs font-medium text-slate-300 hover:text-white underline underline-offset-2"
+              >
+                {t.panel.payPartialLink}
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-white">{t.panel.payPartialTitle}</p>
+                  <button
+                    onClick={() => { setPartialOn(false); setPartialRaw(""); setError(""); }}
+                    className="text-[11px] text-slate-400 hover:text-white"
+                  >
+                    {t.common.cancel}
+                  </button>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoFocus
+                    value={groupUzs(partialRaw)}
+                    onChange={(e) => {
+                      const d = e.target.value.replace(/\D/g, "").slice(0, 12);
+                      setPartialRaw(d);
+                      setError("");
+                    }}
+                    placeholder="0"
+                    className="w-full h-11 rounded-xl bg-white/10 border border-white/20 pl-3 pr-16 text-lg font-bold text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-white/40"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{t.common.sum}</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">{t.panel.payPartialRemaining(uzs.toLocaleString("en-US"))}</span>
+                  {partialUzs > 0 && (
+                    <span className={leftAfterUzs > 0 ? "text-amber-300 font-medium" : "text-emerald-300 font-medium"}>
+                      {leftAfterUzs > 0
+                        ? t.panel.payPartialLeftAfter(leftAfterUzs.toLocaleString("en-US"))
+                        : t.panel.payPartialCovers}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="p-4 flex flex-col gap-4">
